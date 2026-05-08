@@ -1530,14 +1530,14 @@ def _enrich_eslog_data(data):
         naziv_za_iskanje = data['partner'].get('naziv', '')
         if naziv_za_iskanje:
             try:
-                bizi_results = _bizi_search(naziv_za_iskanje)
+                bizi_results = search_bizi(naziv_za_iskanje)
                 if bizi_results:
                     best = bizi_results[0]
                     posta_kraj_split = best.get('posta_kraj', '').split(' ', 1)
                     postna = posta_kraj_split[0] if len(posta_kraj_split) > 0 else ''
                     kraj = posta_kraj_split[1] if len(posta_kraj_split) > 1 else ''
                     
-                    detail = _bizi_detail_full(best['link'])
+                    detail = bizi_detail(best['link'])
                     data['partner']['naziv'] = best['naziv'] or data['partner']['naziv']
                     data['partner']['ulica'] = best.get('naslov') or data['partner'].get('ulica', '')
                     data['partner']['postna_stevilka'] = postna or data['partner'].get('postna_stevilka', '')

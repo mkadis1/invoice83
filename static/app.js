@@ -5463,6 +5463,20 @@ async function renderHelp() {
             details: `
                 <h4>Zgodovina sprememb</h4>
                 <div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                    <div style="margin-bottom:25px;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
+                            <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li>Avtomatizirana izdaja: Vzpostavljena skripta release.py za čiščenje, backup in objavo.</li>
+                            <li>GitHub Integracija: Povezava s GitHub repozitorijem in nastavitev GitHub Actions za samodejno pakiranje tester verzije.</li>
+                            <li>Bizi.si popravek: Odpravljena napaka pri NameError pri samodejnem iskanju podatkov o partnerjih v main.py.</li>
+                            <li>Robustnost: Izboljšano upravljanje z zaklenjenimi datotekami (PermissionError) v Windows okolju.</li>
+                            <li>Zgodovina sprememb: Dodana podpora za samodejno branje opisa posodobitev iz datoteke.</li>
+                        </ul>
+                    </div>
+
                     
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">

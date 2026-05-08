@@ -72,20 +72,32 @@ def backup():
         src = os.path.join(BASE_DIR, item)
         dst = os.path.join(backup_folder, item)
         if os.path.exists(src):
-            if os.path.isdir(src):
-                if os.path.exists(dst): shutil.rmtree(dst)
-                shutil.copytree(src, dst)
-            else:
-                shutil.copy2(src, dst)
+            try:
+                if os.path.isdir(src):
+                    if os.path.exists(dst): shutil.rmtree(dst)
+                    shutil.copytree(src, dst)
+                else:
+                    shutil.copy2(src, dst)
+            except Exception as e:
+                print(f"  ⚠️ Napaka pri backupu {item}: {e}")
     print("✅ Backup uspešno opravljen.")
 
 def update_changelog():
-    print("\n📝 Vnesite nove spremembe (v vsako vrstico eno, zaključi s prazno vrstico):")
     changes = []
-    while True:
-        line = input("> ").strip()
-        if not line: break
-        changes.append(line)
+    changes_file = os.path.join(BASE_DIR, 'changes.txt')
+    
+    if os.path.exists(changes_file):
+        print(f"📄 Berem spremembe iz {changes_file}...")
+        with open(changes_file, 'r', encoding='utf-8') as f:
+            changes = [line.strip() for line in f if line.strip()]
+        # Pobrišemo datoteko po branju, da ne bo ista naslednjič
+        os.remove(changes_file)
+    else:
+        print("\n📝 Vnesite nove spremembe (v vsako vrstico eno, zaključi s prazno vrstico):")
+        while True:
+            line = input("> ").strip()
+            if not line: break
+            changes.append(line)
     
     if not changes:
         print("⏭️ Ni sprememb, preskakujem posodobitev zgodovine.")
