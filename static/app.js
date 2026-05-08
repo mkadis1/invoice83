@@ -3643,7 +3643,7 @@ window.renderZaposleni = async function() {
                     </td></tr>`;
             });
         }
-        html += '</tbody></table><br><button class="btn" style="background:#eee; color:#333;" onclick="renderPotniNalogi()">← Nazaj na potne naloge</button>';
+        html += '</tbody></table>';
         contentDiv.innerHTML = html;
     } catch(e) { contentDiv.innerHTML = '<p>Napaka</p>'; }
 }
@@ -5463,6 +5463,18 @@ async function renderHelp() {
             details: `
                 <h4>Zgodovina sprememb</h4>
                 <div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                    <div style="margin-bottom:25px;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
+                            <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li>Izboljšano samodejno iskanje podjetij preko Bizi.si pri uvozu dokumentov.</li>
+                            <li>Čistejši in bolj pregleden vmesnik v Seznamu zaposlenih.</li>
+                            <li>Hitrejši dostop do popravkov in novih funkcij preko avtomatiziranih posodobitev.</li>
+                        </ul>
+                    </div>
+
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
