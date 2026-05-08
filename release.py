@@ -105,13 +105,13 @@ def update_changelog():
 
     today_str = datetime.datetime.now().strftime("%d. %m. %Y")
     
-    # HTML blok za vstavljanje
+    # HTML blok za vstavljanje (modra značka + napis)
     li_items = "".join([f"                            <li>{ch}</li>\n" for ch in changes])
     new_entry = f"""
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">{today_str}</span>
-                            <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
+                            <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
 {li_items}                        </ul>
@@ -121,7 +121,15 @@ def update_changelog():
     with open(APP_JS, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Marker za vstavljanje
+    # 1. Najprej demoviramo trenutno "Zadnjo posodobitev" v navadno (siva značka)
+    # Iščemo modro značko in napis "Zadnja posodobitev"
+    content = content.replace('background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;', 
+                             'background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;')
+    content = content.replace('<span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>', '')
+    # Dodamo ločilno črto prejšnjemu vnosu
+    content = content.replace('<div style="margin-bottom:25px;">', '<div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">', 1)
+
+    # 2. Vstavimo nov vnos na vrh
     marker = '<div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">'
     
     if marker in content:

@@ -5466,7 +5466,7 @@ async function renderHelp() {
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
-                            <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
+                            <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Bizi.si:</strong> Izboljšano samodejno iskanje in bogatenje podatkov o podjetjih pri uvozu dokumentov.</li>
@@ -5476,10 +5476,9 @@ async function renderHelp() {
                     </div>
 
                     
-                    <div style="margin-bottom:25px;">
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">07. 05. 2026</span>
-                            <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">07. 05. 2026</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Knjiženje plač:</strong> Implementiran celoten sistem knjiženja obračunov plač in prispevkov v glavno knjigo (temeljnice).</li>
