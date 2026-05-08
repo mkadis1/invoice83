@@ -445,3 +445,30 @@ tr:hover {
     display: block;
     margin-top: 2px;
 }
+/* Print Styles */
+@media print {
+    .sidebar, header, .header-tools, .btn, .preview-upload-bar, .attachment-actions {
+        display: none !important;
+    }
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    main {
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+    #report-container {
+        padding: 0 !important;
+    }
+    .tbl-report {
+        font-size: 10pt;
+    }
+    .tbl-report th, .tbl-report td {
+        padding: 4pt 6pt !important;
+    }
+    body {
+        background: white !important;
+    }
+}

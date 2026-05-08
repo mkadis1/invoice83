@@ -612,6 +612,8 @@ async function showModule(moduleName) {
     } else if (moduleName === 'zgodovina') {
         await renderHelp();
         window.renderHelpDetail('zgodovina');
+    } else if (moduleName === 'financna_porocila') {
+        renderFinancnaPorocila();
     } else {
         titleEl.textContent = "Neznano";
         contentDiv.innerHTML = `<p>Modul še ni implementiran.</p>`;
@@ -5466,47 +5468,19 @@ async function renderHelp() {
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
-                            <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
+                            <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Izboljšano samodejno iskanje podjetij preko Bizi.si pri uvozu dokumentov.</li>
-                            <li>Čistejši in bolj pregleden vmesnik v Seznamu zaposlenih.</li>
-                            <li>Hitrejši dostop do popravkov in novih funkcij preko avtomatiziranih posodobitev.</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom:25px;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
-                            <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
-                        </div>
-                        <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Popravek map: Mapa 'demo' je bila prej ločen repozitorij, zdaj pa je pravilno vključena v glavni projekt, da jo Railway lahko vidi.</li>
-                            <li>GitHub integracija: Odpravljena težava s podmoduli (submodules).</li>
-                            <li>Railway Root Directory: Zdaj bi morala biti mapa 'demo' vidna v nastavitvah Railway.</li>
-                            <li>Izboljšana robustnost: Skripta zdaj bolje obvladuje napake in avtomatizacijo vnosov.</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom:25px;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
-                            <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
-                        </div>
-                        <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Avtomatizirana izdaja: Vzpostavljena skripta release.py za čiščenje, backup in objavo.</li>
-                            <li>GitHub Integracija: Povezava s GitHub repozitorijem in nastavitev GitHub Actions za samodejno pakiranje tester verzije.</li>
-                            <li>Bizi.si popravek: Odpravljena napaka pri NameError pri samodejnem iskanju podatkov o partnerjih v main.py.</li>
-                            <li>Robustnost: Izboljšano upravljanje z zaklenjenimi datotekami (PermissionError) v Windows okolju.</li>
-                            <li>Zgodovina sprememb: Dodana podpora za samodejno branje opisa posodobitev iz datoteke.</li>
+                            <li><strong>Bizi.si:</strong> Izboljšano samodejno iskanje in bogatenje podatkov o podjetjih pri uvozu dokumentov.</li>
+                            <li><strong>Zaposleni:</strong> Čistejši in bolj pregleden vmesnik v Seznamu zaposlenih (odstranjeni nepotrebni navigacijski elementi).</li>
+                            <li><strong>Posodobitve:</strong> Vzpostavljen sistem za hitrejši prenos popravkov in novih funkcij do uporabnikov.</li>
                         </ul>
                     </div>
 
                     
-                    <div style="margin-bottom:25px;">
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">07. 05. 2026</span>
-                            <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">07. 05. 2026</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Knjiženje plač:</strong> Implementiran celoten sistem knjiženja obračunov plač in prispevkov v glavno knjigo (temeljnice).</li>
@@ -6099,5 +6073,96 @@ async function brisiTemeljnico(id, isLocked) {
             alert(err.detail);
         }
     } catch(e) { alert("Napaka komunikacije s strežnikom."); }
+}
+
+async function renderFinancnaPorocila() {
+    titleEl.textContent = "Finančna poročila";
+    const leto = getLeto();
+    
+    contentDiv.innerHTML = `
+        <div style="display: flex; gap: 20px; margin-bottom: 25px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
+            <button class="btn btn-blue" onclick="loadReport('bilanca_stanja')">Bilanca stanja</button>
+            <button class="btn btn-blue" onclick="loadReport('izkaz_poslovnega_izida')">Izkaz poslovnega izida</button>
+        </div>
+        <div id="report-container">
+            <p style="color: #666;">Izberite poročilo zgoraj, da ga naložite za leto ${leto}.</p>
+        </div>
+    `;
+}
+
+window.loadReport = async function(vrsta) {
+    const leto = getLeto();
+    const container = document.getElementById('report-container');
+    container.innerHTML = '<p>Nalagam poročilo...</p>';
+    
+    const naslov = vrsta === 'bilanca_stanja' ? 'Bilanca stanja' : 'Izkaz poslovnega izida';
+    
+    try {
+        const [reportRes, settingsRes] = await Promise.all([
+            fetch(`/api/reports/statement?vrsta=${vrsta}&leto=${leto}`),
+            fetch('/api/nastavitve')
+        ]);
+        
+        if (!reportRes.ok) throw new Error("Napaka pri pridobivanju podatkov poročila.");
+        const data = await reportRes.json();
+        
+        let podjetje = "Moje podjetje";
+        if (settingsRes.ok) {
+            const settings = await settingsRes.json();
+            podjetje = settings.naziv || podjetje;
+        }
+        
+        let html = `
+            <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-top: 5px solid var(--primary-blue);">
+                <div style="margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                    <div style="font-size: 1.2em; font-weight: 700; color: #333;">${podjetje}</div>
+                    <div style="color: #666; font-size: 0.9em;">Finančno poročilo</div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3 style="margin:0; color:var(--primary-blue);">${naslov} za leto ${leto}</h3>
+                    <button class="btn btn-blue" onclick="window.print()">Tiskaj / PDF</button>
+                </div>
+                <table class="tbl-report" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #333;">
+                            <th style="text-align:left; padding:8px;">AOP</th>
+                            <th style="text-align:left; padding:8px;">Postavka</th>
+                            <th style="text-align:right; padding:8px;">Znesek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.forEach(row => {
+            const isHeader = row.naziv.startsWith('A.') || row.naziv.startsWith('B.') || row.naziv.startsWith('C.') || 
+                             row.naziv.startsWith('Č.') || row.naziv.startsWith('D.') || row.naziv.startsWith('E.') ||
+                             row.naziv.startsWith('F.') || row.naziv.startsWith('G.') || row.naziv.startsWith('H.') ||
+                             row.naziv.match(/^[IVX]+\./) || row.naziv === row.naziv.toUpperCase();
+            
+            const style = isHeader ? 'font-weight:bold; background:#f8f9fa;' : '';
+            const indent = (!isHeader && !row.naziv.match(/^[0-9]/)) ? 'padding-left:30px;' : '';
+            
+            html += `
+                <tr style="${style} border-bottom: 1px solid #eee;">
+                    <td style="padding:8px; width:60px;">${row.aop}</td>
+                    <td style="padding:8px; ${indent}">${row.naziv}</td>
+                    <td style="padding:8px; text-align:right; font-weight:${isHeader?'700':'400'};">${formatMoneyJS(row.vrednost)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+                <div style="margin-top:30px; font-size:0.8em; color:#999; border-top:1px solid #eee; padding-top:10px;">
+                    Generirano: ${new Date().toLocaleString('sl-SI')}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    } catch(e) {
+        container.innerHTML = `<p style="color:red;">Napaka: ${e.message}</p>`;
+    }
 }
 

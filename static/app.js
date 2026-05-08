@@ -612,6 +612,8 @@ async function showModule(moduleName) {
     } else if (moduleName === 'zgodovina') {
         await renderHelp();
         window.renderHelpDetail('zgodovina');
+    } else if (moduleName === 'financna_porocila') {
+        renderFinancnaPorocila();
     } else {
         titleEl.textContent = "Neznano";
         contentDiv.innerHTML = `<p>Modul še ni implementiran.</p>`;
@@ -6071,5 +6073,96 @@ async function brisiTemeljnico(id, isLocked) {
             alert(err.detail);
         }
     } catch(e) { alert("Napaka komunikacije s strežnikom."); }
+}
+
+async function renderFinancnaPorocila() {
+    titleEl.textContent = "Finančna poročila";
+    const leto = getLeto();
+    
+    contentDiv.innerHTML = `
+        <div style="display: flex; gap: 20px; margin-bottom: 25px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
+            <button class="btn btn-blue" onclick="loadReport('bilanca_stanja')">Bilanca stanja</button>
+            <button class="btn btn-blue" onclick="loadReport('izkaz_poslovnega_izida')">Izkaz poslovnega izida</button>
+        </div>
+        <div id="report-container">
+            <p style="color: #666;">Izberite poročilo zgoraj, da ga naložite za leto ${leto}.</p>
+        </div>
+    `;
+}
+
+window.loadReport = async function(vrsta) {
+    const leto = getLeto();
+    const container = document.getElementById('report-container');
+    container.innerHTML = '<p>Nalagam poročilo...</p>';
+    
+    const naslov = vrsta === 'bilanca_stanja' ? 'Bilanca stanja' : 'Izkaz poslovnega izida';
+    
+    try {
+        const [reportRes, settingsRes] = await Promise.all([
+            fetch(`/api/reports/statement?vrsta=${vrsta}&leto=${leto}`),
+            fetch('/api/nastavitve')
+        ]);
+        
+        if (!reportRes.ok) throw new Error("Napaka pri pridobivanju podatkov poročila.");
+        const data = await reportRes.json();
+        
+        let podjetje = "Moje podjetje";
+        if (settingsRes.ok) {
+            const settings = await settingsRes.json();
+            podjetje = settings.naziv || podjetje;
+        }
+        
+        let html = `
+            <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-top: 5px solid var(--primary-blue);">
+                <div style="margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                    <div style="font-size: 1.2em; font-weight: 700; color: #333;">${podjetje}</div>
+                    <div style="color: #666; font-size: 0.9em;">Finančno poročilo</div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3 style="margin:0; color:var(--primary-blue);">${naslov} za leto ${leto}</h3>
+                    <button class="btn btn-blue" onclick="window.print()">Tiskaj / PDF</button>
+                </div>
+                <table class="tbl-report" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #333;">
+                            <th style="text-align:left; padding:8px;">AOP</th>
+                            <th style="text-align:left; padding:8px;">Postavka</th>
+                            <th style="text-align:right; padding:8px;">Znesek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.forEach(row => {
+            const isHeader = row.naziv.startsWith('A.') || row.naziv.startsWith('B.') || row.naziv.startsWith('C.') || 
+                             row.naziv.startsWith('Č.') || row.naziv.startsWith('D.') || row.naziv.startsWith('E.') ||
+                             row.naziv.startsWith('F.') || row.naziv.startsWith('G.') || row.naziv.startsWith('H.') ||
+                             row.naziv.match(/^[IVX]+\./) || row.naziv === row.naziv.toUpperCase();
+            
+            const style = isHeader ? 'font-weight:bold; background:#f8f9fa;' : '';
+            const indent = (!isHeader && !row.naziv.match(/^[0-9]/)) ? 'padding-left:30px;' : '';
+            
+            html += `
+                <tr style="${style} border-bottom: 1px solid #eee;">
+                    <td style="padding:8px; width:60px;">${row.aop}</td>
+                    <td style="padding:8px; ${indent}">${row.naziv}</td>
+                    <td style="padding:8px; text-align:right; font-weight:${isHeader?'700':'400'};">${formatMoneyJS(row.vrednost)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+                <div style="margin-top:30px; font-size:0.8em; color:#999; border-top:1px solid #eee; padding-top:10px;">
+                    Generirano: ${new Date().toLocaleString('sl-SI')}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    } catch(e) {
+        container.innerHTML = `<p style="color:red;">Napaka: ${e.message}</p>`;
+    }
 }
 

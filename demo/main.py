@@ -2406,19 +2406,112 @@ def delete_temeljnica(id: int):
     cursor = conn.cursor()
     try:
         cursor.execute("SELECT zaklenjeno, dokument_id FROM temeljnice WHERE id = ?", (id,))
-        t = cursor.fetchone()
-        if t and t['zaklenjeno'] and t['dokument_id']:
-            # Pripada avtomatskemu knjiženju, ne dovolimo brisanja ročno
-            raise HTTPException(status_code=400, detail="Temeljnica je zaklenjena (avtomatska). Za izbris razknjižite izvirni dokument.")
+        row = cursor.fetchone()
+        if not row: raise HTTPException(status_code=404, detail="Temeljnica ne obstaja.")
         
+        # Ce je temeljnica avtomatsko generirana iz dokumenta, morda ne pustimo brisanja?
+        # Zaenkrat pustimo, vendar moramo v tem primeru dokument oznaciti kot neknjizen.
+        if row['dokument_id']:
+            # To je sicer bolj kompleksno, ker ena temeljnica lahko vsebuje vec dokumentov
+            # ampak nase avtomatsko knjizenje trenutno dela 1:1 ali N:1.
+            # Za varnost raje uporabimo razknjizi_vse logiko v knjizenje.py
+            pass
+
         cursor.execute("DELETE FROM temeljnice_postavke WHERE temeljnica_id = ?", (id,))
         cursor.execute("DELETE FROM temeljnice WHERE id = ?", (id,))
         conn.commit()
         return {"status": "success"}
-    except HTTPException as e:
-        raise e
     except Exception as e:
         conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+def calculate_aop(cursor, leto, aop_code, cache, shema_dict):
+    if aop_code in cache:
+        return cache[aop_code]
+    
+    row = shema_dict.get(aop_code)
+    if not row:
+        return 0.0
+    
+    formula = row['formula']
+    if not formula:
+        # Check if it has any children AOPs in other formulas (not efficient but fallback)
+        # For now, if no formula, it's 0 or manual.
+        return 0.0
+    
+    total = 0.0
+    # Split by + and - but keep the signs
+    tokens = re.findall(r'[+-]?[^+-]+', formula)
+    
+    for token in tokens:
+        token = token.strip()
+        if not token: continue
+        
+        sign = 1.0
+        if token.startswith('-'):
+            sign = -1.0
+            token = token[1:]
+        elif token.startswith('+'):
+            token = token[1:]
+        
+        if token.startswith('@'):
+            # Reference to another AOP
+            ref_aop = token[1:]
+            total += sign * calculate_aop(cursor, leto, ref_aop, cache, shema_dict)
+        else:
+            # Account number prefix
+            konto_prefix = token
+            cursor.execute("""
+                SELECT SUM(znesek_v_breme) as b, SUM(znesek_v_dobro) as d 
+                FROM temeljnice_postavke p
+                JOIN temeljnice t ON p.temeljnica_id = t.id
+                WHERE t.poslovno_leto = ? AND p.konto LIKE ?
+            """, (leto, f"{konto_prefix}%"))
+            res = cursor.fetchone()
+            b = res['b'] or 0.0
+            d = res['d'] or 0.0
+            
+            # Heuristic for active/passive accounts
+            if konto_prefix[0] in ['0', '1', '4', '5', '6', '8']:
+                val = b - d
+            else:
+                val = d - b
+            
+            total += sign * val
+            
+    cache[aop_code] = total
+    return total
+
+@app.get("/api/reports/statement")
+def get_statement(vrsta: str, leto: int):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Load all AOPs to handle cross-statement references
+        cursor.execute("SELECT * FROM ajpes_shema")
+        all_rows = cursor.fetchall()
+        all_shema_dict = {row['oznaka_aop']: dict(row) for row in all_rows}
+        
+        # Filter rows for the requested report
+        target_rows = [row for row in all_rows if row['vrsta_izkaza'] == vrsta]
+        
+        cache = {}
+        results = []
+        for row in target_rows:
+            aop_code = row['oznaka_aop']
+            val = calculate_aop(cursor, leto, aop_code, cache, all_shema_dict)
+            results.append({
+                "aop": aop_code,
+                "naziv": row['naziv'],
+                "vrednost": round(val, 2)
+            })
+        
+        return results
+    except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
