@@ -5469,36 +5469,9 @@ async function renderHelp() {
                             <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Izboljšano samodejno iskanje podjetij preko Bizi.si pri uvozu dokumentov.</li>
-                            <li>Čistejši in bolj pregleden vmesnik v Seznamu zaposlenih.</li>
-                            <li>Hitrejši dostop do popravkov in novih funkcij preko avtomatiziranih posodobitev.</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom:25px;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
-                            <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
-                        </div>
-                        <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Popravek map: Mapa 'demo' je bila prej ločen repozitorij, zdaj pa je pravilno vključena v glavni projekt, da jo Railway lahko vidi.</li>
-                            <li>GitHub integracija: Odpravljena težava s podmoduli (submodules).</li>
-                            <li>Railway Root Directory: Zdaj bi morala biti mapa 'demo' vidna v nastavitvah Railway.</li>
-                            <li>Izboljšana robustnost: Skripta zdaj bolje obvladuje napake in avtomatizacijo vnosov.</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom:25px;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
-                            <span style="color:#666; font-size:0.9rem;">Avtomatska posodobitev</span>
-                        </div>
-                        <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Avtomatizirana izdaja: Vzpostavljena skripta release.py za čiščenje, backup in objavo.</li>
-                            <li>GitHub Integracija: Povezava s GitHub repozitorijem in nastavitev GitHub Actions za samodejno pakiranje tester verzije.</li>
-                            <li>Bizi.si popravek: Odpravljena napaka pri NameError pri samodejnem iskanju podatkov o partnerjih v main.py.</li>
-                            <li>Robustnost: Izboljšano upravljanje z zaklenjenimi datotekami (PermissionError) v Windows okolju.</li>
-                            <li>Zgodovina sprememb: Dodana podpora za samodejno branje opisa posodobitev iz datoteke.</li>
+                            <li><strong>Bizi.si:</strong> Izboljšano samodejno iskanje in bogatenje podatkov o podjetjih pri uvozu dokumentov.</li>
+                            <li><strong>Zaposleni:</strong> Čistejši in bolj pregleden vmesnik v Seznamu zaposlenih (odstranjeni nepotrebni navigacijski elementi).</li>
+                            <li><strong>Posodobitve:</strong> Vzpostavljen sistem za hitrejši prenos popravkov in novih funkcij do uporabnikov.</li>
                         </ul>
                     </div>
 
