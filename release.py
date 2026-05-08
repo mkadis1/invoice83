@@ -19,13 +19,19 @@ def clean():
     for root, dirs, files in os.walk(BASE_DIR):
         for d in dirs:
             if d == '__pycache__':
-                shutil.rmtree(os.path.join(root, d))
+                try:
+                    shutil.rmtree(os.path.join(root, d))
+                except Exception as e:
+                    print(f"  ⚠️ Ni mogoče pobrisati {d}: {e}")
     
     # build, dist
     for d in ['build', 'dist']:
         path = os.path.join(BASE_DIR, d)
         if os.path.exists(path):
-            shutil.rmtree(path)
+            try:
+                shutil.rmtree(path)
+            except Exception as e:
+                print(f"  ⚠️ Ni mogoče pobrisati {d}: {e}")
             
     # sessions
     sessions_dir = os.path.join(BASE_DIR, 'sessions')
