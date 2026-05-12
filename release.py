@@ -85,6 +85,57 @@ def backup():
                 print(f"  ⚠️ Napaka pri backupu {item}: {e}")
     print("✅ Backup uspešno opravljen.")
 
+def get_git_changes():
+    """Poskusi pridobiti spremembe iz git log-a od zadnje izdaje."""
+    try:
+        # Poišči zadnjo "Release" verzijo
+        result = subprocess.run(
+            ['git', 'log', '--grep=^Release', '-n', '1', '--format=%H'],
+            capture_output=True, text=True
+        )
+        last_release = result.stdout.strip()
+        
+        if not last_release:
+            # Če ni nobene "Release" verzije, vzami zadnjih 5 commitov
+            log_cmd = ['git', 'log', '-n', '5', '--oneline']
+        else:
+            log_cmd = ['git', 'log', f'{last_release}..HEAD', '--oneline']
+            
+        log_output = subprocess.run(log_cmd, capture_output=True, text=True).stdout.strip()
+        
+        if not log_output:
+            return []
+            
+        raw_changes = [line.split(' ', 1)[1] for line in log_output.split('\n') if line.strip()]
+        
+        # Filtriranje "tehnikalij" - ignoriramo commite, ki se začnejo s temi besedami
+        ignore_keywords = [
+            'fix', 'chore', 'refactor', 'cleanup', 'merge', 'build', 'ci', 
+            'minor', 'debug', 'test', 'temp', 'lint', 'styles', 'css', 'release'
+        ]
+        
+        useful_changes = []
+        for ch in raw_changes:
+            # Če commit vsebuje [USER], ga vedno vključimo (brez prefixa)
+            if '[USER]' in ch:
+                useful_changes.append(ch.replace('[USER]', '').strip())
+                continue
+                
+            lower_ch = ch.lower()
+            if any(lower_ch.startswith(k) for k in ignore_keywords):
+                continue
+            if len(ch) < 8:
+                continue
+            # Če je sporočilo v slogu "Update main.py" ali "Fix button", ga preskočimo
+            if lower_ch.startswith('update ') and ('.py' in lower_ch or '.js' in lower_ch or '.css' in lower_ch):
+                continue
+            useful_changes.append(ch)
+            
+        return useful_changes
+    except Exception as e:
+        print(f"  ⚠️ Napaka pri branju git log-a: {e}")
+        return []
+
 def update_changelog():
     changes = []
     changes_file = os.path.join(BASE_DIR, 'changes.txt')
@@ -93,14 +144,32 @@ def update_changelog():
         print(f"📄 Berem spremembe iz {changes_file}...")
         with open(changes_file, 'r', encoding='utf-8') as f:
             changes = [line.strip() for line in f if line.strip()]
-        # Pobrišemo datoteko po branju, da ne bo ista naslednjič
         os.remove(changes_file)
     else:
-        print("\n📝 Vnesite nove spremembe (v vsako vrstico eno, zaključi s prazno vrstico):")
-        while True:
-            line = input("> ").strip()
-            if not line: break
-            changes.append(line)
+        # Avtomatsko zaznavanje iz git-a
+        print("🔍 Iščem nove spremembe v git zgodovini...")
+        changes = get_git_changes()
+        
+        if changes:
+            print("✨ Zaznane spremembe:")
+            for ch in changes:
+                print(f"  - {ch}")
+            confirm = input("\nAli želite uporabiti te spremembe? (D/n/u-uredi): ").lower()
+            if confirm == 'n':
+                changes = []
+            elif confirm == 'u':
+                print("📝 Vnesite popravljene spremembe (prazna vrstica za konec):")
+                changes = []
+                while True:
+                    line = input("> ").strip()
+                    if not line: break
+                    changes.append(line)
+        else:
+            print("📝 Vnesite nove spremembe (v vsako vrstico eno, zaključi s prazno vrstico):")
+            while True:
+                line = input("> ").strip()
+                if not line: break
+                changes.append(line)
     
     if not changes:
         print("⏭️ Ni sprememb, preskakujem posodobitev zgodovine.")
@@ -109,7 +178,15 @@ def update_changelog():
     today_str = datetime.datetime.now().strftime("%d. %m. %Y")
     
     # HTML blok za vstavljanje (modra značka + napis)
-    li_items = "".join([f"                            <li>{ch}</li>\n" for ch in changes])
+    formatted_changes = []
+    for ch in changes:
+        if ':' in ch:
+            header, content = ch.split(':', 1)
+            formatted_changes.append(f"<strong>{header.strip()}:</strong>{content}")
+        else:
+            formatted_changes.append(ch)
+
+    li_items = "".join([f"                            <li>{ch}</li>\n" for ch in formatted_changes])
     new_entry = f"""
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">

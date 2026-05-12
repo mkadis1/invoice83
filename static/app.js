@@ -5826,30 +5826,6 @@ async function renderHelp() {
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Materialno vodenje: Zaloga se zdaj posodablja v realnem času takoj ob shranjevanju dokumentov (prejeti in izdani računi).</li>
-                            <li>Avtomatizacija šifranta: Pri ustvarjanju artikla neposredno iz računa se ID-ji samodejno povežejo, kar zagotavlja 100 % točnost zaloge.</li>
-                            <li>Robustnost: Dodan varnostni mehanizem (fallback), ki artikle poveže po nazivu, če ID ni na voljo.</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">12. 05. 2026</span>
-                            
-                        </div>
-                        <ul style="margin-top:5px; padding-left:20px;">
-                            <li>dodajanje zaloge</li>
-                            <li>avtomatsko usklajevanje zaloge</li>
-                            <li>dodajanje artiklov in storitev</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">12. 05. 2026</span>
-                            
-                        </div>
-                        <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Materialno vodenje:</strong> Zaloga se zdaj posodablja v realnem času takoj ob shranjevanju dokumentov (prejeti in izdani računi).</li>
                             <li><strong>Avtomatizacija šifranta:</strong> Pri ustvarjanju artikla neposredno iz računa se ID-ji samodejno povežejo, kar zagotavlja 100 % točnost zaloge.</li>
                             <li><strong>Robustnost:</strong> Dodan varnostni mehanizem (fallback), ki artikle poveže po nazivu, če ID ni na voljo.</li>
