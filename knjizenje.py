@@ -102,6 +102,11 @@ def knjizi_dokument(dokument_id: int, temeljnica_id: int = None, novi_naziv: str
 
         # Update dokument status
         cursor.execute("UPDATE dokumenti SET knjizeno = 1 WHERE id = ?", (dokument_id,))
+
+        # --- VODENJE ZALOG (izdani in prejeti računi) ---
+        # Zaloga se zdaj posodablja ob vsakem SHRANJEVANJU (create/update), 
+        # zato tukaj le pokličemo isto funkcijo za zagotovitev konsistence.
+        posodobi_zalogo_iz_dokumenta(cursor, dokument_id)
         
         conn.commit()
         return {"status": "success", "message": "Dokument uspešno knjižen.", "temeljnica_id": temeljnica_id}
@@ -217,11 +222,15 @@ def knjizi_potni_nalog(nalog_id: int, temeljnica_id: int = None, novi_naziv: str
     finally:
         conn.close()
 
-def knjizi_amortizacija(leto: int, temeljnica_id: int = None, novi_naziv: str = None):
+def knjizi_amortizacija(leto: int, temeljnica_id: int = None, novi_naziv: str = None, ids: list = None):
     conn = database.get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM osnovna_sredstva WHERE aktiven = 1")
+        if ids and len(ids) > 0:
+            placeholders = ','.join(['?']*len(ids))
+            cursor.execute(f"SELECT * FROM osnovna_sredstva WHERE aktiven = 1 AND id IN ({placeholders})", ids)
+        else:
+            cursor.execute("SELECT * FROM osnovna_sredstva WHERE aktiven = 1 AND tip != 'DI'")
         sredstva = cursor.fetchall()
         
         if not temeljnica_id or temeljnica_id == -1:
@@ -274,11 +283,12 @@ def knjizi_placa(placa_id: int, temeljnica_id: int = None, novi_naziv: str = Non
         if vrsta in ['sp_100', 'sp_50']:
             # S.P. - Samo prispevki
             znesek = p['znesek_skupaj']
-            # V breme: 485 (Prispevki nosilca s.p.)
+            konto_pris = p['konto_prispevkov'] if p['konto_prispevkov'] else '265000'
+            # V breme: izbrani konto ali 265000 (Prispevki nosilca s.p.)
             cursor.execute("""
                 INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
-                VALUES (?, '485', ?, ?, 0, ?, 'place')
-            """, (temeljnica_id, f"Prispevki s.p. {stevilka}", znesek, placa_id))
+                VALUES (?, ?, ?, ?, 0, ?, 'place')
+            """, (temeljnica_id, konto_pris, f"Prispevki s.p. {stevilka}", znesek, placa_id))
             # V dobro: 254 (Obveznosti za prispevke s.p.)
             cursor.execute("""
                 INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
@@ -342,6 +352,18 @@ def razknjizi_vse(id: int, tip: str, update_table: str):
         # Izbriši postavke
         cursor.execute("DELETE FROM temeljnice_postavke WHERE dokument_id = ? AND dokument_tip = ?", (id, tip))
         
+        # --- RAZKNJIŽEVANJE ZALOG ---
+        if tip == 'dokumenti':
+            # Pri dokumentih zdaj brišemo po dokument_id, kar je bolj varno
+            cursor.execute("DELETE FROM zaloga WHERE dokument_id = ?", (id,))
+            # Fallback za stare zapise brez dokument_id
+            cursor.execute("SELECT stevilka FROM dokumenti WHERE id = ?", (id,))
+            doc_row = cursor.fetchone()
+            if doc_row:
+                stevilka = doc_row['stevilka']
+                cursor.execute("DELETE FROM zaloga WHERE opis = ?", (f"Prodaja (Račun {stevilka})",))
+                cursor.execute("DELETE FROM zaloga WHERE opis = ?", (f"Prejem (Račun {stevilka})",))
+        
         # Očisti prazne temeljnice
         for tid in t_ids:
             cursor.execute("SELECT COUNT(id) as c FROM temeljnice_postavke WHERE temeljnica_id = ?", (tid,))
@@ -376,3 +398,43 @@ def razknjizi_amortizacija(leto: int):
 def razknjizi_placa(placa_id: int):
     return razknjizi_vse(placa_id, 'place', 'place')
 
+def posodobi_zalogo_iz_dokumenta(cursor, dokument_id):
+    """
+    Posodobi zalogo za podan dokument. Najprej pobriše stare zapise in nato doda nove.
+    Pokliče se ob create, update in knjizi dokumenta.
+    """
+    cursor.execute("SELECT tip, stevilka, datum_izdaje FROM dokumenti WHERE id = ?", (dokument_id,))
+    doc = cursor.fetchone()
+    if not doc:
+        return
+    
+    tip = doc['tip']
+    stevilka = doc['stevilka']
+    datum = doc['datum_izdaje']
+    
+    # 1. Pobriši obstoječe vpise za ta dokument
+    cursor.execute("DELETE FROM zaloga WHERE dokument_id = ?", (dokument_id,))
+    # Tudi po opisu (za nazaj združljivost)
+    cursor.execute("DELETE FROM zaloga WHERE opis = ?", (f"Prodaja (Račun {stevilka})",))
+    cursor.execute("DELETE FROM zaloga WHERE opis = ?", (f"Prejem (Račun {stevilka})",))
+
+    # 2. Če je tip tak, ki vodi zalogo, dodaj nove vpise
+    if tip in ['izdani_racuni', 'prejeti_racuni']:
+        cursor.execute("""
+            SELECT dp.kolicina, dp.opis, a.id as artikel_id
+            FROM dokumenti_postavke dp
+            JOIN artikli_storitve a ON (dp.artikel_id = a.id OR (dp.artikel_id IS NULL AND dp.opis = a.naziv))
+            WHERE dp.dokument_id = ? AND a.vodi_zalogo = 1
+        """, (dokument_id,))
+        items = cursor.fetchall()
+        for item in items:
+            qty = -item['kolicina'] if tip == 'izdani_racuni' else item['kolicina']
+            prefix = "Prodaja" if tip == 'izdani_racuni' else "Prejem"
+            cursor.execute("""
+                INSERT INTO zaloga (artikel_id, kolicina, datum, opis, dokument_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (item['artikel_id'], qty, datum, f"{prefix} (Račun {stevilka})", dokument_id))
+
+def brisi_zalogo_dokumenta(cursor, dokument_id):
+    """Samo pobriše zalogo za dokument (uporabno ob brisanju dokumenta)"""
+    cursor.execute("DELETE FROM zaloga WHERE dokument_id = ?", (dokument_id,))

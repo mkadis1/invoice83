@@ -472,3 +472,56 @@ tr:hover {
         background: white !important;
     }
 }
+
+/* Financial Reports Expandable Rows */
+.expandable-row {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.expandable-row:hover {
+    background-color: #f1f8ff !important;
+}
+.breakdown-row {
+    display: none;
+    background-color: #fcfcfc;
+}
+.breakdown-row.active {
+    display: table-row;
+}
+.breakdown-container {
+    padding: 10px 20px 15px 60px;
+}
+.breakdown-table {
+    width: 100%;
+    font-size: 0.85em;
+    color: #555;
+    border-collapse: collapse;
+    box-shadow: none;
+    margin: 0;
+    border: 1px solid #eee;
+}
+.breakdown-table tr:hover {
+    background-color: #f8f9fa;
+}
+.breakdown-table td {
+    padding: 5px 10px;
+    border-bottom: 1px solid #f1f3f5;
+}
+.row-expand-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    margin-right: 8px;
+    font-size: 0.7em;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    color: #666;
+    background: #fff;
+}
+.expandable-row.expanded .row-expand-icon {
+    background: var(--primary-blue);
+    color: white;
+    border-color: var(--primary-blue);
+}

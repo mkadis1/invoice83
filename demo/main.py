@@ -186,6 +186,171 @@ class Konto(BaseModel):
     naziv: str
     opis: Optional[str] = ""
 
+class ArtiklStoritev(BaseModel):
+    id: Optional[int] = None
+    sifra: Optional[str] = None
+    vrsta: str = "storitev"   # 'artikel' ali 'storitev'
+    naziv: str
+    opis: Optional[str] = ""
+    enota_mere: Optional[str] = "kos"
+    cena_malo: Optional[float] = 0.0
+    cena_velo: Optional[float] = 0.0
+    stopnja_ddv: Optional[float] = 22.0
+    konto: Optional[str] = ""
+    aktiven: Optional[bool] = True
+    vodi_zalogo: Optional[bool] = False
+    zacetna_zaloga: Optional[float] = 0.0
+
+@app.get("/api/konti")
+def get_kontni_nacrt():
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT stevilka, naziv FROM kontni_nacrt ORDER BY stevilka")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+# --- ARTIKLI IN STORITVE ---
+def _naslednja_sifra(cursor, vrsta: str) -> str:
+    """Generira naslednjo šifro: A001, A002... ali S001, S002..."""
+    prefix = "A" if vrsta == "artikel" else "S"
+    cursor.execute(
+        "SELECT sifra FROM artikli_storitve WHERE vrsta = ? ORDER BY sifra DESC LIMIT 1",
+        (vrsta,)
+    )
+    row = cursor.fetchone()
+    if row:
+        try:
+            num = int(row["sifra"][1:]) + 1
+        except Exception:
+            num = 1
+    else:
+        num = 1
+    return f"{prefix}{num:03d}"
+
+@app.get("/api/artikli_storitve")
+def get_artikli_storitve(vrsta: Optional[str] = None, aktiven: Optional[bool] = None):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    sql = """
+        SELECT a.*, IFNULL(SUM(z.kolicina), 0) as zaloga_kolicina
+        FROM artikli_storitve a
+        LEFT JOIN zaloga z ON a.id = z.artikel_id
+        WHERE 1=1
+    """
+    params = []
+    if vrsta:
+        sql += " AND a.vrsta = ?"
+        params.append(vrsta)
+    if aktiven is not None:
+        sql += " AND a.aktiven = ?"
+        params.append(1 if aktiven else 0)
+    
+    sql += " GROUP BY a.id ORDER BY a.sifra"
+    cursor.execute(sql, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.get("/api/artikli_storitve/search")
+def search_artikli_storitve(q: str):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    query = "%" + q + "%"
+    cursor.execute("""
+        SELECT * FROM artikli_storitve
+        WHERE (naziv LIKE ? OR sifra LIKE ? OR opis LIKE ?) AND aktiven = 1
+        ORDER BY sifra LIMIT 30
+    """, (query, query, query))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.get("/api/artikli_storitve/{id}")
+def get_artikel_storitev(id: int):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM artikli_storitve WHERE id = ?", (id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Artikel/storitev ni najden")
+    return dict(row)
+
+@app.post("/api/artikli_storitve")
+def create_artikel_storitev(a: ArtiklStoritev):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        sifra = a.sifra if a.sifra else _naslednja_sifra(cursor, a.vrsta)
+        cursor.execute("""
+            INSERT INTO artikli_storitve (sifra, vrsta, naziv, opis, enota_mere, cena_malo, cena_velo, stopnja_ddv, konto, aktiven, vodi_zalogo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (sifra, a.vrsta, a.naziv, a.opis, a.enota_mere, a.cena_malo, a.cena_velo, a.stopnja_ddv, a.konto, 1 if a.aktiven else 0, 1 if a.vodi_zalogo else 0))
+        new_id = cursor.lastrowid
+        
+        # Če je podana začetna zaloga, jo vpišemo v tabelo zaloga
+        if a.vodi_zalogo and a.zacetna_zaloga and a.zacetna_zaloga != 0:
+            cursor.execute("""
+                INSERT INTO zaloga (artikel_id, kolicina, datum, opis)
+                VALUES (?, ?, ?, ?)
+            """, (new_id, a.zacetna_zaloga, datetime.now().strftime("%Y-%m-%d"), "Začetno stanje"))
+        
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Napaka: {str(e)}")
+    conn.close()
+    return {"status": "success", "id": new_id, "sifra": sifra}
+
+@app.put("/api/artikli_storitve/{id}")
+def update_artikel_storitev(id: int, a: ArtiklStoritev):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            UPDATE artikli_storitve SET vrsta=?, naziv=?, opis=?, enota_mere=?, cena_malo=?, cena_velo=?,
+            stopnja_ddv=?, konto=?, aktiven=?, vodi_zalogo=?
+            WHERE id = ?
+        """, (a.vrsta, a.naziv, a.opis, a.enota_mere, a.cena_malo, a.cena_velo, a.stopnja_ddv, a.konto, 1 if a.aktiven else 0, 1 if a.vodi_zalogo else 0, id))
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"Napaka: {str(e)}")
+    conn.close()
+    return {"status": "success"}
+
+@app.delete("/api/artikli_storitve/{id}")
+def delete_artikel_storitev(id: int):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM artikli_storitve WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+@app.post("/api/artikli_storitve/{id}/zaloga")
+def adjust_zaloga(id: int, data: dict):
+    # data: { kolicina: float, opis: str }
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        kolicina = float(data.get('kolicina', 0))
+        opis = data.get('opis', 'Ročna prilagoditev')
+        datum = get_now_slo()
+        
+        cursor.execute("""
+            INSERT INTO zaloga (artikel_id, kolicina, datum, opis)
+            VALUES (?, ?, ?, ?)
+        """, (id, kolicina, datum, opis))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise HTTPException(status_code=400, detail=str(e))
+    conn.close()
+    return {"status": "success"}
+
 # --- PRILOGE ---
 @app.post("/api/upload_priloga")
 async def upload_priloga(parent_type: str, parent_id: int, file: UploadFile = File(...)):
@@ -1481,7 +1646,6 @@ def _enrich_eslog_data(data):
     
     data['partner_obstaja'] = row is not None
     data['bizi_enriched'] = False
-    data['bizi_enriched'] = False
 
     if row:
         data['partner']['id'] = row['id']
@@ -1583,9 +1747,9 @@ async def _save_imported_eslog(data):
         # 4. Postavke
         for it in data['postavke']:
             cursor.execute("""
-                INSERT INTO dokumenti_postavke (dokument_id, opis, kolicina, cena_enote, stopnja_ddv, znesek_skupaj, konto, enota_mere)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (doc_id, it['opis'], it['kolicina'], it['cena_enote'], it['stopnja_ddv'], it['znesek_skupaj'], it.get('konto'), it.get('enota_mere', 'kos')))
+                INSERT INTO dokumenti_postavke (dokument_id, artikel_id, opis, kolicina, cena_enote, stopnja_ddv, znesek_skupaj, konto, enota_mere)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (doc_id, it.get('artikel_id'), it['opis'], it['kolicina'], it['cena_enote'], it['stopnja_ddv'], it['znesek_skupaj'], it.get('konto'), it.get('enota_mere', 'kos')))
         
         conn.commit()
         return doc_id
@@ -2179,6 +2343,7 @@ def extract_temu_pdf(content):
 
 # --- DOKUMENTI ---
 class DokumentPostavka(BaseModel):
+    artikel_id: Optional[int] = None
     opis: str
     kolicina: float
     cena_enote: float
@@ -2219,6 +2384,8 @@ def delete_dokument(id: int):
     try:
         conn = database.get_db()
         cursor = conn.cursor()
+        # Izbriši zalogo
+        knjizenje.brisi_zalogo_dokumenta(cursor, id)
         # Izbriši postavke
         cursor.execute("DELETE FROM dokumenti_postavke WHERE dokument_id = ?", (id,))
         # Izbriši dokument
@@ -2273,6 +2440,7 @@ def get_dokument_detajl(id: int):
 class KnjiziRequest(BaseModel):
     temeljnica_id: Optional[int] = None
     novi_naziv: Optional[str] = None
+    ids: Optional[List[int]] = None
 
 class BulkKnjizenjeRequest(BaseModel):
     ids: List[int]
@@ -2427,21 +2595,29 @@ def delete_temeljnica(id: int):
     finally:
         conn.close()
 
-def calculate_aop(cursor, leto, aop_code, cache, shema_dict):
+def calculate_aop(cursor, leto, aop_code, cache, shema_dict, visited=None):
     if aop_code in cache:
         return cache[aop_code]
     
+    if visited is None:
+        visited = set()
+    
+    if aop_code in visited:
+        return 0.0, {} # Circular reference - stop recursion
+    
+    visited.add(aop_code)
+    
     row = shema_dict.get(aop_code)
     if not row:
-        return 0.0
+        return 0.0, {}
     
     formula = row['formula']
     if not formula:
-        # Check if it has any children AOPs in other formulas (not efficient but fallback)
-        # For now, if no formula, it's 0 or manual.
-        return 0.0
+        return 0.0, {}
     
     total = 0.0
+    breakdown = {} # { konto_prefix: value }
+    
     # Split by + and - but keep the signs
     tokens = re.findall(r'[+-]?[^+-]+', formula)
     
@@ -2452,37 +2628,49 @@ def calculate_aop(cursor, leto, aop_code, cache, shema_dict):
         sign = 1.0
         if token.startswith('-'):
             sign = -1.0
-            token = token[1:]
+            token = token[1:].strip()
         elif token.startswith('+'):
-            token = token[1:]
+            token = token[1:].strip()
+        
+        if not token: continue
         
         if token.startswith('@'):
             # Reference to another AOP
-            ref_aop = token[1:]
-            total += sign * calculate_aop(cursor, leto, ref_aop, cache, shema_dict)
+            ref_aop = token[1:].strip()
+            # Pass a COPY of visited to allow siblings to visit the same nodes
+            ref_val, ref_breakdown = calculate_aop(cursor, leto, ref_aop, cache, shema_dict, visited.copy())
+            total += sign * ref_val
+            # Merge breakdown
+            for k, v in ref_breakdown.items():
+                breakdown[k] = breakdown.get(k, 0.0) + (sign * v)
         else:
             # Account number prefix
             konto_prefix = token
             cursor.execute("""
-                SELECT SUM(znesek_v_breme) as b, SUM(znesek_v_dobro) as d 
+                SELECT p.konto, SUM(znesek_v_breme) as b, SUM(znesek_v_dobro) as d 
                 FROM temeljnice_postavke p
                 JOIN temeljnice t ON p.temeljnica_id = t.id
                 WHERE t.poslovno_leto = ? AND p.konto LIKE ?
+                GROUP BY p.konto
             """, (leto, f"{konto_prefix}%"))
-            res = cursor.fetchone()
-            b = res['b'] or 0.0
-            d = res['d'] or 0.0
+            rows = cursor.fetchall()
             
-            # Heuristic for active/passive accounts
-            if konto_prefix[0] in ['0', '1', '4', '5', '6', '8']:
-                val = b - d
-            else:
-                val = d - b
+            for r in rows:
+                konto_full = r['konto']
+                b = r['b'] or 0.0
+                d = r['d'] or 0.0
+                
+                # Heuristic for active/passive accounts based on first digit of the prefix
+                if konto_prefix[0] in ['0', '1', '4', '5', '6', '8']:
+                    val = b - d
+                else:
+                    val = d - b
+                
+                total += sign * val
+                breakdown[konto_full] = breakdown.get(konto_full, 0.0) + (sign * val)
             
-            total += sign * val
-            
-    cache[aop_code] = total
-    return total
+    cache[aop_code] = (total, breakdown)
+    return total, breakdown
 
 @app.get("/api/reports/statement")
 def get_statement(vrsta: str, leto: int):
@@ -2490,6 +2678,10 @@ def get_statement(vrsta: str, leto: int):
     cursor = conn.cursor()
     
     try:
+        # Load kontni nacrt for names
+        cursor.execute("SELECT stevilka, naziv FROM kontni_nacrt")
+        konti_dict = {row['stevilka']: row['naziv'] for row in cursor.fetchall()}
+        
         # Load all AOPs to handle cross-statement references
         cursor.execute("SELECT * FROM ajpes_shema")
         all_rows = cursor.fetchall()
@@ -2502,14 +2694,52 @@ def get_statement(vrsta: str, leto: int):
         results = []
         for row in target_rows:
             aop_code = row['oznaka_aop']
-            val = calculate_aop(cursor, leto, aop_code, cache, all_shema_dict)
+            val, breakdown = calculate_aop(cursor, leto, aop_code, cache, all_shema_dict)
+            
+            # Convert breakdown dict to list of objects with names
+            konti_list = []
+            # Filter out zero values to keep it clean
+            for k, v in breakdown.items():
+                if abs(v) > 0.001:
+                    konti_list.append({
+                        "konto": k,
+                        "naziv": konti_dict.get(k, "Neznan konto"),
+                        "vrednost": round(v, 2)
+                    })
+            # Sort by account number
+            konti_list.sort(key=lambda x: x['konto'])
+            
             results.append({
                 "aop": aop_code,
                 "naziv": row['naziv'],
-                "vrednost": round(val, 2)
+                "vrednost": round(val, 2),
+                "konti": konti_list
             })
         
         return results
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.get("/api/reports/konto_kartica")
+def get_konto_kartica(konto: str, leto: int):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        # Iščemo po celotnem kontu ali po prefixu
+        cursor.execute("""
+            SELECT p.*, t.stevilka as temeljnica_stevilka, t.datum, t.vrsta as temeljnica_vrsta,
+                   par.naziv as partner_naziv
+            FROM temeljnice_postavke p
+            JOIN temeljnice t ON p.temeljnica_id = t.id
+            LEFT JOIN partnerji par ON p.partner_id = par.id
+            WHERE t.poslovno_leto = ? AND p.konto LIKE ?
+            ORDER BY t.datum ASC, t.stevilka ASC, p.id ASC
+        """, (leto, f"{konto}%"))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -2556,9 +2786,12 @@ def create_dokument(doc: Dokument):
     doc_id = cursor.lastrowid
     for p in doc.postavke:
         cursor.execute("""
-            INSERT INTO dokumenti_postavke (dokument_id, opis, kolicina, cena_enote, stopnja_ddv, znesek_skupaj, konto, popust, enota_mere)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (doc_id, p.opis, p.kolicina, p.cena_enote, p.stopnja_ddv, p.znesek_skupaj, p.konto, p.popust, p.enota_mere))
+            INSERT INTO dokumenti_postavke (dokument_id, artikel_id, opis, kolicina, cena_enote, stopnja_ddv, znesek_skupaj, konto, popust, enota_mere)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (doc_id, p.artikel_id, p.opis, p.kolicina, p.cena_enote, p.stopnja_ddv, p.znesek_skupaj, p.konto, p.popust, p.enota_mere))
+    
+    # Posodobi zalogo (takoj ob shranjevanju)
+    knjizenje.posodobi_zalogo_iz_dokumenta(cursor, doc_id)
     
     conn.commit()
     
@@ -2600,10 +2833,13 @@ def update_dokument(id: int, doc: Dokument):
     # Vstavljanje novih postavk
     for p in doc.postavke:
         cursor.execute("""
-            INSERT INTO dokumenti_postavke (dokument_id, opis, kolicina, cena_enote, stopnja_ddv, znesek_skupaj, konto, popust, enota_mere)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (id, p.opis, p.kolicina, p.cena_enote, p.stopnja_ddv, p.znesek_skupaj, p.konto, p.popust, p.enota_mere))
+            INSERT INTO dokumenti_postavke (dokument_id, artikel_id, opis, kolicina, cena_enote, stopnja_ddv, znesek_skupaj, konto, popust, enota_mere)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (id, p.artikel_id, p.opis, p.kolicina, p.cena_enote, p.stopnja_ddv, p.znesek_skupaj, p.konto, p.popust, p.enota_mere))
     
+    # Posodobi zalogo (takoj ob shranjevanju)
+    knjizenje.posodobi_zalogo_iz_dokumenta(cursor, id)
+
     conn.commit()
     
     # Samodejno generiranje PDF za izdane dokumente
@@ -3030,6 +3266,7 @@ class Placa(BaseModel):
     znesek_skupaj: float = 0.0
     sklic: Optional[str] = ""
     zapadlost: Optional[str] = ""
+    konto_prispevkov: Optional[str] = None
     placan: bool = False
 
 @app.get("/api/place")
@@ -3059,11 +3296,11 @@ def create_placa(p: Placa):
     c.execute("""
         INSERT INTO place (zaposleni_id, mesec, leto, vrsta_zaposlitve, bruto_placa, neto_izplacilo, 
         znesek_piz, znesek_zz, znesek_zap, znesek_starsevsko, znesek_ozp, znesek_do, znesek_akontacija_doh, 
-        znesek_skupaj, sklic, zapadlost, placan)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        znesek_skupaj, sklic, zapadlost, placan, konto_prispevkov)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (p.zaposleni_id, p.mesec, p.leto, p.vrsta_zaposlitve, p.bruto_placa, p.neto_izplacilo, 
           p.znesek_piz, p.znesek_zz, p.znesek_zap, p.znesek_starsevsko, p.znesek_ozp, p.znesek_do, p.znesek_akontacija_doh, 
-          p.znesek_skupaj, p.sklic, p.zapadlost, p.placan))
+          p.znesek_skupaj, p.sklic, p.zapadlost, 1 if p.placan else 0, p.konto_prispevkov))
     conn.commit()
     conn.close()
     return {"status": "success"}
@@ -3075,11 +3312,11 @@ def update_placa(id: int, p: Placa):
     c.execute("""
         UPDATE place SET zaposleni_id=?, mesec=?, leto=?, vrsta_zaposlitve=?, bruto_placa=?, neto_izplacilo=?, 
         znesek_piz=?, znesek_zz=?, znesek_zap=?, znesek_starsevsko=?, znesek_ozp=?, znesek_do=?, znesek_akontacija_doh=?, 
-        znesek_skupaj=?, sklic=?, zapadlost=?, placan=?
+        znesek_skupaj=?, sklic=?, zapadlost=?, placan=?, konto_prispevkov=?
         WHERE id=?
     """, (p.zaposleni_id, p.mesec, p.leto, p.vrsta_zaposlitve, p.bruto_placa, p.neto_izplacilo, 
           p.znesek_piz, p.znesek_zz, p.znesek_zap, p.znesek_starsevsko, p.znesek_ozp, p.znesek_do, p.znesek_akontacija_doh, 
-          p.znesek_skupaj, p.sklic, p.zapadlost, p.placan, id))
+          p.znesek_skupaj, p.sklic, p.zapadlost, 1 if p.placan else 0, p.konto_prispevkov, id))
     conn.commit()
     conn.close()
     return {"status": "success"}
@@ -3114,6 +3351,7 @@ class OsnovnoSredstvo(BaseModel):
     nabavna_vrednost: float
     stopnja_amortizacije: float
     trenutna_vrednost: Optional[float] = 0.0
+    tip: Optional[str] = "OS"
 
 @app.get("/api/osnovna_sredstva/next_inv")
 def next_inv():
@@ -3144,9 +3382,9 @@ def create_osnovno_sredstvo(os_obj: OsnovnoSredstvo):
     conn = database.get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO osnovna_sredstva (naziv, aktiven, amortizacijska_skupina, inventarna_stevilka, datum_nabave, nabavna_vrednost, stopnja_amortizacije, trenutna_vrednost)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (os_obj.naziv, os_obj.aktiven, os_obj.amortizacijska_skupina, os_obj.inventarna_stevilka, os_obj.datum_nabave, os_obj.nabavna_vrednost, os_obj.stopnja_amortizacije, os_obj.trenutna_vrednost))
+        INSERT INTO osnovna_sredstva (naziv, aktiven, amortizacijska_skupina, inventarna_stevilka, datum_nabave, nabavna_vrednost, stopnja_amortizacije, trenutna_vrednost, tip)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (os_obj.naziv, os_obj.aktiven, os_obj.amortizacijska_skupina, os_obj.inventarna_stevilka, os_obj.datum_nabave, os_obj.nabavna_vrednost, os_obj.stopnja_amortizacije, os_obj.trenutna_vrednost, os_obj.tip))
     conn.commit()
     conn.close()
     return {"status": "success"}
@@ -3156,9 +3394,9 @@ def update_osnovno_sredstvo(id: int, os_obj: OsnovnoSredstvo):
     conn = database.get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        UPDATE osnovna_sredstva SET naziv=?, aktiven=?, amortizacijska_skupina=?, inventarna_stevilka=?, datum_nabave=?, nabavna_vrednost=?, stopnja_amortizacije=?, trenutna_vrednost=?
+        UPDATE osnovna_sredstva SET naziv=?, aktiven=?, amortizacijska_skupina=?, inventarna_stevilka=?, datum_nabave=?, nabavna_vrednost=?, stopnja_amortizacije=?, trenutna_vrednost=?, tip=?
         WHERE id = ?
-    """, (os_obj.naziv, os_obj.aktiven, os_obj.amortizacijska_skupina, os_obj.inventarna_stevilka, os_obj.datum_nabave, os_obj.nabavna_vrednost, os_obj.stopnja_amortizacije, os_obj.trenutna_vrednost, id))
+    """, (os_obj.naziv, os_obj.aktiven, os_obj.amortizacijska_skupina, os_obj.inventarna_stevilka, os_obj.datum_nabave, os_obj.nabavna_vrednost, os_obj.stopnja_amortizacije, os_obj.trenutna_vrednost, os_obj.tip, id))
     conn.commit()
     conn.close()
     return {"status": "success"}
@@ -3350,7 +3588,8 @@ def api_razknjizi_potni_nalog(id: int):
 def api_knjizi_amortizacija(leto: int, req: Optional[KnjiziRequest] = None):
     tid = req.temeljnica_id if req else None
     naziv = req.novi_naziv if req else None
-    return knjizenje.knjizi_amortizacija(leto, tid, naziv)
+    ids = req.ids if req else None
+    return knjizenje.knjizi_amortizacija(leto, tid, naziv, ids)
 
 @app.post("/api/amortizacija/{leto}/razknjizi")
 def api_razknjizi_amortizacija(leto: int):

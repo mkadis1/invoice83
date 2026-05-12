@@ -59,6 +59,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS dokumenti_postavke (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         dokument_id INTEGER,
+        artikel_id INTEGER,
         opis TEXT NOT NULL,
         kolicina REAL DEFAULT 1,
         cena_enote REAL DEFAULT 0,
@@ -66,7 +67,8 @@ def init_db():
         znesek_skupaj REAL,
         konto TEXT,
         popust REAL DEFAULT 0,
-        FOREIGN KEY (dokument_id) REFERENCES dokumenti(id)
+        FOREIGN KEY (dokument_id) REFERENCES dokumenti(id),
+        FOREIGN KEY (artikel_id) REFERENCES artikli_storitve(id)
     );
 
     -- Bančni izpiski - Glava
@@ -278,6 +280,33 @@ def init_db():
         vrsta_izkaza TEXT NOT NULL, -- 'bilanca_stanja', 'izkaz_poslovnega_izida'
         formula TEXT -- npr. '+020+021-029' (kateri konti se sestejejo ali odstejejo)
     );
+
+    -- Šifrant artiklov in storitev
+    CREATE TABLE IF NOT EXISTS artikli_storitve (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sifra TEXT NOT NULL UNIQUE,          -- A001, A002... ali S001, S002...
+        vrsta TEXT NOT NULL DEFAULT 'storitev', -- 'artikel' ali 'storitev'
+        naziv TEXT NOT NULL,
+        opis TEXT,
+        enota_mere TEXT DEFAULT 'kos',
+        cena_malo REAL DEFAULT 0,            -- maloprodajna cena (brez DDV)
+        cena_velo REAL DEFAULT 0,            -- veleprodajna cena (brez DDV)
+        stopnja_ddv REAL DEFAULT 22,         -- DDV stopnja (%)
+        konto TEXT,
+        aktiven BOOLEAN DEFAULT 1,
+        vodi_zalogo BOOLEAN DEFAULT 0      -- Ali se za ta artikel vodi zaloga
+    );
+
+    -- Tabela za vodenje trenutne zaloge
+    CREATE TABLE IF NOT EXISTS zaloga (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        artikel_id INTEGER NOT NULL,
+        kolicina REAL DEFAULT 0,
+        datum DATE,
+        opis TEXT,
+        zadnja_sprememba TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (artikel_id) REFERENCES artikli_storitve(id)
+    );
     """)
     # Migracija: Dodaj kratko_ime v nastavitve, če ne obstaja
     try:
@@ -326,12 +355,38 @@ def init_db():
     except: pass
     try: cursor.execute("ALTER TABLE place ADD COLUMN knjizeno BOOLEAN DEFAULT 0")
     except: pass
+    try: cursor.execute("ALTER TABLE place ADD COLUMN konto_prispevkov TEXT")
+    except: pass
     try: cursor.execute("ALTER TABLE potni_nalogi ADD COLUMN knjizeno BOOLEAN DEFAULT 0")
+    except: pass
+
+    # Migracija: Dodaj datum in opis v zaloga
+    try: cursor.execute("ALTER TABLE zaloga ADD COLUMN datum DATE")
+    except: pass
+    try: cursor.execute("ALTER TABLE zaloga ADD COLUMN opis TEXT")
+    except: pass
+
+    try: cursor.execute("ALTER TABLE dokumenti_postavke ADD COLUMN artikel_id INTEGER")
+    except: pass
+    try: cursor.execute("ALTER TABLE zaloga ADD COLUMN dokument_id INTEGER")
     except: pass
     try: cursor.execute("ALTER TABLE temeljnice_postavke ADD COLUMN dokument_id INTEGER")
     except: pass
+    try: cursor.execute("ALTER TABLE osnovna_sredstva ADD COLUMN tip TEXT DEFAULT 'OS'")
+    except: pass
     try: cursor.execute("ALTER TABLE temeljnice_postavke ADD COLUMN dokument_tip TEXT")
     except: pass
+
+    # Migracija: Šifrant artiklov in storitev
+    try: cursor.execute("ALTER TABLE artikli_storitve ADD COLUMN konto TEXT")
+    except: pass
+    try: cursor.execute("ALTER TABLE artikli_storitve ADD COLUMN aktiven BOOLEAN DEFAULT 1")
+    except: pass
+
+    try:
+        cursor.execute("ALTER TABLE artikli_storitve ADD COLUMN vodi_zalogo BOOLEAN DEFAULT 0")
+    except:
+        pass
 
     conn.commit()
     conn.close()

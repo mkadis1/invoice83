@@ -215,8 +215,8 @@ async function izvediBulkKnjizenje(akcija, temeljnica_id, novi_naziv) {
             window.updateBulkActionBar();
             // Refresh the correct module
             const mod = window.appSelection.module || window._currentDocTip;
-            if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi'].includes(mod)) {
-                const titles = { 'izdani_racuni': 'Izdani računi', 'prejeti_racuni': 'Prejeti računi', 'ponudbe': 'Ponudbe', 'dobropisi': 'Dobropisi' };
+            if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'delovni_nalogi'].includes(mod)) {
+                const titles = { 'izdani_racuni': 'Izdani računi', 'prejeti_racuni': 'Prejeti računi', 'ponudbe': 'Ponudbe', 'dobropisi': 'Dobropisi', 'delovni_nalogi': 'Delovni nalogi' };
                 renderDokumenti(mod, titles[mod]);
             } else if (mod === 'place') {
                 renderPlace();
@@ -262,8 +262,8 @@ async function izvediKnjiziPosamezen(id, akcija, temeljnica_id, novi_naziv, tip)
         if (res.ok) {
             // Use the passed tip first, then fallback to appSelection.module
             const activeModule = tip || window.appSelection.module;
-            if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi'].includes(activeModule)) {
-                const titles = { 'izdani_racuni': 'Izdani računi', 'prejeti_racuni': 'Prejeti računi', 'ponudbe': 'Ponudbe', 'dobropisi': 'Dobropisi' };
+            if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'delovni_nalogi'].includes(activeModule)) {
+                const titles = { 'izdani_racuni': 'Izdani računi', 'prejeti_racuni': 'Prejeti računi', 'ponudbe': 'Ponudbe', 'dobropisi': 'Dobropisi', 'delovni_nalogi': 'Delovni nalogi' };
                 renderDokumenti(activeModule, titles[activeModule]);
             } else if (activeModule === 'place') {
                 renderPlace();
@@ -337,8 +337,9 @@ window.refreshCurrentModule = function(moduleOverride = null) {
     else if (mod === 'osnovna_sredstva') renderOsnovnaSredstva();
     else if (mod === 'place') renderPlace();
     else if (mod === 'konti') osveziKontiUI();
-    else if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi'].includes(mod)) {
-        const titles = { 'izdani_racuni': 'Izdani računi', 'prejeti_racuni': 'Prejeti računi', 'ponudbe': 'Ponudbe', 'dobropisi': 'Dobropisi' };
+    else if (mod === 'artikli_storitve') renderArtikliStoritve();
+    else if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'delovni_nalogi'].includes(mod)) {
+        const titles = { 'izdani_racuni': 'Izdani računi', 'prejeti_racuni': 'Prejeti računi', 'ponudbe': 'Ponudbe', 'dobropisi': 'Dobropisi', 'delovni_nalogi': 'Delovni nalogi' };
         renderDokumenti(mod, titles[mod]);
     }
 };
@@ -349,7 +350,9 @@ window.appSortState = {
     'prejeti_racuni': { field: 'datum_izdaje', order: 'desc' },
     'ponudbe': { field: 'datum_izdaje', order: 'desc' },
     'dobropisi': { field: 'datum_izdaje', order: 'desc' },
+    'delovni_nalogi': { field: 'datum_izdaje', order: 'desc' },
     'partnerji': { field: 'naziv', order: 'asc' },
+    'artikli_storitve': { field: 'sifra', order: 'asc' },
     'izpiski': { field: 'datum', order: 'desc' },
     'zaposleni': { field: 'priimek_ime', order: 'asc' },
     'potni_nalogi': { field: 'datum_odhoda', order: 'desc' },
@@ -584,13 +587,18 @@ async function showModule(moduleName) {
 
         titleEl.textContent = "Poslovni partnerji";
         renderPartnerji();
-    } else if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'prejeti_dobropisi'].includes(moduleName)) {
+    } else if (moduleName === 'artikli_storitve') {
+        console.log("Preklapljam na modul artikli_storitve");
+        titleEl.textContent = "Artikli in storitve";
+        renderArtikliStoritve();
+    } else if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'prejeti_dobropisi', 'delovni_nalogi'].includes(moduleName)) {
         const titleMap = {
             'izdani_racuni': 'Izdani računi',
             'prejeti_racuni': 'Prejeti računi',
             'ponudbe': 'Ponudbe',
             'dobropisi': 'Dobropisi',
-            'prejeti_dobropisi': 'Prejeti dobropisi'
+            'prejeti_dobropisi': 'Prejeti dobropisi',
+            'delovni_nalogi': 'Delovni nalogi'
         };
         renderDokumenti(moduleName, titleMap[moduleName]);
     } else if (moduleName === 'izpiski') {
@@ -605,6 +613,8 @@ async function showModule(moduleName) {
         renderZaposleni();
     } else if (moduleName === 'prispevki') {
         renderPlace();
+    } else if (moduleName === 'konto_kartica') {
+        renderKontoKartica();
     } else if (moduleName === 'nastavitve') {
         renderNastavitve();
     } else if (moduleName === 'help') {
@@ -1152,6 +1162,280 @@ async function brisiPartnerja(id) {
     }
 }
 
+// --- ARTIKLI IN STORITVE ---
+window.updateKontiDatalist = async function() {
+    const dl = document.getElementById('konti-datalist');
+    if (!dl) return;
+    try {
+        const res = await fetch('/api/konti');
+        const konti = await res.json();
+        dl.innerHTML = konti.map(k => `<option value="${k.stevilka}">${k.stevilka} - ${k.naziv}</option>`).join('');
+    } catch (e) { console.error("Napaka pri posodabljanju kontov", e); }
+};
+
+async function renderArtikliStoritve() {
+    window.updateKontiDatalist();
+    console.log("Kličem renderArtikliStoritve...");
+    contentDiv.innerHTML = '<p style="padding:20px;">Nalagam artikle in storitve...</p>';
+    try {
+        const res = await fetch('/api/artikli_storitve');
+        if (!res.ok) throw new Error("Napaka pri pridobivanju podatkov s strežnika.");
+        const data = await res.json();
+        
+        const sortFields = [
+            {key: 'naziv', label: 'Naziv'},
+            {key: 'sifra', label: 'Šifra'},
+            {key: 'vrsta', label: 'Vrsta'},
+            {key: 'cena_malo', label: 'Cena MP'}
+        ];
+
+        let html = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                <h2 style="margin:0; color:var(--primary-blue);">Artikli in storitve</h2>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    ${window.renderSortControls('artikli_storitve', sortFields, 'renderArtikliStoritve()')}
+                    <button class="btn btn-blue" onclick="showDodajArtikelStoritev()">+ Dodaj artikel/storitev</button>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="40"><input type="checkbox" onclick="window.toggleAllSelection(this.checked, 'artikli_storitve')"></th>
+                        <th>Šifra</th>
+                        <th>Vrsta</th>
+                        <th>Naziv</th>
+                        <th style="text-align:right">Cena (MP)</th>
+                        <th style="text-align:right">Cena (VP)</th>
+                        <th>DDV</th>
+                        <th style="text-align:right">Zaloga</th>
+                        <th width="80" style="text-align:right">Akcije</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        if (data.length === 0) {
+            html += `<tr><td colspan="9" style="text-align:center; padding:20px;">Ni vnesenih artiklov ali storitev. Kliknite gumb zgoraj za dodajanje.</td></tr>`;
+        } else {
+            let sortirano = window.sortAppData(data, 'artikli_storitve');
+            sortirano.forEach(a => {
+                const isChecked = window.appSelection.ids.includes(a.id) ? 'checked' : '';
+                const zalogaText = a.vodi_zalogo ? `<span style="font-weight:bold; color:${a.zaloga_kolicina > 0 ? '#2b8a3e' : '#e03131'}">${formatNumberJS(a.zaloga_kolicina || 0)} ${a.enota_mere}</span>` : '<span style="color:#adb5bd;">/</span>';
+                html += `
+                    <tr>
+                        <td><input type="checkbox" class="row-checkbox" data-id="${a.id}" ${isChecked} onclick="window.toggleItemSelection(${a.id}, 'artikli_storitve')"></td>
+                        <td><code style="background:#eee; padding:2px 5px; border-radius:3px; font-weight:bold;">${a.sifra}</code></td>
+                        <td><span style="font-size:0.85em; text-transform:uppercase; color:#666;">${a.vrsta === 'artikel' ? '📦 Artikel' : '🛠 Storitev'}</span></td>
+                        <td style="font-weight:600; cursor:pointer; color:var(--primary-blue); text-decoration:underline;" onclick="showUrediArtikelStoritev(${a.id})">${a.naziv}</td>
+                        <td style="text-align:right; font-weight:600;">${formatNumberJS(a.cena_malo)} €</td>
+                        <td style="text-align:right">${formatNumberJS(a.cena_velo)} €</td>
+                        <td>${a.stopnja_ddv}%</td>
+                        <td style="text-align:right">${zalogaText}</td>
+                        <td class="action-buttons">
+                            <button class="icon-btn btn-red" onclick="brisiArtikelStoritev(${a.id})" title="Briši">${ICONS.delete}</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        
+        html += `</tbody></table>`;
+        contentDiv.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+        contentDiv.innerHTML = `<div style="padding:20px; background:#fff5f5; border:1px solid #ffc9c9; border-radius:8px; color:#c92a2a;">
+            <strong>Napaka pri nalaganju modula:</strong><br>${e.message}
+        </div>`;
+    }
+}
+
+function showDodajArtikelStoritev() {
+    renderArtikliForm();
+}
+
+async function showUrediArtikelStoritev(id) {
+    try {
+        const res = await fetch(`/api/artikli_storitve/${id}`);
+        const data = await res.json();
+        renderArtikliForm(data);
+    } catch (e) {
+        alert("Napaka pri pridobivanju podatkov.");
+    }
+}
+
+async function renderArtikliForm(editData = null, isPopup = false) {
+    const isEdit = !!editData && !!editData.id;
+    
+    // Pridobimo nastavitve podjetja, da vemo če je zavezanec
+    let settings = window.appSettings;
+    if (!settings) {
+        try {
+            const res = await fetch('/api/nastavitve');
+            settings = await res.json();
+            window.appSettings = settings;
+        } catch(e) { settings = { zavezanec_za_ddv: true }; }
+    }
+    const isZavezanec = settings.zavezanec_za_ddv;
+
+    const target = isPopup ? document.getElementById('artikel-form-popup-container') : contentDiv;
+    if (isPopup) document.getElementById('artikel-form-popup-overlay').style.display = 'flex';
+
+    target.innerHTML = `
+        <div style="max-width: ${isPopup ? '100%' : '700px'}; background: white; padding: 25px; border-radius: ${isPopup ? '0' : '8px'}; box-shadow: ${isPopup ? 'none' : '0 4px 15px rgba(0,0,0,0.05)'}; border-top: ${isPopup ? 'none' : '4px solid var(--primary-blue)'};">
+            ${isPopup ? `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                    <h3 style="margin:0; color:var(--primary-blue);">${isEdit ? 'Uredi artikel/storitev' : 'Nov artikel/storitev'}</h3>
+                    <button type="button" onclick="window.zapriArtikelFormPopup()" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:#868e96;">&times;</button>
+                </div>
+            ` : `
+                <h3 style="margin-bottom: 20px; color: var(--primary-blue);">${isEdit ? 'Uredi artikel/storitev' : 'Nov artikel/storitev'}</h3>
+            `}
+            
+            <form onsubmit="shraniArtikelStoritev(event, ${isEdit ? editData.id : 'null'})">
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex:1">
+                        <label>Vrsta</label>
+                        <select id="a_vrsta" required onchange="document.getElementById('a_zaloga_box').style.display = (this.value==='artikel'?'block':'none')">
+                            <option value="storitev" ${editData?.vrsta === 'storitev' ? 'selected' : ''}>Storitev</option>
+                            <option value="artikel" ${editData?.vrsta === 'artikel' ? 'selected' : ''}>Artikel</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Šifra <small>(pusti prazno za avtomatsko)</small></label>
+                        <input type="text" id="a_sifra" value="${editData?.sifra || ''}" placeholder="A001 / S001">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Naziv</label>
+                    <input type="text" id="a_naziv" value="${editData?.naziv || ''}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Opis / Podrobnosti</label>
+                    <textarea id="a_opis" rows="3" style="width:100%; padding:10px; border:1px solid #ced4da; border-radius:4px; font-family:inherit;">${editData?.opis || ''}</textarea>
+                </div>
+
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex:1">
+                        <label>Enota mere</label>
+                        <select id="a_em">
+                            ${['kos','kg','l','m','m2','m3','ura','dan','kpl','paušal'].map(em => `<option value="${em}" ${editData?.enota_mere === em || (!editData && em === 'kos') ? 'selected' : ''}>${em}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Stopnja DDV (%)</label>
+                        <select id="a_ddv" ${!isZavezanec ? 'disabled style="background:#f1f3f5"' : ''}>
+                            ${isZavezanec ? `
+                                <option value="22" ${editData?.stopnja_ddv === 22 || (!editData) ? 'selected' : ''}>22% (Splošna)</option>
+                                <option value="9.5" ${editData?.stopnja_ddv === 9.5 ? 'selected' : ''}>9.5% (Znižana)</option>
+                                <option value="5" ${editData?.stopnja_ddv === 5 ? 'selected' : ''}>5% (Posebna)</option>
+                                <option value="0" ${editData?.stopnja_ddv === 0 ? 'selected' : ''}>0% (Brez / Izvoz)</option>
+                            ` : `
+                                <option value="0" selected>0% (Niste zavezanec)</option>
+                            `}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex:1">
+                        <label>Maloprodajna cena (MP)</label>
+                        <input type="text" id="a_cena_malo" value="${editData ? formatNumberJS(editData.cena_malo) : '0,00'}">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Veleprodajna cena (VP)</label>
+                        <input type="text" id="a_cena_velo" value="${editData ? formatNumberJS(editData.cena_velo) : '0,00'}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Konto za knjiženje <small>(neobvezno)</small></label>
+                    <input type="text" id="a_konto" list="konti-datalist" value="${editData?.konto || ''}" placeholder="npr. 7600">
+                </div>
+
+                <div id="a_zaloga_box" style="display: ${editData?.vrsta === 'artikel' ? 'block' : 'none'}; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e9ecef; margin-bottom: 20px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" id="a_vodi_zalogo" ${editData?.vodi_zalogo ? 'checked' : ''} style="width:auto; margin:0;">
+                        <label for="a_vodi_zalogo" style="margin:0; font-weight:bold; color:var(--primary-blue);">Vodi zalogo za ta artikel</label>
+                    </div>
+                    ${!isEdit ? `
+                    <div style="margin-top:10px; margin-left:26px; display:flex; align-items:center; gap:10px;">
+                        <label style="font-size:0.9rem;">Začetna zaloga:</label>
+                        <input type="text" id="a_zacetna_zaloga" value="${editData?.zacetna_zaloga ? formatNumberJS(editData.zacetna_zaloga) : '0,00'}" style="width:100px; padding:4px; border:1px solid #ced4da; border-radius:4px; text-align:right;">
+                    </div>
+                    ` : ''}
+                    <p style="font-size:0.8rem; color:#666; margin-top:5px; margin-left:26px;">Če je vklopljeno, bo program spremljal količino na zalogi in jo zmanjševal ob prodaji oz. povečeval ob nakupu.</p>
+                </div>
+
+                <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn" style="background:#eee; color:#333;" onclick="${isPopup ? 'window.zapriArtikelFormPopup()' : 'renderArtikliStoritve()'}">Prekliči</button>
+                    <button type="submit" class="btn btn-blue">${isEdit ? 'Shrani spremembe' : 'Dodaj artikel/storitev'}</button>
+                </div>
+            </form>
+        </div>
+    `;
+}
+
+async function shraniArtikelStoritev(event, id = null) {
+    event.preventDefault();
+    const payload = {
+        vrsta: document.getElementById('a_vrsta').value,
+        sifra: document.getElementById('a_sifra').value.trim() || null,
+        naziv: document.getElementById('a_naziv').value,
+        opis: document.getElementById('a_opis').value,
+        enota_mere: document.getElementById('a_em').value,
+        cena_malo: parseNumberJS(document.getElementById('a_cena_malo').value),
+        cena_velo: parseNumberJS(document.getElementById('a_cena_velo').value),
+        stopnja_ddv: parseFloat(document.getElementById('a_ddv').value),
+        konto: document.getElementById('a_konto').value,
+        vodi_zalogo: document.getElementById('a_vodi_zalogo')?.checked || false,
+        zacetna_zaloga: parseNumberJS(document.getElementById('a_zacetna_zaloga')?.value || '0'),
+        aktiven: true
+    };
+
+    try {
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/artikli_storitve/${id}` : '/api/artikli_storitve';
+        const res = await fetch(url, {
+            method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            const inPopup = document.getElementById('artikel-form-popup-overlay').style.display === 'flex';
+            if (inPopup) {
+                window.zapriArtikelFormPopup();
+                const resData = await res.json();
+                if (resData.id && window._zadnjiPostavkaDiv) {
+                    const idInp = window._zadnjiPostavkaDiv.querySelector('.p-artikel-id');
+                    if (idInp) idInp.value = resData.id;
+                }
+                // Ponovno odpremo izbirnik artiklov in osvežimo seznam
+                document.getElementById('artikel-popup-overlay').style.display = 'flex';
+                window.filterArtikelPopup(); 
+            } else {
+                renderArtikliStoritve();
+            }
+        } else {
+            const err = await res.json();
+            alert("Napaka pri shranjevanju: " + (err.detail || "Neznano"));
+        }
+    } catch (e) {
+        alert("Sistemska napaka pri komunikaciji.");
+    }
+}
+
+async function brisiArtikelStoritev(id) {
+    if (!confirm("Ali ste prepričani, da želite izbrisati ta artikel/storitev?")) return;
+    try {
+        const res = await fetch(`/api/artikli_storitve/${id}`, { method: 'DELETE' });
+        if (res.ok) renderArtikliStoritve();
+    } catch (e) {
+        alert("Napaka pri brisanju.");
+    }
+}
+
 // --- DOKUMENTI ---
 async function renderDokumenti(tip, naslov) {
     titleEl.textContent = naslov;
@@ -1234,6 +1518,7 @@ async function renderDokumenti(tip, naslov) {
                                     `<button class="icon-btn btn-orange" onclick="window.knjiziPosamezen(${d.id}, 'razknjizi', '${tip}')" title="Razknjiži">${ICONS.unbook}</button>`
                                 ) : ''}
                             ${tip === 'ponudbe' ? `<button class="icon-btn btn-green" onclick="window.ustvariRacunIzPonudbe(${d.id})" title="Ustvari račun">${ICONS.invoice}</button>` : ''}
+                            ${(tip === 'ponudbe' || tip === 'izdani_racuni') ? `<button class="icon-btn btn-orange" onclick="window.ustvariDelovniNalog(${d.id})" title="Ustvari delovni nalog">🛠️</button>` : ''}
                             <button class="icon-btn" onclick="window.kopirajDokument(${d.id}, '${tip}', '${naslov}')" title="Kopiraj">${ICONS.copy}</button>
                             <button class="icon-btn btn-red" onclick="brisiDokument(${d.id}, '${tip}', '${naslov}')" title="Briši">${ICONS.delete}</button>
                         </td>
@@ -1374,7 +1659,7 @@ async function showDodajDokument(tip, naslov, editData = null) {
                         <input type="text" id="d_datum_zapadlosti" value="${editData ? formatDateJS(editData.datum_zapadlosti) : ''}" placeholder="DD.MM.YYYY" required>
                     </div>
                 </div>
-                ${(tip === 'prejeti_racuni' || tip === 'izdani_racuni' || tip === 'ponudbe') ? `
+                ${(tip === 'prejeti_racuni' || tip === 'izdani_racuni' || tip === 'ponudbe' || tip === 'delovni_nalogi') ? `
                 <div style="display: flex; gap: 15px; margin-top: 10px;">
                     <div class="form-group" style="flex: 1;">
                         <label>Datum opravljene storitve OD <small>(neobvezno)</small></label>
@@ -1416,7 +1701,7 @@ async function showDodajDokument(tip, naslov, editData = null) {
                     <div style="font-size: 1.25em; font-weight: bold; color:var(--primary-blue);">SKUPAJ: <span id="skupaj-znesek">0.00</span> &euro;</div>
                 </div>
 
-                ${(tip === 'izdani_racuni' || tip === 'ponudbe') ? `
+                ${(tip === 'izdani_racuni' || tip === 'ponudbe' || tip === 'delovni_nalogi') ? `
                 <div style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 4px; border: 1px solid var(--border-color);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <h4 style="margin:0; color:var(--primary-blue);">Zaključna besedila</h4>
@@ -1536,13 +1821,13 @@ async function showDodajDokument(tip, naslov, editData = null) {
     if (editData && editData.zakljucno_besedilo) {
         const parts = editData.zakljucno_besedilo.split('\n\n');
         parts.forEach(p => window.ustvariZakljucnoPolje(p.trim()));
-    } else if (!isActuallyEdit && (tip === 'izdani_racuni' || tip === 'ponudbe')) {
+    } else if (!isActuallyEdit && (tip === 'izdani_racuni' || tip === 'ponudbe' || tip === 'delovni_nalogi')) {
         window.ustvariZakljucnoPolje(""); // Vsaj eno prazno polje
     }
 
     kalkulirajZneske();
 
-    if (tip === 'izdani_racuni' || tip === 'ponudbe') {
+    if (tip === 'izdani_racuni' || tip === 'ponudbe' || tip === 'delovni_nalogi') {
         const tSel = document.getElementById('d_template_select');
 
         async function osveziPredlogeSelect() {
@@ -1630,7 +1915,7 @@ async function showDodajDokument(tip, naslov, editData = null) {
 
 window.dodajPostavkoR = function(data = null) {
     const container = document.getElementById('postavke-container');
-    const showPopust = (window._currentTip === 'izdani_racuni' || window._currentTip === 'ponudbe');
+    const showPopust = (window._currentTip === 'izdani_racuni' || window._currentTip === 'ponudbe' || window._currentTip === 'delovni_nalogi');
     
     const div = document.createElement('div');
     div.className = 'postavka-item';
@@ -1640,7 +1925,12 @@ window.dodajPostavkoR = function(data = null) {
         <div style="display:flex; gap:10px; margin-bottom:10px;">
             <div style="flex:1;">
                 <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Opis storitve/izdelka</label>
-                <input type="text" class="p-opis" style="width:100%" value="${data ? data.opis : ''}" required>
+                <div style="display:flex; gap:5px;">
+                    <input type="hidden" class="p-artikel-id" value="${data ? (data.artikel_id || '') : ''}">
+                    <input type="text" class="p-opis" style="flex:1;" value="${data ? data.opis : ''}" required>
+                    <button type="button" title="Shrani v šifrant" onclick="window.shraniPostavkoKotArtikel(this.closest('.postavka-item'))" style="padding:2px 10px; font-size:1.1em; background:#ebfbee; color:#2b8a3e; border:1px solid #b2f2bb; border-radius:4px; cursor:pointer; white-space:nowrap; height:32px;">💾</button>
+                    <button type="button" title="Izberi iz šifranta" onclick="window.odpriArtikelPopupZaPostavko(this.closest('.postavka-item'))" style="padding:2px 10px; font-size:1.1em; background:#fff3bf; color:#e67700; border:1px solid #ffd43b; border-radius:4px; cursor:pointer; white-space:nowrap; height:32px;">📦</button>
+                </div>
             </div>
             <div style="width: 40px; display:flex; align-items:flex-end;">
                 <button type="button" class="btn btn-red" style="padding: 5px 10px; width:100%; height: 32px;" onclick="this.closest('.postavka-item').remove(); kalkulirajZneske()">X</button>
@@ -1755,6 +2045,7 @@ async function shraniDokument(e, tip, naslov, id = null) {
         const popEl = tr.querySelector('.p-popust');
         const ddvEl = tr.querySelector('.p-ddv');
         postavke.push({
+            artikel_id: parseInt(tr.querySelector('.p-artikel-id').value) || null,
             opis: tr.querySelector('.p-opis').value,
             kolicina: parseNumberJS(tr.querySelector('.p-kol').value) || 1,
             enota_mere: tr.querySelector('.p-em').value,
@@ -1869,6 +2160,29 @@ window.ustvariRacunIzPonudbe = async function(offerId) {
 
         // Prikažemo obrazec za nov račun
         showDodajDokument('izdani_racuni', 'Izdani računi', newData);
+    } catch (e) {
+        alert(e.message);
+    }
+};
+
+window.ustvariDelovniNalog = async function(docId) {
+    if (!confirm("Ali želite iz tega dokumenta ustvariti nov delovni nalog?")) return;
+    try {
+        const res = await fetch(`/api/dokumenti/detajl/${docId}`);
+        if (!res.ok) throw new Error("Ni mogoče pridobiti podatkov dokumenta.");
+        const data = await res.json();
+        
+        const newData = JSON.parse(JSON.stringify(data));
+        delete newData.id;
+        newData.stevilka = "";
+        newData.tip = 'delovni_nalogi';
+        newData.status = 'neplačano';
+        
+        const today = new Date().toISOString().split('T')[0];
+        newData.datum_izdaje = today;
+        newData.datum_zapadlosti = today;
+
+        showDodajDokument('delovni_nalogi', 'Delovni nalogi', newData);
     } catch (e) {
         alert(e.message);
     }
@@ -3427,11 +3741,17 @@ async function renderOsnovnaSredstva() {
                     <button class="btn btn-blue" onclick="showDodajOsnovnoSredstvo()">+ Novo osnovno sredstvo</button>
                 </div>
             </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #dee2e6;">
+                <button class="btn" style="background:#5c7cfa; color:white;" onclick="knjiziAmortizacijoIzbrana()">Knjizi amortizacijo</button>
+                <button class="btn" style="background:#f08c00; color:white;" onclick="razknjiziAmortizacijo()">Razknjizi amortizacijo</button>
+                <div style="margin-left:auto; align-self:center; font-size:0.9em; color:#666;">Amortizacija se knjizi za izbrana (obkljukana) osnovna sredstva ali za vsa, ce ni izbrano nobeno. Drobni inventar se izpusti.</div>
+            </div>
             <table>
                 <thead>
                     <tr>
                         <th width="40"><input type="checkbox" onclick="window.toggleAllSelection(this.checked, 'osnovna_sredstva')"></th>
                         <th>Inv. št.</th>
+                        <th>Tip</th>
                         <th>Naziv</th>
                         <th>Datum nabave</th>
                         <th>Aktiven</th>
@@ -3470,6 +3790,7 @@ async function renderOsnovnaSredstva() {
                 html += `<tr>
                     <td style="padding:10px;"><input type="checkbox" class="row-checkbox" data-id="${x.id}" ${isChecked} onclick="window.toggleItemSelection(${x.id}, 'osnovna_sredstva')"></td>
                     <td style="padding:10px; font-weight:bold; color:var(--primary-blue); cursor:pointer; text-decoration:underline;" onclick='showDodajOsnovnoSredstvo(${JSON.stringify(x).replace(/'/g, "&apos;")})'>${x.inventarna_stevilka || ''}</td>
+                    <td style="padding:10px;"><span style="background:${x.tip === 'DI' ? '#fff3cd' : '#e2e3e5'}; padding:3px 6px; border-radius:4px; font-size:0.85em; font-weight:bold;">${x.tip === 'DI' ? 'DI' : 'OS'}</span></td>
                     <td style="padding:10px;">${x.naziv}</td>
                     <td style="padding:10px; white-space:nowrap;">${formatDateJS(x.datum_nabave)}</td>
                     <td style="padding:10px;">${aktivenTag}</td>
@@ -3511,6 +3832,13 @@ window.showDodajOsnovnoSredstvo = async function(editData = null) {
                     <div class="form-group" style="flex:1">
                         <label>Inventarna številka</label>
                         <input type="text" id="os_inv" value="${editData?.inventarna_stevilka || autoInv}" required>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label>Tip sredstva</label>
+                        <select id="os_tip">
+                            <option value="OS" ${(!editData || editData.tip !== 'DI') ? 'selected' : ''}>Osnovno sredstvo (OS)</option>
+                            <option value="DI" ${(editData?.tip === 'DI') ? 'selected' : ''}>Drobni inventar (DI)</option>
+                        </select>
                     </div>
                 </div>
 
@@ -3561,6 +3889,7 @@ window.shraniOsnovnoSredstvo = async function(e, id) {
     e.preventDefault();
     const payload = {
         inventarna_stevilka: document.getElementById('os_inv').value.trim(),
+        tip: document.getElementById('os_tip').value,
         naziv: document.getElementById('os_naziv').value.trim(),
         aktiven: document.getElementById('os_aktiven').checked,
         amortizacijska_skupina: document.getElementById('os_skupina').value.trim(),
@@ -4723,6 +5052,10 @@ window.showDodajPlaco = function(editData = null) {
                                 <label id="label_bruto">Zavarovalna osnova (€)</label>
                                 <input type="text" id="p_bruto" value="${editData ? formatNumberJS(editData.bruto_placa) : '1445,12'}" oninput="window.preracunajPlaco()">
                             </div>
+                            <div class="form-group" id="p_konto_pris_box" style="flex:1; margin-bottom:0; display:none;">
+                                <label>Konto za prispevke</label>
+                                <input type="text" id="p_konto_pris" value="${editData?.konto_prispevkov || '265000'}" placeholder="265000">
+                            </div>
                             <button type="button" class="btn btn-blue" style="padding:10px 15px; font-weight:bold;" onclick="window.uvodFURS()">Osveži iz FURS</button>
                         </div>
                     </div>
@@ -4803,6 +5136,7 @@ window.preracunajPlaco = function() {
     if(vrsta === 'sp_100' || vrsta === 'sp_50') {
         label.textContent = "Zavarovalna osnova (€)";
         akBox.style.display = 'none';
+        document.getElementById('p_konto_pris_box').style.display = 'block';
         const koef = vrsta === 'sp_50' ? 0.5 : 1.0;
         piz = (bruto * 0.2435) * koef;
         zz = (bruto * 0.1345) * koef;
@@ -4818,6 +5152,7 @@ window.preracunajPlaco = function() {
     } else {
         label.textContent = "Bruto plača (Bruto 1) (€)";
         akBox.style.display = 'block';
+        document.getElementById('p_konto_pris_box').style.display = 'none';
         piz = bruto * 0.155; 
         zz = bruto * 0.0636;
         zap = bruto * 0.0014;
@@ -4937,6 +5272,7 @@ window.shraniPlaco = async function(e, id) {
         znesek_akontacija_doh: parseNumberJS(document.getElementById('p_doh').value),
         znesek_skupaj: parseNumberJS(document.getElementById('p_skupaj_text').textContent),
         sklic: document.getElementById('p_qr_sklic').textContent,
+        konto_prispevkov: document.getElementById('p_konto_pris').value.trim(),
         placan: false
     };
 
@@ -5458,6 +5794,25 @@ async function renderHelp() {
             `
         },
         {
+            id: 'zaloga',
+            title: 'Materialno vodenje in Zaloga',
+            icon: '📦',
+            content: 'Sledenje zalogam artiklov, avtomatsko knjiženje prejemov in prodaje.',
+            details: `
+                <h4>Realnočasovno vodenje zalog</h4>
+                <p>Program Invoice83 omogoča popolno sledljivost vašega blaga brez odvečnega dela.</p>
+                <ul>
+                    <li><strong>Avtomatski premiki:</strong> Zaloga se posodobi takoj, ko <strong>shranite</strong> dokument (račun ali prejeti račun).</li>
+                    <li><strong>Prejeti računi (Prejem):</strong> Ko shranite prejeti račun, program samodejno poveča zalogo artiklov, ki so na dokumentu.</li>
+                    <li><strong>Izdani računi (Prodaja):</strong> Ob shranjevanju izdanega računa se zaloga ustrezno zmanjša.</li>
+                </ul>
+                <div style="background:#e7f5ff; padding:15px; border-radius:8px; border-left:5px solid var(--primary-blue); margin:15px 0;">
+                    <strong>Pametno ustvarjanje:</strong> Če artikla še nimate v šifrantu, ga lahko ustvarite neposredno iz vrstice računa s klikom na ikono 💾. Program bo samodejno povezal ID artikla z vrstico in posodobil zalogo ob shranjevanju dokumenta.
+                </div>
+                <p>Stanje zaloge lahko kadarkoli preverite v <strong>Šifrantu artiklov</strong>.</p>
+            `
+        },
+        {
             id: 'zgodovina',
             title: 'Zgodovina sprememb',
             icon: '🕒',
@@ -5467,8 +5822,31 @@ async function renderHelp() {
                 <div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">12. 05. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li>dodajanje zaloge</li>
+                            <li>avtomatsko usklajevanje zaloge</li>
+                            <li>dodajanje artiklov in storitev</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">12. 05. 2026</span>
+                            
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li><strong>Materialno vodenje:</strong> Zaloga se zdaj posodablja v realnem času takoj ob shranjevanju dokumentov (prejeti in izdani računi).</li>
+                            <li><strong>Avtomatizacija šifranta:</strong> Pri ustvarjanju artikla neposredno iz računa se ID-ji samodejno povežejo, kar zagotavlja 100 % točnost zaloge.</li>
+                            <li><strong>Robustnost:</strong> Dodan varnostni mehanizem (fallback), ki artikle poveže po nazivu, če ID ni na voljo.</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">08. 05. 2026</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Bizi.si:</strong> Izboljšano samodejno iskanje in bogatenje podatkov o podjetjih pri uvozu dokumentov.</li>
@@ -5720,6 +6098,55 @@ window.knjiziAmortizacijo = async function() {
     });
 };
 
+window.knjiziAmortizacijoIzbrana = async function() {
+    const leto = getLeto();
+    let ids = window.appSelection.ids;
+    
+    let msg = `Ali zelite knjiziti letno amortizacijo za vsa aktivna osnovna sredstva za leto ${leto}?`;
+    if (ids.length > 0) {
+        msg = `Ali zelite knjiziti amortizacijo za ${ids.length} izbranih osnovnih sredstev za leto ${leto}?`;
+    }
+    
+    if (!confirm(msg)) return;
+    
+    odpriTemeljnicaPopup(async function(tid, naziv) {
+        try {
+            const payload = { temeljnica_id: tid, novi_naziv: naziv };
+            if (ids.length > 0) payload.ids = ids;
+            
+            const res = await fetch(`/api/amortizacija/${leto}/knjizi`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                alert("Amortizacija uspesno knjizena.");
+                window.appSelection.ids = [];
+                if (activeModule === 'osnovna_sredstva') renderOsnovnaSredstva();
+                else renderGlavnaKnjiga();
+            } else {
+                const err = await res.json();
+                alert("Napaka: " + (err.detail || ""));
+            }
+        } catch(e) { alert("Napaka komunikacije."); }
+    });
+};
+
+window.razknjiziAmortizacijo = async function() {
+    const leto = getLeto();
+    if (!confirm(`Ali želite razknjižiti amortizacijo za leto ${leto}?`)) return;
+    try {
+        const res = await fetch(`/api/amortizacija/${leto}/razknjizi`, { method: 'POST' });
+        if (res.ok) {
+            alert("Amortizacija razknjižena.");
+            renderGlavnaKnjiga();
+        } else {
+            const err = await res.json();
+            alert("Napaka: " + (err.detail || ""));
+        }
+    } catch(e) { alert("Napaka komunikacije."); }
+};
+
 // --- GLAVNA KNJIGA ---
 async function renderGlavnaKnjiga() {
     titleEl.textContent = "Glavna knjiga (Temeljnice)";
@@ -5731,10 +6158,11 @@ async function renderGlavnaKnjiga() {
         const data = await res.json();
         
         let html = `
-            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #dee2e6;">
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-blue" onclick="showDodajTemeljnico()">+ Nova ročna temeljnica</button>
                     <button class="btn" style="background:#5c7cfa; color:white;" onclick="knjiziAmortizacijo()">Knjiži amortizacijo za leto ${leto}</button>
+                    <button class="btn" style="background:#f08c00; color:white;" onclick="razknjiziAmortizacijo()">Razknjiži amortizacijo</button>
                 </div>
             </div>
             <table class="tbl-dash" style="width:100%;">
@@ -6059,10 +6487,12 @@ async function shraniTemeljnico(e) {
 
 async function brisiTemeljnico(id, isLocked) {
     if (isLocked) {
-        alert("Avtomatsko ustvarjenih temeljnic ni mogoče ročno brisati. Izbrišite ali razknjižite izvorni dokument (račun, izpisek).");
-        return;
+        if (!confirm("OPOZORILO: Ta temeljnica je bila avtomatsko ustvarjena. Ce jo izbrisete, boste morda morali ustrezne dokumente (racun, izpisek, amortizacijo) razknjiziti rocno, sicer bodo ti ostali oznaceni kot knjizeni. Zelite vseeno izbrisati temeljnico?")) {
+            return;
+        }
+    } else {
+        if (!confirm("Ste prepričani, da želite izbrisati to ročno temeljnico?")) return;
     }
-    if (!confirm("Ste prepričani, da želite izbrisati to ročno temeljnico?")) return;
     
     try {
         const res = await fetch(`/api/temeljnice/${id}`, { method: 'DELETE' });
@@ -6080,9 +6510,15 @@ async function renderFinancnaPorocila() {
     const leto = getLeto();
     
     contentDiv.innerHTML = `
-        <div style="display: flex; gap: 20px; margin-bottom: 25px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
-            <button class="btn btn-blue" onclick="loadReport('bilanca_stanja')">Bilanca stanja</button>
-            <button class="btn btn-blue" onclick="loadReport('izkaz_poslovnega_izida')">Izkaz poslovnega izida</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6;">
+            <div style="display: flex; gap: 20px;">
+                <button class="btn btn-blue" onclick="loadReport('bilanca_stanja')">Bilanca stanja</button>
+                <button class="btn btn-blue" onclick="loadReport('izkaz_poslovnega_izida')">Izkaz poslovnega izida</button>
+            </div>
+            <div id="report-controls" style="display:none; gap: 10px;">
+                <button class="btn" style="background:#6c757d; font-size:0.85em;" onclick="toggleAllReports(true)">Razširi vse</button>
+                <button class="btn" style="background:#6c757d; font-size:0.85em;" onclick="toggleAllReports(false)">Skrij vse</button>
+            </div>
         </div>
         <div id="report-container">
             <p style="color: #666;">Izberite poročilo zgoraj, da ga naložite za leto ${leto}.</p>
@@ -6133,7 +6569,7 @@ window.loadReport = async function(vrsta) {
                     <tbody>
         `;
         
-        data.forEach(row => {
+        data.forEach((row, idx) => {
             const isHeader = row.naziv.startsWith('A.') || row.naziv.startsWith('B.') || row.naziv.startsWith('C.') || 
                              row.naziv.startsWith('Č.') || row.naziv.startsWith('D.') || row.naziv.startsWith('E.') ||
                              row.naziv.startsWith('F.') || row.naziv.startsWith('G.') || row.naziv.startsWith('H.') ||
@@ -6142,13 +6578,49 @@ window.loadReport = async function(vrsta) {
             const style = isHeader ? 'font-weight:bold; background:#f8f9fa;' : '';
             const indent = (!isHeader && !row.naziv.match(/^[0-9]/)) ? 'padding-left:30px;' : '';
             
+            const hasKonti = row.konti && row.konti.length > 0;
+            const trClass = hasKonti ? 'expandable-row' : '';
+            const clickAttr = hasKonti ? `onclick="toggleReportRow(this, 'breakdown-${idx}')"` : '';
+            
             html += `
-                <tr style="${style} border-bottom: 1px solid #eee;">
+                <tr class="${trClass}" style="${style} border-bottom: 1px solid #eee;" ${clickAttr}>
                     <td style="padding:8px; width:60px;">${row.aop}</td>
-                    <td style="padding:8px; ${indent}">${row.naziv}</td>
+                    <td style="padding:8px; ${indent}">
+                        ${hasKonti ? '<span class="row-expand-icon">+</span>' : ''}
+                        ${row.naziv}
+                    </td>
                     <td style="padding:8px; text-align:right; font-weight:${isHeader?'700':'400'};">${formatMoneyJS(row.vrednost)}</td>
                 </tr>
             `;
+            
+            if (hasKonti) {
+                html += `
+                    <tr id="breakdown-${idx}" class="breakdown-row">
+                        <td colspan="3">
+                            <div class="breakdown-container">
+                                <table class="breakdown-table">
+                                    <thead>
+                                        <tr style="background:#f1f3f5;">
+                                            <th style="padding:5px 10px; width:100px;">Konto</th>
+                                            <th style="padding:5px 10px;">Naziv konta</th>
+                                            <th style="padding:5px 10px; text-align:right;">Znesek</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${row.konti.map(k => `
+                                            <tr style="cursor:pointer;" onclick="event.stopPropagation(); window.prikaziKontoKartico('${k.konto}')" title="Klikni za podrobnosti po knjižbah">
+                                                <td style="color:var(--primary-blue); font-weight:600;">${k.konto}</td>
+                                                <td>${k.naziv}</td>
+                                                <td style="text-align:right; font-weight:600;">${formatMoneyJS(k.vrednost)}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
         });
         
         html += `
@@ -6161,8 +6633,315 @@ window.loadReport = async function(vrsta) {
         `;
         
         container.innerHTML = html;
+        document.getElementById('report-controls').style.display = 'flex';
     } catch(e) {
         container.innerHTML = `<p style="color:red;">Napaka: ${e.message}</p>`;
     }
 }
+
+window.toggleReportRow = function(el, targetId) {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    
+    const isExpanded = target.classList.contains('active');
+    if (isExpanded) {
+        target.classList.remove('active');
+        el.classList.remove('expanded');
+        el.querySelector('.row-expand-icon').textContent = '+';
+    } else {
+        target.classList.add('active');
+        el.classList.add('expanded');
+        el.querySelector('.row-expand-icon').textContent = '−';
+    }
+};
+
+window.toggleAllReports = function(expand) {
+    const rows = document.querySelectorAll('.expandable-row');
+    rows.forEach(row => {
+        const targetId = row.getAttribute('onclick').match(/'([^']+)'/)[1];
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        
+        if (expand) {
+            target.classList.add('active');
+            row.classList.add('expanded');
+            row.querySelector('.row-expand-icon').textContent = '−';
+        } else {
+            target.classList.remove('active');
+            row.classList.remove('expanded');
+            row.querySelector('.row-expand-icon').textContent = '+';
+        }
+    });
+};
+
+async function renderKontoKartica(initialKonto = '') {
+    titleEl.textContent = "Iskanje po kontih (Konto kartica)";
+    const leto = getLeto();
+    
+    contentDiv.innerHTML = `
+        <div class="dash-section" style="margin-bottom:20px;">
+            <div style="display:flex; gap:15px; align-items:flex-end;">
+                <div class="form-group" style="margin:0; flex:1;">
+                    <label>Številka konta (ali začetek)</label>
+                    <input type="text" id="kk_konto" value="${initialKonto}" list="konti-datalist" placeholder="npr. 485" onkeypress="if(event.key==='Enter') window.searchKontoKartica()">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Leto</label>
+                    <input type="number" id="kk_leto" value="${leto}" style="width:100px;">
+                </div>
+                <button class="btn btn-blue" onclick="window.searchKontoKartica()">Išči</button>
+            </div>
+        </div>
+        <div id="kk-results">
+            <p style="color:#999; text-align:center; padding:40px;">Vnesite številko konta zgoraj za prikaz knjižb.</p>
+        </div>
+    `;
+    
+    if (initialKonto) {
+        setTimeout(() => window.searchKontoKartica(), 50);
+    }
+}
+
+window.searchKontoKartica = async function() {
+    const kontoEl = document.getElementById('kk_konto');
+    if (!kontoEl) return;
+    const konto = kontoEl.value.trim();
+    const leto = document.getElementById('kk_leto').value;
+    const resultsDiv = document.getElementById('kk-results');
+    
+    if (!konto) {
+        alert("Prosim vnesite številko konta.");
+        return;
+    }
+    
+    resultsDiv.innerHTML = '<p style="text-align:center; padding:20px;">Iščem...</p>';
+    
+    try {
+        const res = await fetch(`/api/reports/konto_kartica?konto=${konto}&leto=${leto}`);
+        if (!res.ok) throw new Error("Napaka pri pridobivanju podatkov.");
+        
+        const data = await res.json();
+        if (data.length === 0) {
+            resultsDiv.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">Ni najdenih knjižb za ta konto v izbranem letu.</p>';
+            return;
+        }
+        
+        let sumaBreme = 0;
+        let sumaDobro = 0;
+        
+        let html = `
+            <div style="background:white; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.05); overflow:hidden;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
+                    <thead>
+                        <tr style="background:#f8f9fa; border-bottom:2px solid #dee2e6;">
+                            <th style="padding:10px;">Datum</th>
+                            <th style="padding:10px;">Temeljnica</th>
+                            <th style="padding:10px;">Konto</th>
+                            <th style="padding:10px;">Partner</th>
+                            <th style="padding:10px;">Opis knjižbe</th>
+                            <th style="padding:10px; text-align:right;">Breme</th>
+                            <th style="padding:10px; text-align:right;">Dobro</th>
+                            <th style="padding:10px; text-align:center;">Vezava</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.forEach(row => {
+            sumaBreme += row.znesek_v_breme || 0;
+            sumaDobro += row.znesek_v_dobro || 0;
+            
+            const b = row.znesek_v_breme > 0 ? formatMoneyJS(row.znesek_v_breme) : '';
+            const d = row.znesek_v_dobro > 0 ? formatMoneyJS(row.znesek_v_dobro) : '';
+            
+            let linkHtml = '';
+            if (row.dokument_id && row.dokument_tip) {
+                linkHtml = `<button class="icon-btn" title="Odpri dokument" onclick="odpriVezaniDokument(${row.dokument_id}, '${row.dokument_tip}')">${ICONS.invoice}</button>`;
+            }
+            
+            html += `
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:10px; white-space:nowrap;">${formatDateJS(row.datum)}</td>
+                    <td style="padding:10px; color:var(--primary-blue); font-weight:600;">${row.temeljnica_stevilka} (${row.temeljnica_vrsta})</td>
+                    <td style="padding:10px; font-weight:500;">${row.konto}</td>
+                    <td style="padding:10px;">${row.partner_naziv || '/'}</td>
+                    <td style="padding:10px;">${row.opis || ''}</td>
+                    <td style="padding:10px; text-align:right; font-weight:600; color:#1971c2;">${b}</td>
+                    <td style="padding:10px; text-align:right; font-weight:600; color:#c92a2a;">${d}</td>
+                    <td style="padding:10px; text-align:center;">${linkHtml}</td>
+                </tr>
+            `;
+        });
+        
+        const saldo = sumaBreme - sumaDobro;
+        
+        html += `
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:#f8f9fa; font-weight:700; border-top:2px solid #dee2e6;">
+                            <td colspan="5" style="padding:12px; text-align:right;">SKUPAJ:</td>
+                            <td style="padding:12px; text-align:right; color:#1971c2;">${formatMoneyJS(sumaBreme)}</td>
+                            <td style="padding:12px; text-align:right; color:#c92a2a;">${formatMoneyJS(sumaDobro)}</td>
+                            <td></td>
+                        </tr>
+                        <tr style="background:#f1f3f5; font-weight:800; font-size:1.1em;">
+                            <td colspan="5" style="padding:12px; text-align:right;">SALDO:</td>
+                            <td colspan="2" style="padding:12px; text-align:center; color:${saldo >= 0 ? '#1971c2' : '#c92a2a'}">
+                                ${formatMoneyJS(Math.abs(saldo))} ${saldo >= 0 ? '(B)' : '(D)'}
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        `;
+        
+        resultsDiv.innerHTML = html;
+        
+    } catch(e) {
+        resultsDiv.innerHTML = `<p style="color:red; text-align:center; padding:20px;">Napaka: ${e.message}</p>`;
+    }
+}
+
+window.odpriVezaniDokument = async function(id, tip) {
+    if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'prejeti_dobropisi'].includes(tip)) {
+        await editDokument(id, tip);
+    } else if (tip === 'place') {
+        renderPlace();
+    } else if (tip === 'izpiski') {
+        renderIzpiski();
+    }
+};
+
+window.prikaziKontoKartico = function(konto) {
+    showModule('konto_kartica');
+    renderKontoKartica(konto);
+};
+
+// --- POPUP IZBIRNIK ARTIKLOV ---
+let _zadnjiPostavkaDiv = null;
+
+window.odpriArtikelPopupZaPostavko = function(postavkaDiv) {
+    _zadnjiPostavkaDiv = postavkaDiv;
+    document.getElementById('ap_search').value = '';
+    document.getElementById('ap_vrsta_filter').value = '';
+    document.getElementById('artikel-popup-overlay').style.display = 'flex';
+    window.filterArtikelPopup();
+};
+
+window.zapriArtikelPopup = function() {
+    document.getElementById('artikel-popup-overlay').style.display = 'none';
+};
+
+window.filterArtikelPopup = async function() {
+    const query = document.getElementById('ap_search').value.toLowerCase();
+    const vrsta = document.getElementById('ap_vrsta_filter').value;
+    const listDiv = document.getElementById('ap_list');
+    
+    listDiv.innerHTML = '<p style="text-align:center; padding:20px;">Nalagam...</p>';
+    
+    try {
+        const res = await fetch('/api/artikli_storitve');
+        let data = await res.json();
+        
+        // Lokalno filtriranje
+        let filtrirano = data.filter(a => {
+            const matchesQuery = a.naziv.toLowerCase().includes(query) || a.sifra.toLowerCase().includes(query);
+            const matchesVrsta = !vrsta || a.vrsta === vrsta;
+            return matchesQuery && matchesVrsta && a.aktiven;
+        });
+
+        if (filtrirano.length === 0) {
+            listDiv.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">Ni najdenih artiklov/storitev.</p>';
+            return;
+        }
+
+        let html = '<table class="table-small"><thead><tr><th>Šifra</th><th>Naziv</th><th style="text-align:right">Zaloga</th><th style="text-align:right">Cena MP</th><th>Akcija</th></tr></thead><tbody>';
+        filtrirano.forEach(a => {
+            const zText = a.vodi_zalogo ? `<span style="font-weight:bold; color:${a.zaloga_kolicina > 0 ? '#2b8a3e' : '#e03131'}">${formatNumberJS(a.zaloga_kolicina)}</span>` : '-';
+            html += `
+                <tr>
+                    <td><code>${a.sifra}</code></td>
+                    <td><div style="font-weight:500;">${a.naziv}</div><div style="font-size:0.8em; color:#888;">${a.opis || ''}</div></td>
+                    <td style="text-align:right">${zText}</td>
+                    <td style="text-align:right; font-weight:bold; color:var(--primary-blue);">${formatNumberJS(a.cena_malo)} €</td>
+                    <td style="text-align:center;">
+                        <button class="btn btn-blue" style="padding:4px 10px; font-size:0.85em;" onclick="window.izberiArtikelZaPostavko(${JSON.stringify(a).replace(/"/g, '&quot;')})">Izberi</button>
+                    </td>
+                </tr>
+            `;
+        });
+        html += '</tbody></table>';
+        listDiv.innerHTML = html;
+    } catch(e) {
+        listDiv.innerHTML = '<p style="color:red">Napaka pri nalaganju.</p>';
+    }
+};
+
+window.izberiArtikelZaPostavko = function(artikel) {
+    if (!_zadnjiPostavkaDiv) return;
+    
+    const idInp = _zadnjiPostavkaDiv.querySelector('.p-artikel-id');
+    const opisInp = _zadnjiPostavkaDiv.querySelector('.p-opis');
+    const cenaInp = _zadnjiPostavkaDiv.querySelector('.p-cena');
+    const ddvSel = _zadnjiPostavkaDiv.querySelector('.p-ddv');
+    const emSel = _zadnjiPostavkaDiv.querySelector('.p-em');
+
+    if (idInp) idInp.value = artikel.id;
+    if (opisInp) opisInp.value = artikel.naziv; 
+    
+    if (cenaInp) cenaInp.value = formatNumberJS(artikel.cena_malo);
+    
+    if (ddvSel) {
+        for (let opt of ddvSel.options) {
+            if (parseFloat(opt.value) === artikel.stopnja_ddv) {
+                opt.selected = true;
+                break;
+            }
+        }
+    }
+
+    if (emSel) {
+        for (let opt of emSel.options) {
+            if (opt.value.toLowerCase() === artikel.enota_mere.toLowerCase()) {
+                opt.selected = true;
+                break;
+            }
+        }
+    }
+
+    window.zapriArtikelPopup();
+    window.kalkulirajZneske();
+};
+
+window.odpriDodajArtikelIzPopupa = function() {
+    document.getElementById('artikel-popup-overlay').style.display = 'none';
+    renderArtikliForm(null, true); // true = isPopup
+};
+
+window.zapriArtikelFormPopup = function() {
+    document.getElementById('artikel-form-popup-overlay').style.display = 'none';
+};
+
+window.shraniPostavkoKotArtikel = function(row) {
+    window._zadnjiPostavkaDiv = row;
+    const opis = row.querySelector('.p-opis').value;
+    const cena = parseNumberJS(row.querySelector('.p-cena').value);
+    const ddv = parseNumberJS(row.querySelector('.p-ddv')?.value || '22');
+    const em = row.querySelector('.p-em').value;
+    const konto = row.querySelector('.p-konto').value;
+    
+    const syntheticData = {
+        naziv: opis,
+        cena_malo: cena,
+        stopnja_ddv: ddv,
+        enota_mere: em,
+        konto: konto,
+        vrsta: 'artikel',
+        vodi_zalogo: true,
+        zacetna_zaloga: 0.0 // Uporabnik želi pustiti na 0 in da se doda iz dokumenta
+    };
+    
+    renderArtikliForm(syntheticData, true); 
+};
 

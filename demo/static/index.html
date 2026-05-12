@@ -122,6 +122,7 @@
             </div>
             <a href="#" class="active" onclick="showModule('dashboard')" style="margin-top: 10px;">🏠 Nadzorna plošča</a>
             <a href="#" onclick="showModule('partnerji')">👥 Poslovni partnerji</a>
+            <a href="#" onclick="showModule('artikli_storitve')">📦 Artikli in storitve</a>
             
             <div class="nav-group open">
                 <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
@@ -131,6 +132,7 @@
                 <div class="nav-group-items">
                     <a href="#" onclick="showModule('izdani_racuni')">Izdani računi</a>
                     <a href="#" onclick="showModule('ponudbe')">Ponudbe</a>
+                    <a href="#" onclick="showModule('delovni_nalogi')">Delovni nalogi</a>
                     <a href="#" onclick="showModule('dobropisi')">Dobropisi</a>
                 </div>
             </div>
@@ -154,6 +156,7 @@
                 <div class="nav-group-items">
                     <a href="#" onclick="showModule('izpiski')">Bančni izpiski</a>
                     <a href="#" onclick="showModule('glavna_knjiga')">Glavna knjiga</a>
+                    <a href="#" onclick="showModule('konto_kartica')">Iskanje po kontih</a>
                     <a href="#" onclick="showModule('osnovna_sredstva')">Osnovna sredstva</a>
                     <a href="#" onclick="showModule('financna_porocila')">Finančna poročila</a>
                 </div>
@@ -248,7 +251,27 @@
         </div>
     </div>
 
-    <!-- Izbira temeljnice ob knjiženju -->
+    <!-- Modal za izbiro artikla/storitve iz šifranta -->
+    <div id="artikel-popup-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9998; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:10px; padding:25px; width:680px; max-width:96vw; max-height:88vh; overflow-y:auto; box-shadow:0 15px 50px rgba(0,0,0,0.25);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; color:var(--primary-blue);">📦 Izberi artikel ali storitev</h3>
+                <button onclick="window.zapriArtikelPopup()" style="background:none; border:none; font-size:1.5em; cursor:pointer; color:#868e96;">×</button>
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="ap_search" placeholder="Išči po nazivu, šifri..." style="flex:1; min-width:180px;" oninput="window.filterArtikelPopup()">
+                <select id="ap_vrsta_filter" onchange="window.filterArtikelPopup()" style="width:140px;">
+                    <option value="">Vse vrste</option>
+                    <option value="artikel">Artikli</option>
+                    <option value="storitev">Storitve</option>
+                </select>
+                <button class="btn btn-blue" onclick="window.odpriDodajArtikelIzPopupa()" style="white-space:nowrap;">+ Nov</button>
+            </div>
+            <div id="ap_list" style="max-height:420px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+
     <div id="temeljnica-popup-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;">
         <div style="background:white; padding:25px; border-radius:12px; width:480px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
             <h3 style="margin-top:0; color:var(--primary-blue); font-size:1.2rem; border-bottom:1px solid #eee; padding-bottom:10px;">Izbira temeljnice</h3>
@@ -272,6 +295,13 @@
                 <button class="btn" style="background:#eee; color:#333;" onclick="window.zapriTemeljnicaPopup()">Prekliči</button>
                 <button class="btn btn-blue" onclick="window.potrdiTemeljnicaPopup()">Potrdi in knjiži</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal za urejanje/dodajanje artikla (pop-up) -->
+    <div id="artikel-form-popup-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center;">
+        <div id="artikel-form-popup-container" style="background:white; border-radius:10px; padding:0; width:720px; max-width:96vw; max-height:92vh; overflow-y:auto; box-shadow:0 15px 50px rgba(0,0,0,0.25);">
+            <!-- Vsebina se naloži dinamično -->
         </div>
     </div>
 
