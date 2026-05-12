@@ -29,9 +29,12 @@ def clean():
         path = os.path.join(BASE_DIR, d)
         if os.path.exists(path):
             try:
+                # Na Windowsih shutil.rmtree včasih odpove, če so datoteke v uporabi
+                # ignore_errors=True bi sicer preskočil, a mi želimo vsaj poskusiti
                 shutil.rmtree(path)
             except Exception as e:
-                print(f"  ⚠️ Ni mogoče pobrisati {d}: {e}")
+                print(f"  ⚠️ Ni mogoče popolnoma pobrisati {d}: {e}")
+                print(f"  💡 Nasvet: Zaprite vse programe, ki morda uporabljajo datoteke v {d}.")
             
     # sessions
     sessions_dir = os.path.join(BASE_DIR, 'sessions')
