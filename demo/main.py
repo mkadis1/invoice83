@@ -31,7 +31,16 @@ if os.name == 'nt':
 from bs4 import BeautifulSoup
 import pdf_parser
 from pdf_parser import extract_data_from_pdf
-import ocr_engine
+try:
+    import ocr_engine
+except Exception:
+    import traceback
+    import sys
+    sys.stderr.write("CRITICAL: Failed to import ocr_engine\n")
+    traceback.print_exc(file=sys.stderr)
+    sys.stderr.flush()
+    # Still raise it to stop the server
+    raise
 import io
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
