@@ -32,11 +32,11 @@ from bs4 import BeautifulSoup
 import pdf_parser
 from pdf_parser import extract_data_from_pdf
 try:
-    import ocr_engine
+    import invoice_ocr
 except Exception:
     import traceback
     import sys
-    sys.stderr.write("CRITICAL: Failed to import ocr_engine\n")
+    sys.stderr.write("CRITICAL: Failed to import invoice_ocr\n")
     traceback.print_exc(file=sys.stderr)
     sys.stderr.flush()
     # Still raise it to stop the server
@@ -1606,8 +1606,8 @@ async def import_eslog_pregled(file: UploadFile = File(...)):
                                 enriched['file_name'] = name
                                 results.append(enriched)
                             else:
-                                # Poskusimo še s splošnim ocr_engine
-                                parsed = ocr_engine.process_invoice_data(f_content, name)
+                                # Poskusimo še s splošnim invoice_ocr
+                                parsed = invoice_ocr.process_invoice_data(f_content, name)
                                 if parsed:
                                     enriched = _enrich_eslog_data(parsed)
                                     enriched['file_data'] = base64.b64encode(f_content).decode('utf-8')
@@ -1623,7 +1623,7 @@ async def import_eslog_pregled(file: UploadFile = File(...)):
             elif file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
                 parsed = extract_aliexpress_png(content)
                 if not parsed:
-                    parsed = ocr_engine.process_invoice_data(content, file.filename)
+                    parsed = invoice_ocr.process_invoice_data(content, file.filename)
                 
                 if parsed:
                     enriched = _enrich_eslog_data(parsed)
@@ -1987,9 +1987,9 @@ def extract_generic_pdf(content):
         print(f"PDF Error: {e}")
 
     if not pdf_text.strip():
-        # Skenirani/slikovni PDF - ni besedila. Uporabimo ocr_engine.
+        # Skenirani/slikovni PDF - ni besedila. Uporabimo invoice_ocr.
         try:
-            return ocr_engine.process_invoice_data(content, "imported.pdf")
+            return invoice_ocr.process_invoice_data(content, "imported.pdf")
         except:
             return None
         
