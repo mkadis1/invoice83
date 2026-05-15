@@ -11,6 +11,7 @@ except:
 shutil.copy2('database.py', 'demo/database.py')
 shutil.copy2('pdf_parser.py', 'demo/pdf_parser.py')
 shutil.copy2('knjizenje.py', 'demo/knjizenje.py')
+shutil.copy2('ocr_engine.py', 'demo/ocr_engine.py')
 
 # 2. Patch main.py for Demo
 with open('main.py', 'r', encoding='utf-8') as f:
