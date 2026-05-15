@@ -1,4 +1,7 @@
 import os
+import sys
+# Zagotovi, da je trenutna mapa v pathu za uvoze na Railwayu
+sys.path.append(os.getcwd())
 import base64
 import tempfile
 import zipfile
