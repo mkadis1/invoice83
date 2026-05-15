@@ -229,14 +229,21 @@ def git_push():
         subprocess.run(['git', 'init'], check=True)
     
     try:
-        subprocess.run(['git', 'add', '.'], check=True)
-        msg = f"Release {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        subprocess.run(['git', 'commit', '-m', msg], check=True)
+        # Preveri če so sploh kakšne spremembe
+        status = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True).stdout.strip()
         
+        if status:
+            subprocess.run(['git', 'add', '.'], check=True)
+            msg = f"Release {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            subprocess.run(['git', 'commit', '-m', msg], check=True)
+            print(f"[*] Ustvarjen commit: {msg}")
+        else:
+            print("[*] Ni novih sprememb za commit.")
+
         # Preveri če obstaja remote
         remotes = subprocess.run(['git', 'remote'], capture_output=True, text=True).stdout.strip()
         if not remotes:
-            print("❌ Napaka: Brez remote-a (origin) ne morem push-ati. Prosim, ročno dodajte remote: git remote add origin <url>")
+            print("[!] Napaka: Brez remote-a (origin) ne morem push-ati.")
             return
 
         subprocess.run(['git', 'push', '-u', 'origin', 'main'], check=True)
