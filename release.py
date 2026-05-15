@@ -215,7 +215,7 @@ def run_scripts():
 
     print(">>> Ustvarjanje ZIP arhiva za testerje (pakiranje.ps1)...")
     try:
-        subprocess.run(['powershell', '-File', 'pakiranje.ps1'], check=True)
+        subprocess.run(['powershell', '-ExecutionPolicy', 'Bypass', '-File', 'pakiranje.ps1'], check=True)
         print("[OK] ZIP arhiv ustvarjen.")
     except Exception as e:
         print(f"[ERR] Napaka pri ustvarjanju ZIP arhiva: {e}")
