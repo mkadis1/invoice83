@@ -28,6 +28,7 @@ if os.name == 'nt':
 from bs4 import BeautifulSoup
 import pdf_parser
 from pdf_parser import extract_data_from_pdf
+import ocr_engine
 import io
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -203,6 +204,7 @@ class Nastavitve(BaseModel):
     email_template_racun: Optional[str] = ""
     email_template_ponudba: Optional[str] = ""
     email_template_dobropis: Optional[str] = ""
+    dashboard_config: Optional[str] = None
 
 class PlaciloPovezava(BaseModel):
     dokument_id: int
@@ -615,12 +617,14 @@ def save_nastavitve(n: Nastavitve):
             naziv=?, ulica=?, posta_kraj=?, drzava=?, davcna_stevilka=?, 
             zavezanec_za_ddv=?, trr=?, banka=?, email_posiljatelja=?, telefon=?, spletna_stran=?,
             kratko_ime=?, dvostavno_knjigovodstvo=?, smtp_server=?, smtp_port=?, smtp_username=?,
-            smtp_password=?, smtp_use_tls=?, email_template_racun=?, email_template_ponudba=?, email_template_dobropis=?
+            smtp_password=?, smtp_use_tls=?, email_template_racun=?, email_template_ponudba=?, email_template_dobropis=?,
+            dashboard_config=?
         WHERE id = 1
     """, (n.naziv, n.ulica, n.posta_kraj, n.drzava, n.davcna_stevilka, 
           n.zavezanec_za_ddv, n.trr, n.banka, n.email_posiljatelja, n.telefon, n.spletna_stran,
           n.kratko_ime, n.dvostavno_knjigovodstvo, n.smtp_server, n.smtp_port, n.smtp_username,
-          n.smtp_password, n.smtp_use_tls, n.email_template_racun, n.email_template_ponudba, n.email_template_dobropis))
+          n.smtp_password, n.smtp_use_tls, n.email_template_racun, n.email_template_ponudba, n.email_template_dobropis,
+          n.dashboard_config))
     conn.commit()
     conn.close()
     
@@ -1628,19 +1632,31 @@ async def import_eslog_pregled(file: UploadFile = File(...)):
                                 enriched['file_data'] = base64.b64encode(f_content).decode('utf-8')
                                 enriched['file_name'] = name
                                 results.append(enriched)
+                            else:
+                                # Poskusimo še s splošnim ocr_engine
+                                parsed = ocr_engine.process_invoice_data(f_content, name)
+                                if parsed:
+                                    enriched = _enrich_eslog_data(parsed)
+                                    enriched['file_data'] = base64.b64encode(f_content).decode('utf-8')
+                                    enriched['file_name'] = name
+                                    results.append(enriched)
                         except Exception as e:
-                            print(f"Error parsing Ali/Temu {name}: {e}")
+                            print(f"Error parsing {name}: {e}")
         else:
             if file.filename.lower().endswith('.xml'):
                 parsed = parse_eslog_xml(content)
                 enriched = _enrich_eslog_data(parsed)
                 results.append(enriched)
-            elif file.filename.lower().endswith('.png'):
+            elif file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
                 parsed = extract_aliexpress_png(content)
-                enriched = _enrich_eslog_data(parsed)
-                enriched['file_data'] = base64.b64encode(content).decode('utf-8')
-                enriched['file_name'] = file.filename
-                results.append(enriched)
+                if not parsed:
+                    parsed = ocr_engine.process_invoice_data(content, file.filename)
+                
+                if parsed:
+                    enriched = _enrich_eslog_data(parsed)
+                    enriched['file_data'] = base64.b64encode(content).decode('utf-8')
+                    enriched['file_name'] = file.filename
+                    results.append(enriched)
             elif file.filename.lower().endswith('.pdf'):
                 parsed = extract_temu_pdf(content)
                 enriched = _enrich_eslog_data(parsed)
@@ -1671,6 +1687,14 @@ def _enrich_eslog_data(data):
         # 2. Poskusi ujemanje po točnem nazivu
         cursor.execute("SELECT id, naziv FROM partnerji WHERE UPPER(naziv) = UPPER(?)", (naziv,))
         row = cursor.fetchone()
+        
+    if not row and naziv:
+        # 3. Poskusi "po korenu" — vzemi prvi del naziva (brez d.o.o., s.p. itd)
+        # Odstranimo vse do vejice ali pike ali d.o.o.
+        koren = re.split(r'[,.\s]+(?:d\.?\s*o\.?\s*o\.?|s\.?\s*p\.?|d\.?\s*d\.?)\b', naziv, flags=re.IGNORECASE)[0].strip()
+        if len(koren) > 3:
+            cursor.execute("SELECT id, naziv FROM partnerji WHERE UPPER(naziv) LIKE UPPER(?)", (f"%{koren}%",))
+            row = cursor.fetchone()
         
     if not row and naziv:
         # 3. Posebna pravila za tuje platforme
@@ -1726,6 +1750,10 @@ async def import_eslog_bulk_potrdi(request_data: dict):
         except Exception as e:
             print(f"Bulk save error: {e}")
     return {"status": "success", "count": len(results), "ids": results}
+
+            
+    conn.close()
+    return {"status": "finished", "results": results}
 
 async def _save_imported_eslog(data):
     conn = database.get_db()
@@ -1786,9 +1814,9 @@ async def _save_imported_eslog(data):
         # 4. Postavke
         for it in data['postavke']:
             cursor.execute("""
-                INSERT INTO dokumenti_postavke (dokument_id, artikel_id, opis, kolicina, cena_enote, stopnja_ddv, znesek_skupaj, konto, enota_mere)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (doc_id, it.get('artikel_id'), it['opis'], it['kolicina'], it['cena_enote'], it['stopnja_ddv'], it['znesek_skupaj'], it.get('konto'), it.get('enota_mere', 'kos')))
+                INSERT INTO dokumenti_postavke (dokument_id, artikel_id, opis, kolicina, cena_enote, popust, stopnja_ddv, znesek_skupaj, konto, enota_mere)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (doc_id, it.get('artikel_id'), it['opis'], it['kolicina'], it['cena_enote'], it.get('popust', 0), it['stopnja_ddv'], it['znesek_skupaj'], it.get('konto'), it.get('enota_mere', 'kos')))
         
         conn.commit()
         return doc_id
@@ -1986,7 +2014,11 @@ def extract_generic_pdf(content):
         print(f"PDF Error: {e}")
 
     if not pdf_text.strip():
-        return None  # Skenirani/slikovni PDF - ni besedila
+        # Skenirani/slikovni PDF - ni besedila. Uporabimo ocr_engine.
+        try:
+            return ocr_engine.process_invoice_data(content, "imported.pdf")
+        except:
+            return None
         
     try:
         with open("pdf_debug.txt", "w", encoding="utf-8") as f:
@@ -2411,6 +2443,7 @@ class Dokument(BaseModel):
     zakljucno_besedilo: Optional[str] = ""
     noga_dokumenta: Optional[str] = ""
     opombe: Optional[str] = ""
+    interna_stevilka: Optional[str] = ""
     valuta: Optional[str] = "EUR"
     tecaj: Optional[float] = 1.0
     znesek_v_valuti: Optional[float] = 0.0
@@ -2792,6 +2825,8 @@ def create_dokument(doc: Dokument):
     
     # Samodejno oštevilčevanje, če številka ni podana
     stevilka = doc.stevilka
+    interna_st = doc.interna_stevilka
+    
     if not stevilka or stevilka == "":
         cursor.execute("SELECT stevilka FROM dokumenti WHERE tip = ? AND poslovno_leto = ? AND stevilka LIKE '%-%'", (doc.tip, doc.poslovno_leto))
         rows = cursor.fetchall()
@@ -2800,27 +2835,42 @@ def create_dokument(doc: Dokument):
         for r in rows:
             st = r['stevilka']
             try:
-                # Handle both '001-2026' and '2026-001' historically just in case
                 parts = st.split('-')
                 if len(parts) == 2:
                     if parts[0].isdigit() and len(parts[0]) <= 4 and int(parts[0]) != doc.poslovno_leto:
-                        # Format NNN-YYYY
                         num = int(parts[0])
                     else:
-                        # Format YYYY-NNN
                         num = int(parts[1])
                     if num > max_num:
                         max_num = num
-            except:
-                pass
+            except: pass
                 
         next_num = max_num + 1
         stevilka = f"{next_num:03d}-{doc.poslovno_leto}"
+
+    # Posebna logika za interna_stevilka pri prejetih računih
+    if doc.tip == 'prejeti_racuni' and (not interna_st or interna_st == ""):
+        cursor.execute("SELECT interna_stevilka FROM dokumenti WHERE tip = 'prejeti_racuni' AND poslovno_leto = ? AND interna_stevilka LIKE '%-%'", (doc.poslovno_leto,))
+        rows = cursor.fetchall()
+        max_int = 0
+        for r in rows:
+            st = r['interna_stevilka']
+            if not st: continue
+            try:
+                parts = st.split('-')
+                if len(parts) == 2:
+                    num = int(parts[0]) if parts[0].isdigit() and int(parts[0]) != doc.poslovno_leto else int(parts[1])
+                    if num > max_int: max_int = num
+            except: pass
+        next_int = max_int + 1
+        interna_st = f"{next_int:03d}-{doc.poslovno_leto}"
+    elif not interna_st or interna_st == "":
+        interna_st = stevilka
     
     cursor.execute("""
-        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila))
+        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila, interna_stevilka)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, interna_st))
     
     doc_id = cursor.lastrowid
     for p in doc.postavke:
@@ -2862,12 +2912,12 @@ def update_dokument(id: int, doc: Dokument):
             poslovno_leto=?, tip=?, stevilka=?, partner_id=?, datum_izdaje=?, datum_zapadlosti=?, 
             znesek_brez_ddv=?, znesek_ddv=?, znesek_skupaj=?, datum_storitve_od=?, datum_storitve_do=?, 
             status=?, datum_placila=?, nacin_placila=?, zakljucno_besedilo=?, noga_dokumenta=?, opombe=?,
-            valuta=?, tecaj=?, znesek_v_valuti=?, vkljuci_placilo=?, odstotek_placila=?
+            valuta=?, tecaj=?, znesek_v_valuti=?, vkljuci_placilo=?, odstotek_placila=?, interna_stevilka=?
         WHERE id = ?
     """, (doc.poslovno_leto, doc.tip, doc.stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, 
           doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, 
           doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe,
-          doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, id))
+          doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, doc.interna_stevilka, id))
     
     # Vstavljanje novih postavk
     for p in doc.postavke:

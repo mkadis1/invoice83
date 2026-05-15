@@ -53,6 +53,7 @@ def init_db():
         zakljucno_besedilo TEXT,
         noga_dokumenta TEXT,
         opombe TEXT,
+        interna_stevilka TEXT,
         FOREIGN KEY (partner_id) REFERENCES partnerji(id)
     );
 
@@ -199,7 +200,8 @@ def init_db():
         smtp_port INTEGER,
         smtp_username TEXT,
         smtp_password TEXT,
-        smtp_use_tls BOOLEAN DEFAULT 1
+        smtp_use_tls BOOLEAN DEFAULT 1,
+        dashboard_config TEXT
     );
 
     CREATE TABLE IF NOT EXISTS zakljucna_besedila (
@@ -377,6 +379,9 @@ def init_db():
     try: cursor.execute("ALTER TABLE temeljnice_postavke ADD COLUMN dokument_tip TEXT")
     except: pass
 
+    try: cursor.execute("ALTER TABLE dokumenti ADD COLUMN interna_stevilka TEXT")
+    except: pass
+
     # Migracija: Šifrant artiklov in storitev
     try: cursor.execute("ALTER TABLE artikli_storitve ADD COLUMN konto TEXT")
     except: pass
@@ -385,6 +390,11 @@ def init_db():
 
     try:
         cursor.execute("ALTER TABLE artikli_storitve ADD COLUMN vodi_zalogo BOOLEAN DEFAULT 0")
+    except:
+        pass
+        
+    try:
+        cursor.execute("ALTER TABLE nastavitve ADD COLUMN dashboard_config TEXT")
     except:
         pass
 

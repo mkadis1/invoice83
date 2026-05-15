@@ -121,8 +121,16 @@
                 </select>
             </div>
             <a href="#" class="active" onclick="showModule('dashboard')" style="margin-top: 10px;">🏠 Nadzorna plošča</a>
-            <a href="#" onclick="showModule('partnerji')">👥 Poslovni partnerji</a>
-            <a href="#" onclick="showModule('artikli_storitve')">📦 Artikli in storitve</a>
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
+                    <span>📂 Šifranti</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="nav-group-items">
+                    <a href="#" onclick="showModule('partnerji')">Partnerji</a>
+                    <a href="#" onclick="showModule('artikli_storitve')">Artikli in storitve</a>
+                </div>
+            </div>
             
             <div class="nav-group open">
                 <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
@@ -295,6 +303,13 @@
                 <button class="btn" style="background:#eee; color:#333;" onclick="window.zapriTemeljnicaPopup()">Prekliči</button>
                 <button class="btn btn-blue" onclick="window.potrdiTemeljnicaPopup()">Potrdi in knjiži</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Popup za dokumente (Izdani računi, Prejeti računi, Ponudbe...) -->
+    <div id="dokument-popup-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9000; align-items:center; justify-content:center;">
+        <div id="dokument-popup-box" style="background:white; border-radius:12px; width:98vw; height:98vh; max-width:1800px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <!-- Vsebina se naloži dinamično -->
         </div>
     </div>
 

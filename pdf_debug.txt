@@ -1,36 +1,75 @@
-Google Cloud EMEA Limited
-Velasco
-Račun Clanwilliam Place
-Dublin 2
-Ireland
-Številka računa: 5474306531
-Številka za DDV: IE3668997OH
-Izstavi račun na ime
-Miha Kadis
-Miha Kadis s.p.
+GMT d.o.o.
+Noršinska ulica 31, 9000 Murska Sobota
+ID za DDV: SI90084985
+GMT PE Ravne 0042
+Koroška cesta 7, SI-2390 Ravne na
+Koroškem
+SI56 0400 0027 8484 031 (OTP d.d.)
+SI56 2900 0005 0676 440 (UNICREDIT BANK d.d.)
+Kupec 00059107
+SIM 83 - Simulatorji vožnje, Miha Kadiš s.p. Kraj izdaje Ravne na Koroškem
 Dobja vas 253
-2390 RAVNE NA KOROŠKEM
-Slovenia
-Številka za DDV: SI 11648236
-Podrobnosti Google Workspace
-.Š.t.e..v.i.lk.a.. .r.a.č..u.n..a........................5..4..7.4..3.0..6.5..3.1......
-.D.a..t.u.m.. .r.a..č.u..n.a..........................3..1... .j.a.n... .2..0.2..6..... Skupni znesek v valuti EUR 18,98 €
-.ID.. .z.a.. .o.b..r.a.č.u..n..........................5..1.1..9.-.5..9.9..5.-.3..4.7..0.
-.Im...e. .d.o..m..e..n.e............................8..3...s..i..............
-Povzetek za časovno obdobje 1. jan. 2026 - 31. jan. 2026
-Vmesna vsota v valuti EUR 18,98 €
-DDV (0%) 0,00 €
-Skupni znesek v valuti EUR 18,98 €
-Storitve so predmet povrnjenih stroškov – prejemnik mora sam uveljaviti DDV v skladu s členom 196 Direktive Sveta 2006/112/ES.
-Morebitni dolgovani znesek vam bomo samodejno zaračunali.
-Stran 1 od 2
-Račun
-Številka računa: 5474306531
-Naročnina Opis Interval Količina Znesek (€)
-Google Workspace Business Plus Uporaba 1. jan. - 31. jan. 1 18,98
-Vmesna vsota v valuti EUR 18,98 €
-DDV (0%) 0,00 €
-Skupni znesek v valuti EUR 18,98 €
-Ali potrebujete pomoč pri razumevanju bremenitev na računu? Kliknite tukaj in si oglejte podrobna pojasnila
-https://support.google.com/a?p=gsuite-bills-and-charges
-Stran 2 od 2
+Datum izdaje 08.01.2026
+Datum in čas: 08.01.2026 12:13:01
+SI-2390 Ravne na Koroškem
+Blag. zaključek
+Prod. svetovalec Uroš Fortek
+Ravne na Koroškem
+ID za DDV 11648236
+Račun 0042-0B42-108 Interna številka 26-0B42-0000110
+Številka kopije 1
+Ident Naziv Količina EM MPC Cena R % DDV % MPC Vrednost
+PC Cena PC Vrednost
+11298216 SVEČKA ŽARILNA 4,00 KOM 23,85 35,00 22,00 62,01
+19,55 50,83
+Z besedo dvainšestdeset EUR 01/100 Skupaj 78,20
+Rabat 1 27,37
+DDV 11,18
+62,01 Za plačilo EUR
+DAVČNE STOPNJE Osnova DDV Vrednost
+Blago, od katerega se DDV obračuna po stopnji 22% 50,83 11,18 62,01
+Načini plačila Vrednost
+Visa 62,01
+ZOI: 9c3016fb57ffb83c274442bc1a30a452
+EOR: 22d1e94a-944f-4d2b-bdb1-8183701ec16a
+Odbitki pri vračilu
+do 10 dni (0% - Odbitka)
+do 20 dni (3% - Odbitka)
+do 30 dni (5% - Odbitka)
+do 60 dni (12% - Odbitka)
+od 61 dni (25% - Odbitka)
+KADIS - 26-0192-0018820
+Prosimo vas, da nakazilo izvršite na enega izmed zgoraj navedenih transakcijskih računov.
+V primeru da račun vsebuje blago, ki na pofdlagi Uredbe o okoljski dajatvi zaradi onesnaževanja okolja zaradi nastajanja izrabljenih gum (Ur.l.RS.št.32/28.3.2006)
+podleže plačilu okoljske dajatve, izjavljamo, da je okoljska dajatev obračunana, oziroma Uredbe o okoljski dajatvi zaradi onesnaževanja okolja zaradi mazalnih olj in
+tekočin (Ur.l.RS.št.53/2005 s spremembami).
+V primeru da račun vsebuje blago, ki na podlagi omenjene uredbe podleže plačilu okoljske dajatve, vendar skladno z določili omenjene uredbe nismo zavezanec,
+izjavljamo, da razpolagamo z izjavo, da je bila okoljska dajatev obračunana oz. da je blago oproščeno okoljske dajatve.
+Za odpadno embalažo je zagotovljeno predpisano ravnanje v skladu z Uredbo o ravnanju z embalažo in odpadno embalažo (Ur. l. RS, št. 84/06 z vsemi
+spremembami in dopolnitvami). Izjavljamo, da smo obveznosti iz naslova ravnanja z odpadno embalažo prenesli na družbo za ravnanje z odpadno embalažo
+SUROVINA d.o.o. po pogodbi številka OE00016/24. Dobavljeno blago je v lasti GMT d.o.o. do popolnega plačila računa.
+Po preteku roka plačila si pridržujemo pravico zaračunati zakonske zamudne obresti. Količinske reklamacije upoštevamo v roku 3. delovne dni od datuma izdaje
+blaga, ostale reklamacije in vračila pa v roku 8. dni ob predložitvi originalnega dokumenta in v nepoškodovani originalni embalaži.
+Stran 1/2
+GMT d.o.o.
+Noršinska ulica 31, 9000 Murska Sobota
+ID za DDV: SI90084985
+GMT PE Ravne 0042
+Koroška cesta 7, SI-2390 Ravne na
+Koroškem
+SI56 0400 0027 8484 031 (OTP d.d.)
+SI56 2900 0005 0676 440 (UNICREDIT BANK d.d.)
+Kupec 00059107
+SIM 83 - Simulatorji vožnje, Miha Kadiš s.p. Kraj izdaje Ravne na Koroškem
+Dobja vas 253
+Datum izdaje 08.01.2026
+Datum in čas: 08.01.2026 12:13:01
+SI-2390 Ravne na Koroškem
+Blag. zaključek
+Prod. svetovalec Uroš Fortek
+Ravne na Koroškem
+ID za DDV 11648236
+Račun 0042-0B42-108 Interna številka 26-0B42-0000110
+Številka kopije 1
+Fakturiral/a: Uroš Fortek Direktor: GIDER LAURA
+Stran 2/2

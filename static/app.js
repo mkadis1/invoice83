@@ -552,6 +552,7 @@ function buildSplitViewHTML(formHtml, parentType, parentId) {
 }
 
 async function showModule(moduleName) {
+    document.getElementById('dokument-popup-overlay').style.display = 'none';
     sessionStorage.setItem('activeModule', moduleName);
     document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
     
@@ -652,37 +653,34 @@ async function renderDashboard() {
     const leto = getLeto();
     contentDiv.innerHTML = '<p style="padding:20px;">Nalagam nadzorno ploščo...</p>';
     window.osveziPodjetja();
+    
+    // Pred-predpomnilnik za podatke, da ne nalagamo istega večkrat
+    const cache = {};
+    async function getCached(url) {
+        if (!cache[url]) {
+            const res = await fetch(url);
+            cache[url] = await res.json();
+        }
+        return cache[url];
+    }
+
     try {
-        const [izdRes, prRes] = await Promise.all([
-            fetch('/api/dokumenti/izdani_racuni'),
-            fetch('/api/dokumenti/prejeti_racuni')
-        ]);
-        const izdani = (await izdRes.json()).filter(d => d.poslovno_leto === leto);
-        const prejeti = (await prRes.json()).filter(d => d.poslovno_leto === leto);
+        const nastavitve = await getCached('/api/nastavitve');
         const today = new Date(); today.setHours(0,0,0,0);
 
-        // KPI
-        const skupajIzdano = izdani.reduce((s,d) => s + d.znesek_skupaj, 0);
-        const skupajPrejeto = prejeti.reduce((s,d) => s + d.znesek_skupaj, 0);
-        const odprtihIzdanih = izdani.filter(d => d.status !== 'plačano').length;
-        const odprtihPrejetih = prejeti.filter(d => d.status !== 'plačano').length;
+        let config = [];
+        try {
+            if (nastavitve.dashboard_config) config = JSON.parse(nastavitve.dashboard_config);
+        } catch(e) { console.error("Napaka pri branju dashboard configa", e); }
 
-        // Mesečni podatki za graf (jan-dec)
-        const meseci = ['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Avg','Sep','Okt','Nov','Dec'];
-        const izdMes = new Array(12).fill(0);
-        const preMes = new Array(12).fill(0);
-        izdani.forEach(d => { const m = parseInt((d.datum_izdaje||'').split('-')[1])-1; if(m>=0) izdMes[m] += d.znesek_skupaj; });
-        prejeti.forEach(d => { const m = parseInt((d.datum_izdaje||'').split('-')[1])-1; if(m>=0) preMes[m] += d.znesek_skupaj; });
-
-        // Odprte terjatve (izdani računi - neplačano), urejeni po zapadlosti
-        const odprteTerjatve = izdani
-            .filter(d => d.status !== 'plačano' && d.datum_zapadlosti)
-            .sort((a,b) => a.datum_zapadlosti.localeCompare(b.datum_zapadlosti));
-
-        // Neplačane obveznosti (prejeti računi - neplačano), urejeni po zapadlosti
-        const neplacaneObveznosti = prejeti
-            .filter(d => d.status !== 'plačano' && d.datum_zapadlosti)
-            .sort((a,b) => a.datum_zapadlosti.localeCompare(b.datum_zapadlosti));
+        if (!config || config.length === 0) {
+            config = [
+                { id: 'kpi_cards', type: 'kpi', width: 'full', title: 'KPI Povzetek' },
+                { id: 'charts', type: 'charts', width: 'full', title: 'Grafi poslovanja' },
+                { id: 'terjatve', type: 'table', content: 'terjatve', width: 'half', title: 'Odprte terjatve' },
+                { id: 'obveznosti', type: 'table', content: 'obveznosti', width: 'half', title: 'Neplačane obveznosti' }
+            ];
+        }
 
         function daysDiff(dateStr) {
             const d = new Date(dateStr); d.setHours(0,0,0,0);
@@ -695,167 +693,303 @@ async function renderDashboard() {
             return { label: '60+ dni', color: '#c92a2a' };
         }
 
-        contentDiv.innerHTML = `
+        let html = `
         <style>
-            .dash-kpi { display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; }
-            .dash-kpi-card { flex:1; min-width:150px; background:white; border-radius:8px; padding:18px 20px; box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:4px solid; }
-            .dash-kpi-card .val { font-size:1.6em; font-weight:700; margin-top:4px; }
-            .dash-kpi-card .lbl { font-size:0.78em; color:#868e96; text-transform:uppercase; letter-spacing:.05em; }
-            .dash-section { background:white; border-radius:8px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.07); margin-bottom:20px; }
-            .dash-section h4 { margin:0 0 15px 0; color:var(--primary-blue); font-size:1em; border-bottom:2px solid #e9ecef; padding-bottom:8px; }
-            .dash-charts { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
-            .tbl-dash { width:100%; border-collapse:collapse; font-size:0.88em; }
-            .tbl-dash th { background:#f1f3f5; padding:7px 10px; text-align:left; font-weight:600; color:#495057; }
-            .tbl-dash td { padding:7px 10px; border-bottom:1px solid #f1f3f5; vertical-align:middle; }
+            .dash-container { display: flex; flex-wrap: wrap; gap: 20px; padding-bottom: 40px; }
+            .dash-block { min-width: 300px; display: flex; flex-direction: column; }
+            .dash-block.full { width: 100%; }
+            .dash-block.half { width: calc(50% - 10px); }
+            @media (max-width: 1100px) { .dash-block.half { width: 100%; } }
+
+            .dash-kpi { display:flex; gap:15px; flex-wrap:wrap; width: 100%; }
+            .dash-kpi-card { flex:1; min-width:180px; background:white; border-radius:12px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-left:5px solid; transition: transform 0.2s; }
+            .dash-kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+            .dash-kpi-card .val { font-size:1.8em; font-weight:800; margin-top:5px; }
+            .dash-kpi-card .lbl { font-size:0.8em; color:#868e96; text-transform:uppercase; letter-spacing:.05em; font-weight: 600; }
+            
+            .dash-section { background:white; border-radius:12px; padding:25px; box-shadow:0 4px 12px rgba(0,0,0,0.05); height: 100%; box-sizing: border-box; position: relative; overflow: hidden; }
+            .dash-section h4 { margin:0 0 20px 0; color:var(--primary-blue); font-size:1.1em; font-weight: 700; border-bottom:2px solid #f1f3f5; padding-bottom:12px; display: flex; align-items: center; gap: 10px; }
+            .dash-charts { display:grid; grid-template-columns:1fr 1fr; gap:20px; width: 100%; }
+            @media (max-width: 800px) { .dash-charts { grid-template-columns: 1fr; } }
+            
+            .tbl-dash { width:100%; border-collapse:collapse; font-size:0.9em; }
+            .tbl-dash th { background:#f8f9fa; padding:10px 12px; text-align:left; font-weight:600; color:#495057; border-bottom: 1px solid #dee2e6; }
+            .tbl-dash td { padding:10px 12px; border-bottom:1px solid #f1f3f5; vertical-align:middle; transition: background 0.2s; }
+            .tbl-dash tr:hover td { background: #f8f9fa; }
             .tbl-dash tr:last-child td { border-bottom:none; }
-            .aging-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:0.8em; font-weight:600; color:white; }
+            
+            .aging-badge { display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.75em; font-weight:700; color:white; text-transform: uppercase; }
+            .dash-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; color: #adb5bd; text-align: center; }
+            .dash-empty-icon { font-size: 3em; margin-bottom: 10px; opacity: 0.3; }
+            
+            .shortcut-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
+            .shortcut-btn { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 15px; background: #f8f9fa; border-radius: 10px; text-decoration: none; color: #495057; font-weight: 600; font-size: 0.85em; transition: all 0.2s; border: 1px solid transparent; }
+            .shortcut-btn:hover { background: white; border-color: var(--primary-blue); color: var(--primary-blue); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+            .shortcut-icon { font-size: 2em; }
         </style>
 
-        <!-- KPI kartice -->
-        <div class="dash-kpi">
-            <div class="dash-kpi-card" style="border-color:#1971c2;">
-                <div class="lbl">Skupaj izdano (${leto})</div>
-                <div class="val" style="color:#1971c2;">${formatMoneyJS(skupajIzdano)}</div>
-            </div>
-            <div class="dash-kpi-card" style="border-color:#e03131;">
-                <div class="lbl">Skupaj prejeto (${leto})</div>
-                <div class="val" style="color:#e03131;">${formatMoneyJS(skupajPrejeto)}</div>
-            </div>
-            <div class="dash-kpi-card" style="border-color:#f59f00;">
-                <div class="lbl">Odprte terjatve</div>
-                <div class="val" style="color:#f59f00;">${odprtihIzdanih}</div>
-            </div>
-            <div class="dash-kpi-card" style="border-color:#868e96;">
-                <div class="lbl">Neplačane obveznosti</div>
-                <div class="val" style="color:#868e96;">${odprtihPrejetih}</div>
-            </div>
-        </div>
-
-        <!-- Grafa -->
-        <div class="dash-charts">
-            <div class="dash-section">
-                <h4>📈 Izdani računi — mesečno (${leto})</h4>
-                <canvas id="canvas-izdani" style="width:100%; display:block;"></canvas>
-            </div>
-            <div class="dash-section">
-                <h4>📉 Prejeti računi — mesečno (${leto})</h4>
-                <canvas id="canvas-prejeti" style="width:100%; display:block;"></canvas>
-            </div>
-        </div>
-
-        <!-- Odprte terjatve -->
-        <div class="dash-section">
-            <h4>📋 Odprte terjatve — urejeno po zapadlosti</h4>
-            ${odprteTerjatve.length === 0 ? '<p style="color:#868e96;font-size:0.9em;">Ni odprtih terjatev.</p>' : `
-            <table class="tbl-dash">
-                <thead><tr><th>Številka</th><th>Partner</th><th>Datum izdaje</th><th>Zapadlost</th><th>Znesek</th><th>Status zapadlosti</th></tr></thead>
-                <tbody>
-                ${odprteTerjatve.map(d => {
-                    const days = daysDiff(d.datum_zapadlosti);
-                    const ag = agingLabel(days);
-                    return `<tr>
-                        <td style="font-weight:600;color:var(--primary-blue);">${d.stevilka}</td>
-                        <td>${d.partner_naziv||'/'}</td>
-                        <td>${d.datum_izdaje}</td>
-                        <td style="${days>0?'color:#c92a2a;font-weight:600;':''}">${d.datum_zapadlosti}</td>
-                        <td style="font-weight:700;">${formatMoneyJS(d.znesek_skupaj)}</td>
-                        <td><span class="aging-badge" style="background:${ag.color}">${ag.label}</span></td>
-                    </tr>`;
-                }).join('')}
-                </tbody>
-            </table>`}
-        </div>
-
-        <!-- Neplačane obveznosti -->
-        <div class="dash-section">
-            <h4>⚠️ Neplačane obveznosti po upnikih</h4>
-            ${neplacaneObveznosti.length === 0 ? '<p style="color:#868e96;font-size:0.9em;">Ni neplačanih obveznosti.</p>' : `
-            <table class="tbl-dash">
-                <thead><tr><th>Številka</th><th>Upnik</th><th>Zapadlost</th><th>Znesek</th><th>Zamuda</th></tr></thead>
-                <tbody>
-                ${neplacaneObveznosti.map(d => {
-                    const days = daysDiff(d.datum_zapadlosti);
-                    const ag = agingLabel(days);
-                    return `<tr>
-                        <td style="font-weight:600;">${d.stevilka}</td>
-                        <td style="font-weight:500;">${d.partner_naziv||'/'}</td>
-                        <td style="${days>0?'color:#c92a2a;font-weight:600;':''}">${d.datum_zapadlosti}</td>
-                        <td style="font-weight:700;color:#e03131;">${formatMoneyJS(d.znesek_skupaj)}</td>
-                        <td><span class="aging-badge" style="background:${ag.color}">${ag.label}${days>0?' ('+days+' dni)':''}</span></td>
-                    </tr>`;
-                }).join('')}
-                </tbody>
-            </table>`}
-        </div>
+        <div class="dash-container">
         `;
 
-        // Nariši grafe s canvas API
-        function drawBarChart(canvasId, labels, values, color) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const H = 200;
-            // Uporabimo parentElement.clientWidth za pravo širino vsebnika
-            const W = canvas.parentElement.clientWidth - 40; // 40px = padding
-            canvas.width = W;
-            canvas.height = H;
-            const pad = { t:10, r:10, b:35, l:60 };
-            const maxVal = Math.max(...values, 1);
-            const barW = (W - pad.l - pad.r) / labels.length;
+        for (const block of config) {
+            const bWidth = block.width === 'half' ? 'half' : 'full';
+            html += `<div class="dash-block ${bWidth}">`;
 
-            ctx.clearRect(0, 0, W, H);
-            ctx.font = '11px Inter, sans-serif';
+            if (block.type === 'kpi') {
+                const izdani = (await getCached('/api/dokumenti/izdani_racuni')).filter(d => d.poslovno_leto === leto);
+                const prejeti = (await getCached('/api/dokumenti/prejeti_racuni')).filter(d => d.poslovno_leto === leto);
+                
+                const skupajIzdano = izdani.reduce((s,d) => s + d.znesek_skupaj, 0);
+                const skupajPrejeto = prejeti.reduce((s,d) => s + d.znesek_skupaj, 0);
+                const odprtihIzdanih = izdani.filter(d => d.status !== 'plačano').length;
+                const odprtihPrejetih = prejeti.filter(d => d.status !== 'plačano').length;
 
-            // Y axis gridlines + labels
-            for (let i = 0; i <= 4; i++) {
-                const y = pad.t + (H - pad.t - pad.b) * (1 - i/4);
-                ctx.strokeStyle = '#e9ecef'; ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
-                const val = Math.round(maxVal * i / 4);
-                ctx.fillStyle = '#adb5bd';
-                const label = val >= 1000 ? (val/1000).toFixed(1)+'k' : val.toString();
-                ctx.fillText(label, pad.l - ctx.measureText(label).width - 6, y + 4);
+                html += `
+                <div class="dash-kpi">
+                    <div class="dash-kpi-card" style="border-color:#1971c2; cursor:pointer;" onclick="showModule('izdani_racuni')">
+                        <div class="lbl">Skupaj izdano (${leto})</div>
+                        <div class="val" style="color:#1971c2;">${formatMoneyJS(skupajIzdano)}</div>
+                    </div>
+                    <div class="dash-kpi-card" style="border-color:#e03131; cursor:pointer;" onclick="showModule('prejeti_racuni')">
+                        <div class="lbl">Skupaj prejeto (${leto})</div>
+                        <div class="val" style="color:#e03131;">${formatMoneyJS(skupajPrejeto)}</div>
+                    </div>
+                    <div class="dash-kpi-card" style="border-color:#f59f00; cursor:pointer;" onclick="showModule('izdani_racuni')">
+                        <div class="lbl">Odprte terjatve</div>
+                        <div class="val" style="color:#f59f00;">${odprtihIzdanih}</div>
+                    </div>
+                    <div class="dash-kpi-card" style="border-color:#868e96; cursor:pointer;" onclick="showModule('prejeti_racuni')">
+                        <div class="lbl">Neplačane obveznosti</div>
+                        <div class="val" style="color:#868e96;">${odprtihPrejetih}</div>
+                    </div>
+                </div>
+                `;
+            } else if (block.type === 'charts') {
+                html += `
+                <div class="dash-charts">
+                    <div class="dash-section">
+                        <h4>📈 Izdani računi — mesečno</h4>
+                        <canvas id="canvas-izdani" style="width:100%; height:200px; display:block;"></canvas>
+                    </div>
+                    <div class="dash-section">
+                        <h4>📉 Prejeti računi — mesečno</h4>
+                        <canvas id="canvas-prejeti" style="width:100%; height:200px; display:block;"></canvas>
+                    </div>
+                </div>
+                `;
+            } else if (block.type === 'table') {
+                html += `<div class="dash-section"><h4>${block.title || 'Pregled'}</h4>`;
+                
+                if (block.content === 'terjatve' || block.content === 'izdani_racuni') {
+                    let docs = (await getCached('/api/dokumenti/izdani_racuni')).filter(d => d.poslovno_leto === leto);
+                    if (block.content === 'terjatve') docs = docs.filter(d => d.status !== 'plačano' && d.datum_zapadlosti).sort((a,b) => a.datum_zapadlosti.localeCompare(b.datum_zapadlosti));
+                    else docs = docs.sort((a,b) => (b.datum_izdaje||'').localeCompare(a.datum_izdaje||'')).slice(0, 10);
+
+                    if (docs.length === 0) {
+                        html += '<div class="dash-empty"><div class="dash-empty-icon">📄</div>Ni podatkov.</div>';
+                    } else {
+                        html += `
+                        <table class="tbl-dash">
+                            <thead><tr><th>Številka</th><th>Partner</th><th>Zapadlost</th><th>Znesek</th><th>Status</th></tr></thead>
+                            <tbody>
+                            ${docs.map(d => {
+                                const days = daysDiff(d.datum_zapadlosti);
+                                const ag = agingLabel(days);
+                                return `<tr style="cursor:pointer;" onclick="showUrediDokument(${d.id}, 'izdani_racuni', 'Izdani račun')">
+                                    <td style="font-weight:600;color:var(--primary-blue);">${d.stevilka}</td>
+                                    <td>${d.partner_naziv||'/'}</td>
+                                    <td style="${days>0?'color:#c92a2a;font-weight:600;':''}">${d.datum_zapadlosti || '/'}</td>
+                                    <td style="font-weight:700;">${formatMoneyJS(d.znesek_skupaj)}</td>
+                                    <td><span class="aging-badge" style="background:${ag.color}">${ag.label}</span></td>
+                                </tr>`;
+                            }).join('')}
+                            </tbody>
+                        </table>`;
+                    }
+                } else if (block.content === 'obveznosti' || block.content === 'prejeti_racuni') {
+                    let docs = (await getCached('/api/dokumenti/prejeti_racuni')).filter(d => d.poslovno_leto === leto);
+                    if (block.content === 'obveznosti') docs = docs.filter(d => d.status !== 'plačano' && d.datum_zapadlosti).sort((a,b) => a.datum_zapadlosti.localeCompare(b.datum_zapadlosti));
+                    else docs = docs.sort((a,b) => (b.datum_izdaje||'').localeCompare(a.datum_izdaje||'')).slice(0, 10);
+
+                    if (docs.length === 0) {
+                        html += '<div class="dash-empty"><div class="dash-empty-icon">📥</div>Ni podatkov.</div>';
+                    } else {
+                        html += `
+                        <table class="tbl-dash">
+                            <thead><tr><th>Številka</th><th>Upnik</th><th>Zapadlost</th><th>Znesek</th><th>Zamuda</th></tr></thead>
+                            <tbody>
+                            ${docs.map(d => {
+                                const days = daysDiff(d.datum_zapadlosti);
+                                const ag = agingLabel(days);
+                                return `<tr style="cursor:pointer;" onclick="showUrediDokument(${d.id}, 'prejeti_racuni', 'Prejeti račun')">
+                                    <td style="font-weight:600;color:var(--primary-blue);">${d.stevilka}</td>
+                                    <td>${d.partner_naziv||'/'}</td>
+                                    <td style="${days>0?'color:#c92a2a;font-weight:600;':''}">${d.datum_zapadlosti || '/'}</td>
+                                    <td style="font-weight:700;color:#e03131;">${formatMoneyJS(d.znesek_skupaj)}</td>
+                                    <td><span class="aging-badge" style="background:${ag.color}">${ag.label}${days>0?' ('+days+' dni)':''}</span></td>
+                                </tr>`;
+                            }).join('')}
+                            </tbody>
+                        </table>`;
+                    }
+                } else if (block.content === 'zadnji_dokumenti') {
+                    const izd = (await getCached('/api/dokumenti/izdani_racuni')).filter(d => d.poslovno_leto === leto);
+                    const prej = (await getCached('/api/dokumenti/prejeti_racuni')).filter(d => d.poslovno_leto === leto);
+                    const vsi = [...izd, ...prej].sort((a,b) => (b.datum_izdaje||'').localeCompare(a.datum_izdaje||'')).slice(0, 10);
+                    if (vsi.length === 0) {
+                        html += '<div class="dash-empty"><div class="dash-empty-icon">📋</div>Ni dokumentov.</div>';
+                    } else {
+                        html += `
+                        <table class="tbl-dash">
+                            <thead><tr><th>Tip</th><th>Številka</th><th>Partner</th><th>Datum</th><th>Znesek</th></tr></thead>
+                            <tbody>
+                            ${vsi.map(d => `
+                                <tr style="cursor:pointer;" onclick="showUrediDokument(${d.id}, '${d.tip}', '${d.tip === 'izdani_racuni' ? 'Izdani račun' : 'Prejeti račun'}')">
+                                    <td style="font-size:0.8em; color:#868e96; font-weight:700;">${d.tip.replace('_', ' ').toUpperCase()}</td>
+                                    <td style="font-weight:600; color:var(--primary-blue);">${d.stevilka}</td>
+                                    <td>${d.partner_naziv||'/'}</td>
+                                    <td>${d.datum_izdaje}</td>
+                                    <td style="font-weight:700;">${formatMoneyJS(d.znesek_skupaj)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>`;
+                    }
+                } else if (block.content === 'partnerji') {
+                    const parts = (await getCached('/api/partnerji')).slice(0, 10);
+                    html += `
+                    <table class="tbl-dash">
+                        <thead><tr><th>Naziv</th><th>Kraj</th><th>Davčna</th></tr></thead>
+                        <tbody>
+                        ${parts.map(p => `
+                            <tr style="cursor:pointer;" onclick="showUrediPartnerja(${p.id})">
+                                <td style="font-weight:600;">${p.naziv}</td>
+                                <td>${p.kraj || '/'}</td>
+                                <td>${p.davcna_stevilka || '/'}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+                } else if (block.content === 'artikli') {
+                    const arts = (await getCached('/api/artikli_storitve')).slice(0, 10);
+                    html += `
+                    <table class="tbl-dash">
+                        <thead><tr><th>Šifra</th><th>Naziv</th><th>Cena</th></tr></thead>
+                        <tbody>
+                        ${arts.map(a => `
+                            <tr style="cursor:pointer;" onclick="showUrediArtikel(${a.id})">
+                                <td style="font-weight:700; color:#868e96;">${a.sifra}</td>
+                                <td style="font-weight:600;">${a.naziv}</td>
+                                <td style="font-weight:700;">${formatMoneyJS(a.cena_malo)}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+                } else if (block.content === 'izpiski') {
+                    const izp = (await getCached('/api/izpiski')).slice(0, 10);
+                    html += `
+                    <table class="tbl-dash">
+                        <thead><tr><th>Datum</th><th>Številka</th><th>Krajno stanje</th></tr></thead>
+                        <tbody>
+                        ${izp.map(i => `
+                            <tr style="cursor:pointer;" onclick="showUrediIzpisek(${i.id})">
+                                <td>${i.datum}</td>
+                                <td style="font-weight:600;">${i.stevilka_izpiska}</td>
+                                <td style="font-weight:700;">${formatMoneyJS(i.koncno_stanje)}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+                }
+                
+                html += `</div>`;
+            } else if (block.type === 'shortcuts') {
+                html += `
+                <div class="dash-section">
+                    <h4>🚀 Hitre povezave</h4>
+                    <div class="shortcut-grid">
+                        <a href="#" class="shortcut-btn" onclick="showModule('izdani_racuni'); window.showDodajDokument('izdani_racuni', 'Izdani račun')"><span class="shortcut-icon">➕</span>Nov račun</a>
+                        <a href="#" class="shortcut-btn" onclick="showModule('partnerji'); window.showDodajPartnerja()"><span class="shortcut-icon">👤</span>Nov partner</a>
+                        <a href="#" class="shortcut-btn" onclick="showModule('izpiski'); window.ucloadIzpisekModal()"><span class="shortcut-icon">🏦</span>Uvozi izpisek</a>
+                        <a href="#" class="shortcut-btn" onclick="showModule('ponudbe'); window.showDodajDokument('ponudbe', 'Ponudba')"><span class="shortcut-icon">📄</span>Nova ponudba</a>
+                    </div>
+                </div>
+                `;
             }
 
-            values.forEach((val, i) => {
-                const barH = val === 0 ? 0 : Math.max(2, (val / maxVal) * (H - pad.t - pad.b));
-                const x = pad.l + i * barW + barW * 0.1;
-                const y = pad.t + (H - pad.t - pad.b) - barH;
-                const bw = barW * 0.8;
-
-                const grad = ctx.createLinearGradient(0, y, 0, y + barH);
-                grad.addColorStop(0, color + 'ee');
-                grad.addColorStop(1, color + '77');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.roundRect(x, y, bw, barH, 3);
-                ctx.fill();
-
-                // X labels
-                ctx.fillStyle = '#868e96';
-                ctx.font = '10px Inter, sans-serif';
-                const lw = ctx.measureText(labels[i]).width;
-                ctx.fillText(labels[i], x + bw/2 - lw/2, H - pad.b + 16);
-            });
+            html += `</div>`;
         }
 
-        function redrawCharts() {
-            drawBarChart('canvas-izdani', meseci, izdMes, '#1971c2');
-            drawBarChart('canvas-prejeti', meseci, preMes, '#e03131');
+        html += `</div>`;
+        contentDiv.innerHTML = html;
+
+        // Nariši grafe s canvas API
+        if (config.some(b => b.type === 'charts')) {
+            const izdani = (await getCached('/api/dokumenti/izdani_racuni')).filter(d => d.poslovno_leto === leto);
+            const prejeti = (await getCached('/api/dokumenti/prejeti_racuni')).filter(d => d.poslovno_leto === leto);
+            const izdMes = new Array(12).fill(0);
+            const preMes = new Array(12).fill(0);
+            izdani.forEach(d => { const m = parseInt((d.datum_izdaje||'').split('-')[1])-1; if(m>=0) izdMes[m] += d.znesek_skupaj; });
+            prejeti.forEach(d => { const m = parseInt((d.datum_izdaje||'').split('-')[1])-1; if(m>=0) preMes[m] += d.znesek_skupaj; });
+            
+            function drawBarChart(canvasId, labels, values, color) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const H = 200;
+                const W = canvas.parentElement.clientWidth - 50;
+                canvas.width = W;
+                canvas.height = H;
+                const pad = { t:10, r:10, b:35, l:60 };
+                const maxVal = Math.max(...values, 100);
+                const barW = (W - pad.l - pad.r) / labels.length;
+
+                ctx.clearRect(0, 0, W, H);
+                ctx.font = '11px Inter, sans-serif';
+
+                for (let i = 0; i <= 4; i++) {
+                    const y = pad.t + (H - pad.t - pad.b) * (1 - i/4);
+                    ctx.strokeStyle = '#f1f3f5'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+                    const val = Math.round(maxVal * i / 4);
+                    ctx.fillStyle = '#adb5bd';
+                    const label = val >= 1000 ? (val/1000).toFixed(1)+'k' : val.toString();
+                    ctx.fillText(label, pad.l - ctx.measureText(label).width - 10, y + 4);
+                }
+
+                values.forEach((val, i) => {
+                    const barH = val === 0 ? 0 : Math.max(4, (val / maxVal) * (H - pad.t - pad.b));
+                    const x = pad.l + i * barW + barW * 0.15;
+                    const y = pad.t + (H - pad.t - pad.b) - barH;
+                    const bw = barW * 0.7;
+
+                    const grad = ctx.createLinearGradient(0, y, 0, y + barH);
+                    grad.addColorStop(0, color);
+                    grad.addColorStop(1, color + '88');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, bw, barH, 4);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#868e96';
+                    ctx.font = '10px Inter, sans-serif';
+                    const lw = ctx.measureText(labels[i]).width;
+                    ctx.fillText(labels[i], x + bw/2 - lw/2, H - pad.b + 18);
+                });
+            }
+
+            const redrawCharts = () => {
+                const meseci = ['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Avg','Sep','Okt','Nov','Dec'];
+                drawBarChart('canvas-izdani', meseci, izdMes, '#1971c2');
+                drawBarChart('canvas-prejeti', meseci, preMes, '#e03131');
+            };
+            
+            setTimeout(redrawCharts, 100);
+            if (window._dashResizeObserver) window._dashResizeObserver.disconnect();
+            window._dashResizeObserver = new ResizeObserver(() => redrawCharts());
+            const chartBlocks = document.querySelectorAll('.dash-charts');
+            chartBlocks.forEach(cb => window._dashResizeObserver.observe(cb));
         }
-
-        // Potrpimo, da se DOM izriše, nato narišemo grafe
-        setTimeout(redrawCharts, 50);
-
-        // Ob spremembi velikosti okna prerisemo
-        if (window._dashResizeObserver) window._dashResizeObserver.disconnect();
-        window._dashResizeObserver = new ResizeObserver(() => redrawCharts());
-        const chartContainer = document.querySelector('.dash-charts');
-        if (chartContainer) window._dashResizeObserver.observe(chartContainer);
 
     } catch (e) {
         console.error(e);
-        contentDiv.innerHTML = '<p style="color:red;">Napaka pri nalaganju nadzorne plošče.</p>';
+        contentDiv.innerHTML = '<div class="dash-empty" style="color:red;">Prišlo je do napake pri nalaganju nadzorne plošče. Prosimo, preverite nastavitve.</div>';
     }
 }
 
@@ -947,10 +1081,9 @@ async function showUrediPartnerja(id) {
 
 function renderPartnerForm(editData = null) {
     const isEdit = !!editData;
-    contentDiv.innerHTML = `
-        <div style="max-width: 800px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
-            <h3 style="margin-bottom: 20px; color: var(--primary-blue);">${isEdit ? 'Uredi partnerja' : 'Nov partner'}</h3>
-            
+    const title = isEdit ? 'Uredi partnerja' : 'Nov partner';
+    
+    const innerHtml = `
             ${isEdit ? '' : `
             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #dee2e6;">
                 <label style="font-weight: bold; display: block; margin-bottom: 8px; color: var(--primary-red);">Iskanje po Bizi.si</label>
@@ -1025,11 +1158,12 @@ function renderPartnerForm(editData = null) {
                 </div>
                 <div style="margin-top: 25px; padding-top:15px; border-top: 1px solid var(--border-color);">
                     <button type="submit" class="btn btn-blue">${isEdit ? 'Shrani spremembe' : 'Shrani partnerja'}</button>
-                    <button type="button" class="btn" onclick="renderPartnerji()" style="color: var(--text-main); background: #eee; margin-left: 10px;">Prekliči</button>
+                    <button type="button" class="btn" onclick="window.zapriGlavniPopup()" style="color: var(--text-main); background: #eee; margin-left: 10px;">Prekliči</button>
                 </div>
             </form>
-        </div>
     `;
+
+    window.odpriGlavniPopup(title, innerHtml);
     window.initDatePickers();
     // Iskanje na Enter
     const bq = document.getElementById('bizi_search_q');
@@ -1138,7 +1272,7 @@ async function shraniPartnerja(e, id = null) {
             body: JSON.stringify(payload)
         });
         if (res.ok) {
-            renderPartnerji();
+            window.zapriGlavniPopup();
         } else {
             alert("Napaka pri shranjevanju partnerja: " + res.statusText);
         }
@@ -1263,8 +1397,9 @@ async function showUrediArtikelStoritev(id) {
     }
 }
 
-async function renderArtikliForm(editData = null, isPopup = false) {
+async function renderArtikliForm(editData = null) {
     const isEdit = !!editData && !!editData.id;
+    const title = isEdit ? 'Uredi artikel/storitev' : 'Nov artikel/storitev';
     
     // Pridobimo nastavitve podjetja, da vemo če je zavezanec
     let settings = window.appSettings;
@@ -1277,20 +1412,7 @@ async function renderArtikliForm(editData = null, isPopup = false) {
     }
     const isZavezanec = settings.zavezanec_za_ddv;
 
-    const target = isPopup ? document.getElementById('artikel-form-popup-container') : contentDiv;
-    if (isPopup) document.getElementById('artikel-form-popup-overlay').style.display = 'flex';
-
-    target.innerHTML = `
-        <div style="max-width: ${isPopup ? '100%' : '700px'}; background: white; padding: 25px; border-radius: ${isPopup ? '0' : '8px'}; box-shadow: ${isPopup ? 'none' : '0 4px 15px rgba(0,0,0,0.05)'}; border-top: ${isPopup ? 'none' : '4px solid var(--primary-blue)'};">
-            ${isPopup ? `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">
-                    <h3 style="margin:0; color:var(--primary-blue);">${isEdit ? 'Uredi artikel/storitev' : 'Nov artikel/storitev'}</h3>
-                    <button type="button" onclick="window.zapriArtikelFormPopup()" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:#868e96;">&times;</button>
-                </div>
-            ` : `
-                <h3 style="margin-bottom: 20px; color: var(--primary-blue);">${isEdit ? 'Uredi artikel/storitev' : 'Nov artikel/storitev'}</h3>
-            `}
-            
+    const innerHtml = `
             <form onsubmit="shraniArtikelStoritev(event, ${isEdit ? editData.id : 'null'})">
                 <div style="display: flex; gap: 15px;">
                     <div class="form-group" style="flex:1">
@@ -1354,10 +1476,11 @@ async function renderArtikliForm(editData = null, isPopup = false) {
                     <input type="text" id="a_konto" list="konti-datalist" value="${editData?.konto || ''}" placeholder="npr. 7600">
                 </div>
 
-                <div id="a_zaloga_box" style="display: ${editData?.vrsta === 'artikel' ? 'block' : 'none'}; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e9ecef; margin-bottom: 20px;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <input type="checkbox" id="a_vodi_zalogo" ${editData?.vodi_zalogo ? 'checked' : ''} style="width:auto; margin:0;">
-                        <label for="a_vodi_zalogo" style="margin:0; font-weight:bold; color:var(--primary-blue);">Vodi zalogo za ta artikel</label>
+                <div id="a_zaloga_box" style="display: ${editData?.vrsta === 'artikel' ? 'block' : 'none'}; margin-top: 15px; background: #fff9db; padding: 15px; border-radius: 6px; border: 1px solid #fab005;">
+                    <h4 style="margin: 0 0 10px 0; color: #495057;">Sledenje zalogi</h4>
+                    <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; display: flex; margin-bottom: 0;">
+                        <input type="checkbox" id="a_vodi_zalogo" ${editData?.vodi_zalogo ? 'checked' : ''} style="width: auto; margin:0;">
+                        <label for="a_vodi_zalogo" style="margin:0;">Vklopi sledenje zalogi za ta artikel</label>
                     </div>
                     ${!isEdit ? `
                     <div style="margin-top:10px; margin-left:26px; display:flex; align-items:center; gap:10px;">
@@ -1415,7 +1538,7 @@ async function shraniArtikelStoritev(event, id = null) {
                 document.getElementById('artikel-popup-overlay').style.display = 'flex';
                 window.filterArtikelPopup(); 
             } else {
-                renderArtikliStoritve();
+                window.zapriGlavniPopup();
             }
         } else {
             const err = await res.json();
@@ -1447,6 +1570,7 @@ async function renderDokumenti(tip, naslov) {
         const sortFields = [
             {key: 'datum_izdaje', label: 'Datum izdaje'},
             {key: 'stevilka', label: 'Številka'},
+            {key: 'interna_stevilka', label: 'Zaporedna št.'},
             {key: 'partner_naziv', label: 'Partner'},
             {key: 'znesek_skupaj', label: 'Znesek'},
             {key: 'status', label: 'Status'}
@@ -1467,6 +1591,7 @@ async function renderDokumenti(tip, naslov) {
                 <thead>
                     <tr>
                         <th width="40"><input type="checkbox" onclick="window.toggleAllSelection(this.checked, '${tip}')"></th>
+                        <th width="100">#</th>
                         <th>Številka</th>
                         <th>Partner</th>
                         <th>Datum izdaje</th>
@@ -1491,8 +1616,11 @@ async function renderDokumenti(tip, naslov) {
                 html += `
                     <tr>
                         <td><input type="checkbox" class="row-checkbox" data-id="${d.id}" ${isChecked} onclick="window.toggleItemSelection(${d.id}, '${tip}')"></td>
-                        <td>
-                            <span style="color:var(--primary-blue); font-weight:bold; cursor:pointer; text-decoration:underline;" onclick="showUrediDokument(${d.id}, '${tip}', '${naslov}')">${d.stevilka}</span>
+                        <td style="white-space: nowrap;">
+                            <span style="color:var(--primary-blue); font-weight:bold; cursor:pointer; text-decoration:underline;" onclick="showUrediDokument(${d.id}, '${tip}', '${naslov}')">${d.interna_stevilka || d.stevilka}</span>
+                        </td>
+                        <td style="white-space: nowrap;">
+                            ${d.stevilka}
                             ${d.ima_prilogo ? '<span title="Dokument ima priponko" style="margin-left:5px; font-size:1.1em; cursor:help;">📎</span>' : ''}
                             ${d.zadnje_poslano ? '<span title="Dokument je bil poslan po e-pošti" style="margin-left:5px; font-size:1.1em; cursor:help;">✉</span>' : ''}
                         </td>
@@ -1536,7 +1664,6 @@ async function renderDokumenti(tip, naslov) {
 }
 
 async function showUrediDokument(id, tip, naslov) {
-    contentDiv.innerHTML = '<p>Nalagam podatke za urejanje...</p>';
     try {
         const res = await fetch(`/api/dokumenti/detajl/${id}`);
         if (!res.ok) throw new Error("Ni mogoče pridobiti podatkov.");
@@ -1583,6 +1710,33 @@ window.osveziTecaj = async function() {
     }
 };
 
+window.zapriGlavniPopup = function() {
+    document.getElementById('dokument-popup-overlay').style.display = 'none';
+    if (window.refreshCurrentModule) window.refreshCurrentModule();
+};
+
+window.zapriDokumentPopup = function() {
+    window.zapriGlavniPopup();
+};
+
+window.odpriGlavniPopup = function(title, innerHtml, footerHtml = "", wide = false) {
+    const box = document.getElementById('dokument-popup-box');
+    document.getElementById('dokument-popup-overlay').style.display = 'flex';
+    
+    box.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 25px; border-bottom:1px solid #eee; background:#f8f9fa;">
+            <h3 style="margin:0; color:var(--primary-blue);">${title}</h3>
+            <button onclick="window.zapriGlavniPopup()" style="background:none; border:none; font-size:1.8em; cursor:pointer; color:#868e96; line-height:1;">&times;</button>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding: 15px 25px;">
+            <div style="max-width: ${wide ? '1600px' : '900px'}; margin: 0 auto; background: white;">
+                ${innerHtml}
+                ${footerHtml ? `<div style="margin-top: 25px; padding-top:15px; border-top: 1px solid var(--border-color);">${footerHtml}</div>` : ''}
+            </div>
+        </div>
+    `;
+};
+
 async function showDodajDokument(tip, naslov, editData = null) {
     const pRes = await fetch('/api/partnerji');
     const partnerji = await pRes.json();
@@ -1615,20 +1769,22 @@ async function showDodajDokument(tip, naslov, editData = null) {
         } catch(e) {}
     }
 
-    contentDiv.innerHTML = `
-        <div style="max-width: 800px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: var(--primary-blue); flex: 1;">${title}</h3>
-                <div style="display: flex; gap: 8px; flex-shrink: 0;">
-                    ${isActuallyEdit ? `
-                        ${tip === 'ponudbe' ? `<button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#2b8a3e; color:white; border:1px solid #2b8a3e;" onclick="window.ustvariRacunIzPonudbe(${editData.id})" title="Ustvari račun iz te ponudbe">🧾 Ustvari račun</button>` : ''}
-                        <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da;" onclick="showDodajDokument('${tip}', '${naslov}')" title="Nov dokument">➕ Nov</button>
-                        <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#e7f5ff; color:#1971c2; border:1px solid #a5d8ff;" onclick="window.kopirajDokument(${editData.id}, '${tip}', '${naslov}')" title="Kopiraj dokument">📋 Kopiraj</button>
-                        <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da; ${!prevId ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${prevId ? `onclick="showUrediDokument(${prevId}, '${tip}', '${naslov}')"` : 'disabled'} title="Prejšnji">◀ Prejšnji</button>
-                        <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da; ${!nextId ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${nextId ? `onclick="showUrediDokument(${nextId}, '${tip}', '${naslov}')"` : 'disabled'} title="Naslednji">Naslednji ▶</button>
-                    ` : ''}
+    const box = document.getElementById('dokument-popup-box');
+    document.getElementById('dokument-popup-overlay').style.display = 'flex';
+    
+    let formInnerHtml = `
+        <div style="max-width: 1600px; margin: 0 auto; background: white; padding: 0; border-radius: 0;">
+                <div style="display: flex; justify-content: flex-end; gap: 15px; margin-bottom: 20px;">
+                    <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                        ${isActuallyEdit ? `
+                            ${tip === 'ponudbe' ? `<button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#2b8a3e; color:white; border:1px solid #2b8a3e;" onclick="window.ustvariRacunIzPonudbe(${editData.id})" title="Ustvari račun iz te ponudbe">🧾 Ustvari račun</button>` : ''}
+                            <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da;" onclick="showDodajDokument('${tip}', '${naslov}')" title="Nov dokument">➕ Nov</button>
+                            <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#e7f5ff; color:#1971c2; border:1px solid #a5d8ff;" onclick="window.kopirajDokument(${editData.id}, '${tip}', '${naslov}')" title="Kopiraj dokument">📋 Kopiraj</button>
+                            <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da; ${!prevId ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${prevId ? `onclick="showUrediDokument(${prevId}, '${tip}', '${naslov}')"` : 'disabled'} title="Prejšnji">◀ Prejšnji</button>
+                            <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da; ${!nextId ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${nextId ? `onclick="showUrediDokument(${nextId}, '${tip}', '${naslov}')"` : 'disabled'} title="Naslednji">Naslednji ▶</button>
+                        ` : ''}
+                    </div>
                 </div>
-            </div>
             <p style="margin-bottom: 20px; color: var(--text-muted); font-size: 0.9em;">
                 ${isActuallyEdit ? 'Spremenite podatke in potrdite s klikom na spodnji gumb.' : `Dokument bo samodejno oštevilčen glede na izbrano poslovno leto (<strong>${getLeto()}</strong>).`}
             </p>
@@ -1648,6 +1804,12 @@ async function showDodajDokument(tip, naslov, editData = null) {
                         <label>Številka dokumenta</label>
                         <input type="text" id="d_stevilka" value="${editData ? (editData.stevilka || '') : ''}" placeholder="${(tip === 'izdani_racuni' || tip === 'ponudbe') ? 'Samodejno' : 'Vnesi številko'}">
                     </div>
+                    ${tip === 'prejeti_racuni' ? `
+                    <div class="form-group" style="flex: 1;">
+                        <label>Zaporedna št. (#)</label>
+                        <input type="text" id="d_interna_stevilka" value="${editData ? (editData.interna_stevilka || '') : ''}" placeholder="Samodejno">
+                    </div>
+                    ` : `<input type="hidden" id="d_interna_stevilka" value="${editData ? (editData.interna_stevilka || '') : ''}">`}
                 </div>
                 <div style="display: flex; gap: 15px;">
                     <div class="form-group" style="flex: 1;">
@@ -1774,14 +1936,21 @@ async function showDodajDokument(tip, naslov, editData = null) {
 
                 <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color);">
                     <button type="submit" class="btn btn-blue">${btnText}</button>
-                    <button type="button" class="btn" onclick="renderDokumenti('${tip}', '${naslov}')" style="color: var(--text-main); background: #eee; margin-left: 10px;">Prekliči</button>
+                    <button type="button" class="btn" onclick="window.zapriDokumentPopup()" style="color: var(--text-main); background: #eee; margin-left: 10px;">Prekliči</button>
                 </div>
             </form>
         </div>
     `;
     // Ovijemo v split view
-    const formHtml = contentDiv.innerHTML;
-    contentDiv.innerHTML = buildSplitViewHTML(formHtml, 'dokumenti', isActuallyEdit ? editData.id : null);
+    box.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 25px; border-bottom:1px solid #eee; background:#f8f9fa;">
+            <h3 style="margin:0; color:var(--primary-blue);">${title}</h3>
+            <button onclick="window.zapriDokumentPopup()" style="background:none; border:none; font-size:1.8em; cursor:pointer; color:#868e96; line-height:1;">&times;</button>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding: 10px 20px;">
+            ${buildSplitViewHTML(formInnerHtml, 'dokumenti', isActuallyEdit ? editData.id : null)}
+        </div>
+    `;
     window.PrilogeUI.zadnjePoslano = editData ? editData.zadnje_poslano : null;
     if (isActuallyEdit) window.PrilogeUI.init('dokumenti', editData.id);
     
@@ -1915,7 +2084,7 @@ async function showDodajDokument(tip, naslov, editData = null) {
 
 window.dodajPostavkoR = function(data = null) {
     const container = document.getElementById('postavke-container');
-    const showPopust = (window._currentTip === 'izdani_racuni' || window._currentTip === 'ponudbe' || window._currentTip === 'delovni_nalogi');
+    const showPopust = (window._currentTip === 'izdani_racuni' || window._currentTip === 'ponudbe' || window._currentTip === 'delovni_nalogi' || window._currentTip === 'prejeti_racuni');
     
     const div = document.createElement('div');
     div.className = 'postavka-item';
@@ -1970,7 +2139,7 @@ window.dodajPostavkoR = function(data = null) {
                 <input type="number" step="0.01" class="p-popust" value="${data ? data.popust : 0}" style="width:100%; height:32px;" oninput="kalkulirajZneske()">
             </div>
             ` : ''}
-            ${window._isZavezanec ? `
+            ${(window._isZavezanec || window._currentTip === 'prejeti_racuni') ? `
             <div style="flex: 1; min-width: 80px;">
                 <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">DDV %</label>
                 <select class="p-ddv" style="width:100%; height:32px;" onchange="kalkulirajZneske()">
@@ -2009,14 +2178,13 @@ window.kalkulirajZneske = function() {
         const ddvEl = tr.querySelector('.p-ddv');
         const ddv = ddvEl ? (parseNumberJS(ddvEl.value)) : 0;
         
-        const znesekT = (kol * cena) * (1 - popust / 100);
-        tr.querySelector('.p-znesek').value = formatNumberJS(znesekT);
-        skupajValuta += znesekT;
-        if (window._isZavezanec) {
-            sumBrezDDVValuta += znesekT / (1 + ddv / 100);
-        } else {
-            sumBrezDDVValuta += znesekT;
-        }
+        // Znesek v vrstici naj bo BRUTO (z DDV), da se ujema s predogledom in računom
+        const netoZnesek = (kol * cena) * (1 - popust / 100);
+        const brutoZnesek = netoZnesek * (1 + ddv / 100);
+        
+        tr.querySelector('.p-znesek').value = formatNumberJS(brutoZnesek);
+        skupajValuta += brutoZnesek;
+        sumBrezDDVValuta += netoZnesek;
     });
 
     const skupajEUR = skupajValuta * tecaj;
@@ -2078,6 +2246,7 @@ async function shraniDokument(e, tip, naslov, id = null) {
         poslovno_leto: getLeto(),
         tip: tip,
         stevilka: document.getElementById('d_stevilka').value,
+        interna_stevilka: document.getElementById('d_interna_stevilka').value,
         partner_id: parseInt(document.getElementById('d_partner').value),
         datum_izdaje: parseDateISO(document.getElementById('d_datum_izdaje').value),
         datum_zapadlosti: parseDateISO(document.getElementById('d_datum_zapadlosti').value),
@@ -2222,7 +2391,12 @@ window.kalkulirajImportZneske = function() {
     document.querySelectorAll('.import-p-row').forEach(tr => {
         const kol = parseNumberJS(tr.querySelector('.i-p-kol').value) || 0;
         const cena = parseNumberJS(tr.querySelector('.i-p-cena').value) || 0;
-        const znesek = kol * cena;
+        const popEl = tr.querySelector('.i-p-popust');
+        const popust = popEl ? (parseNumberJS(popEl.value) || 0) : 0;
+        const ddvEl = tr.querySelector('.i-p-ddv');
+        const ddv = ddvEl ? (parseNumberJS(ddvEl.value) || 0) : 0;
+        
+        const znesek = (kol * cena) * (1 - popust / 100) * (1 + ddv / 100);
         tr.querySelector('.i-p-znesek').value = formatNumberJS(znesek);
         skupaj += znesek;
     });
@@ -2250,30 +2424,35 @@ window.dodajImportPostavko = function() {
                 <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Količina</label>
                 <input type="text" class="i-p-kol" value="1,00" style="width:100%; height:32px; text-align:right" oninput="window.kalkulirajImportZneske()" required>
             </div>
-            <div style="flex: 1; min-width: 80px;">
+            <div style="flex: 1; min-width: 60px;">
                 <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">EM</label>
                 <select class="i-p-em" style="width:100%; height:32px;">
                     <option value="kos">kos</option>
                     <option value="h">h</option>
                     <option value="kg">kg</option>
-                    <option value="g">g</option>
-                    <option value="t">t</option>
                     <option value="l">l</option>
                     <option value="m">m</option>
-                    <option value="m2">m2</option>
-                    <option value="m3">m3</option>
-                    <option value="km">km</option>
                     <option value="kpl">kpl</option>
-                    <option value="dan">dan</option>
-                    <option value="mesec">mesec</option>
-                    <option value="paušal">paušal</option>
                 </select>
             </div>
-            <div style="flex: 1.5; min-width: 100px;">
+            <div style="flex: 1; min-width: 80px;">
                 <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Cena</label>
                 <input type="text" class="i-p-cena" value="0,00" style="width:100%; height:32px; text-align:right" oninput="window.kalkulirajImportZneske()" required>
             </div>
-            <div style="flex: 1.5; min-width: 100px;">
+            <div style="flex: 0.8; min-width: 60px;">
+                <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Rab. %</label>
+                <input type="text" class="i-p-popust" value="0" style="width:100%; height:32px; text-align:right" oninput="window.kalkulirajImportZneske()">
+            </div>
+            <div style="flex: 0.8; min-width: 70px;">
+                <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">DDV %</label>
+                <select class="i-p-ddv" style="width:100%; height:32px;" onchange="window.kalkulirajImportZneske()">
+                    <option value="22" selected>22 %</option>
+                    <option value="9.5">9.5 %</option>
+                    <option value="5">5 %</option>
+                    <option value="0">0 %</option>
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 90px;">
                 <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Skupaj</label>
                 <input type="text" class="i-p-znesek" value="0,00" style="width:100%; height:32px; text-align:right; font-weight:bold; background:#e9ecef;" readonly>
             </div>
@@ -2386,30 +2565,35 @@ async function showImportPreview(data) {
                                     <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Količina</label>
                                     <input type="text" class="i-p-kol" value="${formatNumberJS(p.kolicina)}" style="width:100%; height:32px; text-align:right" oninput="window.kalkulirajImportZneske()" required>
                                 </div>
-                                <div style="flex: 1; min-width: 80px;">
+                                <div style="flex: 1; min-width: 60px;">
                                     <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">EM</label>
                                     <select class="i-p-em" style="width:100%; height:32px;">
                                         <option value="kos" ${(!p.enota_mere || p.enota_mere === 'kos') ? 'selected' : ''}>kos</option>
                                         <option value="h" ${p.enota_mere === 'h' ? 'selected' : ''}>h</option>
                                         <option value="kg" ${p.enota_mere === 'kg' ? 'selected' : ''}>kg</option>
-                                        <option value="g" ${p.enota_mere === 'g' ? 'selected' : ''}>g</option>
-                                        <option value="t" ${p.enota_mere === 't' ? 'selected' : ''}>t</option>
                                         <option value="l" ${p.enota_mere === 'l' ? 'selected' : ''}>l</option>
                                         <option value="m" ${p.enota_mere === 'm' ? 'selected' : ''}>m</option>
-                                        <option value="m2" ${p.enota_mere === 'm2' ? 'selected' : ''}>m2</option>
-                                        <option value="m3" ${p.enota_mere === 'm3' ? 'selected' : ''}>m3</option>
-                                        <option value="km" ${p.enota_mere === 'km' ? 'selected' : ''}>km</option>
                                         <option value="kpl" ${p.enota_mere === 'kpl' ? 'selected' : ''}>kpl</option>
-                                        <option value="dan" ${p.enota_mere === 'dan' ? 'selected' : ''}>dan</option>
-                                        <option value="mesec" ${p.enota_mere === 'mesec' ? 'selected' : ''}>mesec</option>
-                                        <option value="paušal" ${p.enota_mere === 'paušal' ? 'selected' : ''}>paušal</option>
                                     </select>
                                 </div>
-                                <div style="flex: 1.5; min-width: 100px;">
+                                <div style="flex: 1; min-width: 80px;">
                                     <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Cena</label>
-                                    <input type="text" class="i-p-cena" value="${formatNumberJS(p.cena_enote)}" style="width:100%; height:32px; text-align:right" oninput="window.kalkulirajImportZneske()" required>
+                                    <input type="text" class="i-p-cena" value="${formatNumberJS(p.cena_enote, 4)}" style="width:100%; height:32px; text-align:right" oninput="window.kalkulirajImportZneske()" required>
                                 </div>
-                                <div style="flex: 1.5; min-width: 100px;">
+                                <div style="flex: 0.8; min-width: 60px;">
+                                    <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Rab. %</label>
+                                    <input type="text" class="i-p-popust" value="${p.popust || 0}" style="width:100%; height:32px; text-align:right" oninput="window.kalkulirajImportZneske()">
+                                </div>
+                                <div style="flex: 0.8; min-width: 70px;">
+                                    <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">DDV %</label>
+                                    <select class="i-p-ddv" style="width:100%; height:32px;" onchange="window.kalkulirajImportZneske()">
+                                        <option value="22" ${(!p.stopnja_ddv || p.stopnja_ddv === 22) ? 'selected' : ''}>22 %</option>
+                                        <option value="9.5" ${p.stopnja_ddv === 9.5 ? 'selected' : ''}>9.5 %</option>
+                                        <option value="5" ${p.stopnja_ddv === 5 ? 'selected' : ''}>5 %</option>
+                                        <option value="0" ${p.stopnja_ddv === 0 ? 'selected' : ''}>0 %</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1; min-width: 90px;">
                                     <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Skupaj</label>
                                     <input type="text" class="i-p-znesek" value="${formatNumberJS(p.znesek_skupaj)}" style="width:100%; height:32px; text-align:right; font-weight:bold; background:#e9ecef;" readonly>
                                 </div>
@@ -2490,21 +2674,24 @@ async function showImportPreview(data) {
                 const kol = parseNumberJS(tr.querySelector('.i-p-kol').value) || 1;
                 const em = tr.querySelector('.i-p-em').value || 'kos';
                 const cena = parseNumberJS(tr.querySelector('.i-p-cena').value) || 0;
-                const znesek = Math.round(kol * cena * 100) / 100;
-                // Ohranjamo stopnjo DDV iz originalnih podatkov za vsako postavko
-                const stopnja = (data.postavke && data.postavke[idx] && data.postavke[idx].stopnja_ddv != null)
-                    ? data.postavke[idx].stopnja_ddv : defaultDdvStopnja;
+                const popust = parseNumberJS(tr.querySelector('.i-p-popust').value) || 0;
+                const stopnja = parseNumberJS(tr.querySelector('.i-p-ddv').value);
+                
+                const netoVrstica = (kol * cena) * (1 - popust / 100);
+                const brutoVrstica = netoVrstica * (1 + stopnja / 100);
+                
                 novePostavke.push({
                     opis: opis,
                     kolicina: kol,
                     enota_mere: em,
                     cena_enote: cena,
+                    popust: popust,
                     stopnja_ddv: stopnja,
-                    znesek_skupaj: znesek,
+                    znesek_skupaj: Math.round(brutoVrstica * 100) / 100,
                     konto: globalKonto || ""
                 });
-                novSkupaj += znesek;
-                novBrezDDV += (stopnja > 0) ? znesek / (1 + stopnja / 100) : znesek;
+                novSkupaj += brutoVrstica;
+                novBrezDDV += netoVrstica;
             });
             data.postavke = novePostavke;
             data.znesek_skupaj = Math.round(novSkupaj * 100) / 100;
@@ -2803,7 +2990,6 @@ window.kalkIzpisek = function() {
 };
 
 async function showUrediIzpisek(id) {
-    contentDiv.innerHTML = '<p>Nalagam izpisek...</p>';
     try {
         const res = await fetch(`/api/izpiski/detajl/${id}`);
         const data = await res.json();
@@ -2828,16 +3014,14 @@ async function showDodajIzpisek(editData = null, noDefaultRow = false) {
             const allDocs = await resAll.json();
             const sortirano = window.sortAppData(allDocs, 'izpiski');
             const idx = sortirano.findIndex(d => d.id === editData.id);
-            if (idx > 0) nextId = sortirano[idx - 1].id; // Novejši -> Naslednji
-            if (idx !== -1 && idx < sortirano.length - 1) prevId = sortirano[idx + 1].id; // Starejši -> Prejšnji
+            if (idx > 0) nextId = sortirano[idx - 1].id;
+            if (idx !== -1 && idx < sortirano.length - 1) prevId = sortirano[idx + 1].id;
         } catch(e) {}
     }
 
-    contentDiv.innerHTML = `
-        <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
+    const formHtml = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 20px;">
-                <h3 style="margin: 0; color: var(--primary-blue); flex: 1;">${title}</h3>
-                <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                <div style="display: flex; gap: 8px; flex-shrink: 0; margin-left: auto;">
                     ${isEdit ? `
                         <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da;" onclick="showDodajIzpisek()" title="Nov izpisek">➕ Nov</button>
                         <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da; ${!prevId ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${prevId ? `onclick="showUrediIzpisek(${prevId})"` : 'disabled'} title="Prejšnji">◀ Prejšnji</button>
@@ -2871,15 +3055,14 @@ async function showDodajIzpisek(editData = null, noDefaultRow = false) {
                 
                 <div style="margin-top: 25px; border-top: 1px solid var(--border-color); padding-top:15px;">
                     <button type="submit" class="btn btn-blue">${btnText}</button>
-                    <button type="button" class="btn" onclick="renderIzpiski()" style="color: var(--text-main); background: #eee; margin-left:10px;">Prekliči</button>
+                    <button type="button" class="btn" onclick="window.zapriGlavniPopup()" style="color: var(--text-main); background: #eee; margin-left:10px;">Prekliči</button>
                 </div>
             </form>
-        </div>
     `;
-    
-    // Ovijemo v split view
-    const formHtml = contentDiv.innerHTML;
-    contentDiv.innerHTML = buildSplitViewHTML(formHtml, 'izpiski', isEdit ? editData.id : null);
+
+    const splitHtml = buildSplitViewHTML(formHtml, 'izpiski', isEdit ? editData.id : null);
+    window.odpriGlavniPopup(title, splitHtml, "", true);
+
     if (isEdit) window.PrilogeUI.init('izpiski', editData.id);
 
     if (!window.appSettings) {
@@ -2966,12 +3149,7 @@ async function shraniIzpisek(e, id = null) {
     if (res.ok) {
         const result = await res.json();
         const newId = id || result.id;
-        // Za osvežitev forme s pridobljenim ID-jem (če je bil nov) in morebitnimi prilogami
-        try {
-            const detailRes = await fetch(`/api/izpiski/detajl/${newId}`);
-            const detail = await detailRes.json();
-            showDodajIzpisek(detail);
-        } catch(e) { renderIzpiski(); }
+        window.zapriGlavniPopup();
         if (window._pendingIzpisekFile && newId) {
             await window.PrilogeUI._uploadRaw(window._pendingIzpisekFile, 'izpiski', newId);
             window._pendingIzpisekFile = null;
@@ -3104,6 +3282,7 @@ async function renderNastavitve(tab = 'podjetje', isNew = false) {
             <a href="#" onclick="renderNastavitve('konti')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'konti' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'konti' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'konti' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">Kontni načrt</a>
             <a href="#" onclick="renderNastavitve('eposta')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'eposta' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'eposta' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'eposta' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">E-pošta</a>
             <a href="#" onclick="renderNastavitve('odhodna_posta')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'odhodna_posta' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'odhodna_posta' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'odhodna_posta' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">Odhodna pošta</a>
+            <a href="#" onclick="renderNastavitve('nadzorna_plosca')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'nadzorna_plosca' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'nadzorna_plosca' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'nadzorna_plosca' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">Nadzorna plošča</a>
             ` : ''}
         </div>
         <div id="settings-tab-content"></div>
@@ -3337,6 +3516,10 @@ async function renderNastavitve(tab = 'podjetje', isNew = false) {
             } catch(e) {
                 tabContent.innerHTML = '<p style="color:red">Napaka pri pridobivanju dnevnika.</p>';
             }
+        } else if (tab === 'nadzorna_plosca') {
+            const res = await fetch('/api/nastavitve');
+            const data = await res.json();
+            window.renderDashboardBuilder(tabContent, data.dashboard_config);
         }
     } catch (e) {
         tabContent.innerHTML = '<p style="color:red">Napaka pri nalaganju vsebine.</p>';
@@ -3403,6 +3586,179 @@ window.shraniNastavitvePodjetja = async (isNew = false) => {
         }
     }
 };
+
+window.renderDashboardBuilder = function(container, configStr) {
+    let config = [];
+    try {
+        if (configStr) config = JSON.parse(configStr);
+    } catch(e) { console.error("Napaka pri branju dashboard configa", e); }
+
+    const DEFAULT_CONFIG = [
+        { id: 'kpi_cards', type: 'kpi', width: 'full', title: 'KPI Povzetek' },
+        { id: 'charts', type: 'charts', width: 'full', title: 'Grafi poslovanja' },
+        { id: 'terjatve', type: 'table', content: 'terjatve', width: 'half', title: 'Odprte terjatve' },
+        { id: 'obveznosti', type: 'table', content: 'obveznosti', width: 'half', title: 'Neplačane obveznosti' }
+    ];
+
+    if (!config || config.length === 0) {
+        config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    }
+
+    const blockTypes = [
+        { val: 'kpi', lbl: 'KPI Kartice (Povzetek)' },
+        { val: 'charts', lbl: 'Grafi (Izdani/Prejeti)' },
+        { val: 'table', lbl: 'Tabela s podatki' },
+        { val: 'shortcuts', lbl: 'Hitre povezave' }
+    ];
+
+    const tableContents = [
+        { val: 'terjatve', lbl: 'Odprte terjatve' },
+        { val: 'obveznosti', lbl: 'Neplačane obveznosti' },
+        { val: 'zadnji_dokumenti', lbl: 'Zadnjih 10 dokumentov' },
+        { val: 'izdani_racuni', lbl: 'Zadnjih 10 izdanih računov' },
+        { val: 'prejeti_racuni', lbl: 'Zadnjih 10 prejetih računov' },
+        { val: 'partnerji', lbl: 'Seznam partnerjev (zadnjih 10)' },
+        { val: 'artikli', lbl: 'Seznam artiklov (zadnjih 10)' },
+        { val: 'izpiski', lbl: 'Bančni izpiski (zadnjih 10)' }
+    ];
+
+    const widths = [
+        { val: 'full', lbl: 'Polna širina (100%)' },
+        { val: 'half', lbl: 'Polovična širina (50%)' }
+    ];
+
+    function renderBlocks() {
+        let html = `
+            <div style="max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-top: 6px solid var(--primary-blue);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; color: var(--primary-blue); font-weight: 800;">Urejevalnik nadzorne plošče</h3>
+                    <button class="btn" style="background: #f1f3f5; color: #495057;" onclick="window.resetDbConfig()">Ponastavi na privzeto</button>
+                </div>
+                <p style="margin-bottom: 30px; color: #868e96; font-size: 0.95em;">Prilagodite gradnike, ki jih želite videti na vstopni strani aplikacije. Gradnike lahko dodajate, brišete in premikate.</p>
+                
+                <div id="db-blocks-list" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px;">
+                    ${config.map((b, i) => `
+                        <div class="db-builder-block" style="display: flex; gap: 20px; align-items: flex-start; background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #e9ecef; transition: all 0.2s;">
+                            <div style="cursor: move; color: #dee2e6; font-size: 1.5em; margin-top: 10px;">⋮⋮</div>
+                            <div style="flex: 1;">
+                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                    <div>
+                                        <label style="font-size: 0.8rem; font-weight: 700; color: #495057; display: block; margin-bottom: 5px;">Naslov gradnika</label>
+                                        <input type="text" value="${b.title || ''}" onchange="window.updateDbBlock(${i}, 'title', this.value)" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9em;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.8rem; font-weight: 700; color: #495057; display: block; margin-bottom: 5px;">Vrsta</label>
+                                        <select onchange="window.updateDbBlock(${i}, 'type', this.value)" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9em; background: white;">
+                                            ${blockTypes.map(t => `<option value="${t.val}" ${b.type === t.val ? 'selected' : ''}>${t.lbl}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div>
+                                        <label style="font-size: 0.8rem; font-weight: 700; color: #495057; display: block; margin-bottom: 5px;">Širina</label>
+                                        <select onchange="window.updateDbBlock(${i}, 'width', this.value)" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9em; background: white;">
+                                            ${widths.map(w => `<option value="${w.val}" ${b.width === w.val ? 'selected' : ''}>${w.lbl}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    ${b.type === 'table' ? `
+                                    <div>
+                                        <label style="font-size: 0.8rem; font-weight: 700; color: #495057; display: block; margin-bottom: 5px;">Vsebina</label>
+                                        <select onchange="window.updateDbBlock(${i}, 'content', this.value)" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9em; background: white;">
+                                            ${tableContents.map(tc => `<option value="${tc.val}" ${b.content === tc.val ? 'selected' : ''}>${tc.lbl}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    ` : '<div></div>'}
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button class="icon-btn" onclick="window.moveDbBlock(${i}, -1)" title="Premakni gor" ${i === 0 ? 'disabled' : ''} style="background: white;">↑</button>
+                                <button class="icon-btn" onclick="window.moveDbBlock(${i}, 1)" title="Premakni dol" ${i === config.length - 1 ? 'disabled' : ''} style="background: white;">↓</button>
+                                <button class="icon-btn btn-red" onclick="window.removeDbBlock(${i})" title="Odstrani gradnik" style="margin-top: 5px;">${ICONS.delete}</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div style="display: flex; gap: 15px; border-top: 1px solid #eee; padding-top: 25px;">
+                    <button class="btn btn-blue" onclick="window.addDbBlock()" style="padding: 10px 20px;">+ Dodaj nov gradnik</button>
+                    <button class="btn btn-red" onclick="window.saveDashboardConfig()" style="margin-left: auto; padding: 10px 25px; font-weight: 800; box-shadow: 0 4px 10px rgba(224, 49, 49, 0.2);">SHRANI KONFIGURACIJO</button>
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+    }
+
+    window.updateDbBlock = (index, field, value) => {
+        config[index][field] = value;
+        if (field === 'type' && value === 'table' && !config[index].content) config[index].content = 'zadnji_dokumenti';
+        renderBlocks();
+    };
+
+    window.removeDbBlock = (index) => {
+        config.splice(index, 1);
+        renderBlocks();
+    };
+
+    window.moveDbBlock = (index, dir) => {
+        const target = index + dir;
+        if (target < 0 || target >= config.length) return;
+        const temp = config[index];
+        config[index] = config[target];
+        config[target] = temp;
+        renderBlocks();
+    };
+
+    window.addDbBlock = () => {
+        config.push({ id: 'new_' + Date.now(), type: 'table', content: 'zadnji_dokumenti', width: 'full', title: 'Nov gradnik' });
+        renderBlocks();
+    };
+
+    window.resetDbConfig = () => {
+        if (confirm("Ali želite ponastaviti nadzorno ploščo na privzete nastavitve?")) {
+            config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+            renderBlocks();
+        }
+    };
+
+    window.saveDashboardConfig = async () => {
+        try {
+            // Pridobimo trenutne nastavitve, da ne prepišemo drugih polj
+            const res = await fetch('/api/nastavitve');
+            const current = await res.json();
+            
+            // Odstranimo 'id' če obstaja v payloadu, da ne zmedemo Pydantica (čeprav bi moral ignorirati)
+            const { id, ...cleanCurrent } = current;
+            
+            const payload = {
+                ...cleanCurrent,
+                dashboard_config: JSON.stringify(config)
+            };
+            
+            const saveRes = await fetch('/api/nastavitve', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (saveRes.ok) {
+                alert("Konfiguracija nadzorne plošče je bila uspešno shranjena.");
+                // Osvežimo podatek v nastavitvah, če bi jih kdo drug bral
+                renderNastavitve('nadzorna_plosca');
+            } else {
+                const errData = await saveRes.json();
+                console.error("Napaka pri shranjevanju:", errData);
+                alert("Napaka pri shranjevanju. Preverite konzolo za podrobnosti.");
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Napaka pri komunikaciji s strežnikom.");
+        }
+    };
+
+    renderBlocks();
+};
+
+
 
 window.shraniVseEpostaNastavitve = async () => {
     const cRes = await fetch('/api/nastavitve');
@@ -3811,6 +4167,7 @@ async function renderOsnovnaSredstva() {
 
 window.showDodajOsnovnoSredstvo = async function(editData = null) {
     const isEdit = !!editData;
+    const title = isEdit ? 'Uredi osnovno sredstvo' : 'Novo osnovno sredstvo';
     let autoInv = '001';
     
     if(!isEdit) {
@@ -3823,9 +4180,7 @@ window.showDodajOsnovnoSredstvo = async function(editData = null) {
         } catch(e) {}
     }
 
-    contentDiv.innerHTML = `
-        <div style="max-width: 600px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
-            <h3 style="margin-bottom: 20px; color: var(--primary-blue);">${isEdit ? 'Uredi osnovno sredstvo' : 'Novo osnovno sredstvo'}</h3>
+    const innerHtml = `
             <form onsubmit="shraniOsnovnoSredstvo(event, ${isEdit ? editData.id : 'null'})">
                 
                 <div style="display:flex; gap:15px;">
@@ -3876,12 +4231,12 @@ window.showDodajOsnovnoSredstvo = async function(editData = null) {
                 
                 <div style="margin-top:25px; padding-top:15px; border-top:1px solid #eee; display:flex; gap:10px;">
                     <button type="submit" class="btn btn-blue">${isEdit ? 'Shrani spremembe' : 'Shrani osnovno sredstvo'}</button>
-                    <button type="button" class="btn" style="background:#eee; color:#333;" onclick="renderOsnovnaSredstva()">Prekliči</button>
+                    <button type="button" class="btn" style="background:#eee; color:#333;" onclick="window.zapriGlavniPopup()">Prekliči</button>
                     ${isEdit ? `<button type="button" class="btn btn-red" style="margin-left:auto;" onclick="brisiOsnovnoSredstvo(${editData.id})">Briši</button>` : ''}
                 </div>
             </form>
-        </div>
     `;
+    window.odpriGlavniPopup(title, innerHtml);
     window.initDatePickers();
 };
 
@@ -3909,7 +4264,7 @@ window.shraniOsnovnoSredstvo = async function(e, id) {
             body: JSON.stringify(payload)
         });
         if(res.ok) {
-            window.renderOsnovnaSredstva();
+            window.zapriGlavniPopup();
         } else {
             alert('Napaka pri shranjevanju.');
         }
@@ -3981,9 +4336,9 @@ window.renderZaposleni = async function() {
 
 window.showDodajZaposleni = function(editData = null) {
     const isEdit = !!editData;
-    contentDiv.innerHTML = `
-        <div style="max-width: 700px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
-            <h3 style="margin-bottom: 20px; color: var(--primary-blue);">${isEdit ? 'Uredi zaposlenega' : 'Nov zaposleni'}</h3>
+    const title = isEdit ? 'Uredi zaposlenega' : 'Nov zaposleni';
+    
+    const innerHtml = `
             <form onsubmit="window.shraniZaposleni(event, ${isEdit ? editData.id : 'null'})">
                 <div class="form-group"><label>Ime in priimek *</label><input type="text" id="z_ime" value="${editData?.ime_priimek || ''}" required></div>
                 <div class="form-group"><label>Naslov</label><input type="text" id="z_naslov" value="${editData?.naslov || ''}"></div>
@@ -4031,11 +4386,11 @@ window.showDodajZaposleni = function(editData = null) {
 
                 <div style="margin-top:25px; display:flex; gap:10px;">
                     <button type="submit" class="btn btn-blue">Shrani zaposlenega</button>
-                    <button type="button" class="btn" style="background:#eee; color:#333;" onclick="window.renderZaposleni()">Prekliči</button>
+                    <button type="button" class="btn" style="background:#eee; color:#333;" onclick="window.zapriGlavniPopup()">Prekliči</button>
                 </div>
             </form>
-        </div>
     `;
+    window.odpriGlavniPopup(title, innerHtml);
     window.initDatePickers();
     window.osveziIzracunDopusta();
 }
@@ -4098,7 +4453,7 @@ window.shraniZaposleni = async function(e, id) {
     try {
         const url = id ? `/api/zaposleni/${id}` : '/api/zaposleni';
         const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(pay) });
-        if(res.ok) window.renderZaposleni();
+        if(res.ok) window.zapriGlavniPopup();
     } catch(e) {}
 }
 
@@ -4187,6 +4542,7 @@ async function renderPotniNalogi() {
 
 window.showDodajPN = async function(editData = null) {
     const isEdit = !!editData;
+    const title = isEdit ? 'Uredi potni nalog' : 'Nov potni nalog';
     const trenutnoLeto = getLeto();
     let autoSt = '001-' + trenutnoLeto;
     if(!isEdit) {
@@ -4196,12 +4552,11 @@ window.showDodajPN = async function(editData = null) {
         } catch(e) {}
     }
 
-    const zapOpts = loadedZaposleni.map(z => `<option value="${z.id}" ${editData && editData.zaposleni_id===z.id ? 'selected':''}>${z.ime_priimek}</option>`).join('');
-    const vozDataLst = loadedVozila.map(v => `<option value="${v}">`).join('');
+    const zapOpts = (window.loadedZaposleni || []).map(z => `<option value="${z.id}" ${editData && editData.zaposleni_id===z.id ? 'selected':''}>${z.ime_priimek}</option>`).join('');
+    const vozDataLst = (window.loadedVozila || []).map(v => `<option value="${v}">`).join('');
 
     const df = (dt) => {
         if(!dt) return '';
-        // Pretvori iz YYYY-MM-DD HH:MM:SS v DD.MM.YYYY HH:MM
         const p = dt.split(' ');
         const d = p[0].split('-');
         if(d.length !== 3) return dt;
@@ -4209,14 +4564,12 @@ window.showDodajPN = async function(editData = null) {
         return `${d[2]}.${d[1]}.${d[0]} ${time}`;
     };
 
-    contentDiv.innerHTML = `
+    const innerHtml = `
         <style>
             .pn-box { background:#f8f9fa; border:1px solid #e9ecef; padding:15px; border-radius:6px; margin-bottom:15px; }
             .pn-row { display:flex; gap:15px; margin-bottom:10px; }
             .pn-row .form-group { margin-bottom:0; flex:1; }
         </style>
-        <div style="max-width: 800px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
-            <h3 style="margin-bottom: 20px; color: var(--primary-blue);">${isEdit ? 'Uredi potni nalog' : 'Nov potni nalog'}</h3>
             <form onsubmit="window.shraniPN(event, ${isEdit ? editData.id : 'null'})">
                 
                 <div class="pn-row">
@@ -4267,6 +4620,7 @@ window.showDodajPN = async function(editData = null) {
                     </div>
 
                     <p id="pn_osm_info" style="font-size:0.85em; margin:5px 0; color:#1971c2; font-style:italic; display:none;">Računam razdaljo s pomočjo OpenStreetMap...</p>
+                    
                     <button type="button" class="btn" style="background:#e7f5ff; color:#1971c2; border:1px solid #a5d8ff; padding:5px 12px; margin-bottom:10px; width:100%; transition:0.2s;" onclick="window.pnIzracunajRazdaljoOSM(this)">
                         <span style="font-size:1.1em; margin-right:5px;">🌍</span> Samodejno izračunaj razdaljo
                     </button>
@@ -4293,21 +4647,22 @@ window.showDodajPN = async function(editData = null) {
                         <div style="font-size:1.5em; font-weight:bold; color:#2b8a3e;"><span id="pn_skupaj_text">${formatMoneyJS(editData?.skupni_znesek||0)}</span></div>
                     </div>
                     <div style="display:flex; gap:10px;">
-                        <button type="button" class="btn" style="background:#eee; color:#333;" onclick="renderPotniNalogi()">Prekliči</button>
-                        <button type="submit" class="btn btn-blue">Shrani nalog</button>
+                        <button type="button" class="btn" style="background:#eee; color:#333;" onclick="window.zapriGlavniPopup()">Prekliči</button>
+                        <button type="submit" class="btn btn-blue">${isEdit ? 'Shrani spremembe' : 'Shrani nalog'}</button>
                     </div>
                 </div>
             </form>
-        </div>
     `;
-
-    // Initialize box state based on edit data
-    if(isEdit && editData.relacija_konec && editData.relacija_zacetek !== editData.relacija_konec && editData.relacija_konec !== "Enako_kot_zacetek") {
-        document.getElementById('pn_konec_enak').checked = false;
-        document.getElementById('pn_konec_box').style.display = 'flex';
-        document.getElementById('pn_rel_konec').value = editData.relacija_konec;
-    }
+    window.odpriGlavniPopup(title, innerHtml);
     window.initDatePickers();
+    
+    if(isEdit && editData.relacija_konec && editData.relacija_zacetek !== editData.relacija_konec && editData.relacija_konec !== "Enako_kot_zacetek") {
+        const chk = document.getElementById('pn_konec_enak');
+        if(chk) {
+            chk.checked = false;
+            window.pnToggleKonec(chk);
+        }
+    }
 };
 
 window.pnToggleKonec = function(checkbox) {
@@ -4490,8 +4845,7 @@ window.shraniPN = async function(e, id) {
         const url = id ? `/api/potni_nalogi/${id}` : '/api/potni_nalogi';
         const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
         if(res.ok) {
-            const saved = await res.json();
-            window.showDodajPN(saved);
+            window.zapriGlavniPopup();
         }
         else alert("Napaka pri shranjevanju.");
     } catch(e) { alert("Napaka: " + e.message); }
@@ -4990,7 +5344,10 @@ async function renderPlace() {
                 html += `
                     <tr>
                         <td><input type="checkbox" class="row-checkbox" data-id="${p.id}" ${isChecked} onclick="window.toggleItemSelection(${p.id}, 'place')"></td>
-                        <td>${p.mesec} / ${p.leto}</td>
+                        <td style="${!p.knjizeno ? 'cursor:pointer; color:var(--primary-blue); text-decoration:underline; font-weight:600;' : ''}" 
+                            onclick='${!p.knjizeno ? `window.showDodajPlaco(${JSON.stringify(p).replace(/'/g,"&apos;")})` : ""}'>
+                            ${p.mesec} / ${p.leto}
+                        </td>
                         <td style="font-weight:bold;">${p.zaposleni_ime || '/'}</td>
                         <td style="font-size:0.9em;">${p.vrsta_zaposlitve.toUpperCase()}</td>
                         <td style="text-align:right;">${formatMoneyJS(p.bruto_placa)}</td>
@@ -5003,7 +5360,6 @@ async function renderPlace() {
                         </td>
                         <td class="action-buttons">
                             ${!p.knjizeno ? `
-                                <button class="icon-btn" onclick='window.showDodajPlaco(${JSON.stringify(p).replace(/'/g,"&apos;")})' title="Uredi">${ICONS.edit}</button>
                                 <button class="icon-btn btn-green" onclick="window.knjiziPosamezen(${p.id}, 'knjizi', 'place')" title="Knjiži">${ICONS.book}</button>
                                 <button class="icon-btn btn-red" onclick="window.brisiPlaco(${p.id})" title="Briši">${ICONS.delete}</button>
                             ` : `
@@ -5021,12 +5377,12 @@ async function renderPlace() {
 
 window.showDodajPlaco = function(editData = null) {
     const isEdit = !!editData;
+    const title = isEdit ? 'Uredi obračun' : 'Nov obračun plač/prispevkov';
     const zapOpts = (window.loadedZaposleni || []).map(z => `<option value="${z.id}" ${editData && editData.zaposleni_id===z.id ? 'selected':''}>${z.ime_priimek}</option>`).join('');
     
-    contentDiv.innerHTML = `
-        <div style="max-width: 900px; display:grid; grid-template-columns: 1.5fr 1fr; gap:20px;">
-            <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
-                <h3 style="margin-bottom: 20px; color: var(--primary-blue);">${isEdit ? 'Uredi obračun' : 'Nov obračun plač/prispevkov'}</h3>
+    const innerHtml = `
+        <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:20px;">
+            <div style="background: white; padding: 5px;">
                 <form id="placa-form" onsubmit="window.shraniPlaco(event, ${isEdit ? editData.id : 'null'})">
                     <div style="display:flex; gap:10px;">
                         <div class="form-group" style="flex:2"><label>Zaposleni / Nosilec *</label>
@@ -5073,14 +5429,14 @@ window.showDodajPlaco = function(editData = null) {
                     <div style="margin-top:20px; padding-top:15px; border-top:2px solid var(--primary-blue); display:flex; justify-content:space-between; align-items:center;">
                         <div style="font-weight:bold; color:var(--primary-blue); font-size:1.2em;">SKUPAJ: <span id="p_skupaj_text">${formatMoneyJS(editData?.znesek_skupaj || 0)}</span></div>
                         <div style="display:flex; gap:10px;">
-                            <button type="button" class="btn" style="background:#eee; color:#333;" onclick="renderPlace()">Prekliči</button>
-                            <button type="submit" class="btn btn-blue">Shrani obračun</button>
+                            <button type="button" class="btn" style="background:#eee; color:#333;" onclick="window.zapriGlavniPopup()">Prekliči</button>
+                            <button type="submit" class="btn btn-blue">${isEdit ? 'Shrani spremembe' : 'Shrani obračun'}</button>
                         </div>
                     </div>
                 </form>
             </div>
 
-            <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid #adb5bd;">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
                 <h4 style="margin:0 0 15px 0;">UPN / Plačilo</h4>
                 <div id="p_qr_canvas_box" style="display:flex; justify-content:center; margin-bottom:15px; background:#fff; padding:10px; border:1px solid #eee;">
                     <div id="p_qr_code"></div>
@@ -5093,6 +5449,7 @@ window.showDodajPlaco = function(editData = null) {
             </div>
         </div>
     `;
+    window.odpriGlavniPopup(title, innerHtml, "", true);
     window.preracunajPlaco();
 };
 
@@ -5284,7 +5641,7 @@ window.shraniPlaco = async function(e, id) {
             body: JSON.stringify(pay)
         });
         if(res.ok) {
-            window.renderPlace();
+            window.zapriGlavniPopup();
         }
     } catch(e) { alert("Napaka pri shranjevanju."); }
 };
@@ -6200,19 +6557,15 @@ async function renderGlavnaKnjiga() {
 }
 
 async function showTemeljnicaDetajl(id) {
-    contentDiv.innerHTML = '<p>Nalagam detajle...</p>';
     try {
         const res = await fetch(`/api/temeljnice/detajl/${id}`);
         if (!res.ok) throw new Error("Ni mogoče naložiti temeljnice");
         const t = await res.json();
         
-        let html = `
-            <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                    <h3 style="margin:0; color:var(--primary-blue);">Temeljnica: ${t.stevilka} <span style="font-size:0.7em; color:#868e96; background:#f1f3f5; padding:3px 8px; border-radius:10px; vertical-align:middle;">${t.vrsta}</span></h3>
-                    <button class="btn" onclick="renderGlavnaKnjiga()">Nazaj na seznam</button>
-                </div>
-                
+        const title = `Temeljnica: ${t.stevilka}`;
+        const vrst = `<span style="font-size:0.7em; color:#868e96; background:#f1f3f5; padding:3px 8px; border-radius:10px; vertical-align:middle; margin-left:10px;">${t.vrsta}</span>`;
+        
+        let innerHtml = `
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; background:#f8f9fa; padding:15px; border-radius:6px; margin-bottom:20px;">
                     <div><strong>Datum:</strong> ${formatDateJS(t.datum)}</div>
                     <div><strong>Poslovno leto:</strong> ${t.poslovno_leto}</div>
@@ -6237,7 +6590,7 @@ async function showTemeljnicaDetajl(id) {
         t.postavke.forEach(p => {
             sumB += p.znesek_v_breme;
             sumD += p.znesek_v_dobro;
-            html += `
+            innerHtml += `
                 <tr>
                     <td style="font-weight:bold;">${p.konto}</td>
                     <td>${p.partner_naziv || '/'}</td>
@@ -6249,7 +6602,7 @@ async function showTemeljnicaDetajl(id) {
         });
         
         const isBalanced = Math.abs(sumB - sumD) < 0.01;
-        html += `
+        innerHtml += `
                     </tbody>
                     <tfoot>
                         <tr style="background:#f1f3f5; font-weight:bold;">
@@ -6259,25 +6612,21 @@ async function showTemeljnicaDetajl(id) {
                         </tr>
                     </tfoot>
                 </table>
-            </div>
+                <div style="margin-top:20px; text-align:right;">
+                    <button class="btn" onclick="window.zapriGlavniPopup()">Zapri</button>
+                </div>
         `;
-        contentDiv.innerHTML = html;
+        window.odpriGlavniPopup(title + vrst, innerHtml, "", true);
         
     } catch (e) {
         alert(e.message);
-        renderGlavnaKnjiga();
     }
 }
 
 async function showDodajTemeljnico() {
     const leto = getLeto();
-    let html = `
-        <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3 style="margin:0; color:var(--primary-blue);">Nova ročna temeljnica</h3>
-                <button class="btn" onclick="renderGlavnaKnjiga()">Nazaj</button>
-            </div>
-            
+    const title = 'Nova ročna temeljnica';
+    const innerHtml = `
             <form id="frm-temeljnica" onsubmit="shraniTemeljnico(event)">
                 <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px; margin-bottom:20px;">
                     <div class="form-group">
@@ -6303,14 +6652,13 @@ async function showDodajTemeljnico() {
                 <button type="button" class="btn" style="margin-top:10px; background:#f1f3f5; color:#333;" onclick="dodajTemeljnicaPostavko()">+ Dodaj postavko</button>
                 
                 <div style="margin-top:30px; padding-top:20px; border-top:1px solid #eee; display:flex; justify-content:flex-end; gap:15px;">
-                    <button type="button" class="btn" onclick="renderGlavnaKnjiga()" style="background:#eee; color:#333;">Prekliči</button>
+                    <button type="button" class="btn" onclick="window.zapriGlavniPopup()" style="background:#eee; color:#333;">Prekliči</button>
                     <button type="submit" class="btn btn-blue">Shrani temeljnico</button>
                 </div>
             </form>
-        </div>
     `;
     
-    contentDiv.innerHTML = html;
+    window.odpriGlavniPopup(title, innerHtml, "", true);
     
     // Dodamo prvi dve prazni postavki (V breme in V dobro)
     window._t_postavke = [];
@@ -6465,7 +6813,7 @@ async function shraniTemeljnico(e) {
         });
         
         if (res.ok) {
-            renderGlavnaKnjiga();
+            window.zapriGlavniPopup();
         } else {
             const err = await res.json();
             alert("Napaka pri shranjevanju: " + err.detail);

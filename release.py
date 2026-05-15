@@ -151,25 +151,11 @@ def update_changelog():
         changes = get_git_changes()
         
         if changes:
-            print("✨ Zaznane spremembe:")
+            print("✨ Zaznane spremembe (samodejno potrjeno):")
             for ch in changes:
                 print(f"  - {ch}")
-            confirm = input("\nAli želite uporabiti te spremembe? (D/n/u-uredi): ").lower()
-            if confirm == 'n':
-                changes = []
-            elif confirm == 'u':
-                print("📝 Vnesite popravljene spremembe (prazna vrstica za konec):")
-                changes = []
-                while True:
-                    line = input("> ").strip()
-                    if not line: break
-                    changes.append(line)
         else:
-            print("📝 Vnesite nove spremembe (v vsako vrstico eno, zaključi s prazno vrstico):")
-            while True:
-                line = input("> ").strip()
-                if not line: break
-                changes.append(line)
+            print("ℹ️ Ni novih pomembnih sprememb v git zgodovini.")
     
     if not changes:
         print("⏭️ Ni sprememb, preskakujem posodobitev zgodovine.")
@@ -236,10 +222,7 @@ def run_scripts():
         print(f"❌ Napaka pri ustvarjanju ZIP arhiva: {e}")
 
 def git_push():
-    confirm = input("\n🐙 Ali želite potisniti spremembe na GitHub/Railway? (d/n): ").lower()
-    if confirm != 'd':
-        print("⏭️ Preskakujem git push.")
-        return
+    print("\n🐙 Priprava za potisk na GitHub/Railway...")
 
     # Preveri če je git inicializiran
     if not os.path.exists(os.path.join(BASE_DIR, '.git')):
@@ -254,13 +237,8 @@ def git_push():
         # Preveri če obstaja remote
         remotes = subprocess.run(['git', 'remote'], capture_output=True, text=True).stdout.strip()
         if not remotes:
-            url = input("Vnesite URL GitHub repozitorija: ").strip()
-            if url:
-                subprocess.run(['git', 'remote', 'add', 'origin', url], check=True)
-                subprocess.run(['git', 'branch', '-M', 'main'], check=True)
-            else:
-                print("❌ Brez remote-a ne morem push-ati.")
-                return
+            print("❌ Napaka: Brez remote-a (origin) ne morem push-ati. Prosim, ročno dodajte remote: git remote add origin <url>")
+            return
 
         subprocess.run(['git', 'push', '-u', 'origin', 'main'], check=True)
         print("✅ Uspešno potisnjeno na GitHub.")
