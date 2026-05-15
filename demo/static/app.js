@@ -6170,6 +6170,25 @@ async function renderHelp() {
             `
         },
         {
+            id: 'dashboard',
+            title: 'Osebna nadzorna plošča',
+            icon: '📊',
+            content: 'Prilagodite svojo nadzorno ploščo z gradniki po vaši meri.',
+            details: `
+                <h4>Personalizacija nadzorne plošče</h4>
+                <p>Nadzorna plošča je vaš prvi stik z aplikacijo. Zdaj jo lahko popolnoma prilagodite:</p>
+                <ul>
+                    <li><strong>Urejanje blokov:</strong> Kliknite gumb <strong>"Uredi nadzorno ploščo"</strong> v zgornjem desnem kotu.</li>
+                    <li><strong>Dodajanje novih:</strong> Izbirate lahko med različnimi tipi blokov (grafi prihodkov, seznami neplačanih računov, stanje zaloge, opomniki).</li>
+                    <li><strong>Premikanje in brisanje:</strong> Bloke lahko poljubno razporejate ali odstranite tiste, ki jih ne potrebujete.</li>
+                    <li><strong>Shranjevanje:</strong> Ko ste z razporeditvijo zadovoljni, kliknite <strong>"Shrani razpored"</strong>. Nastavitve se bodo shranile v vaš profil podjetja.</li>
+                </ul>
+                <div style="background:#fff9db; padding:15px; border-radius:8px; border-left:5px solid #fab005; margin:15px 0;">
+                    <strong>Namig:</strong> Začnite s preprostim razporedom (npr. Graf prihodkov in Seznam neplačanih računov) in ga kasneje dopolnjujte glede na vaše potrebe.
+                </div>
+            `
+        },
+        {
             id: 'zgodovina',
             title: 'Zgodovina sprememb',
             icon: '🕒',
