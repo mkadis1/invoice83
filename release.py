@@ -68,7 +68,7 @@ def backup():
     # Seznam datotek/map za backup
     to_backup = [
         'main.py', 'database.py', 'pdf_parser.py', 'knjizenje.py', 
-        'requirements.txt', 'static', 'companies.json', 'racunovodstvo.db'
+        'ocr_engine.py', 'requirements.txt', 'static', 'companies.json', 'racunovodstvo.db'
     ]
     
     for item in to_backup:
