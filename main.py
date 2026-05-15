@@ -31,12 +31,14 @@ if os.name == 'nt':
 from bs4 import BeautifulSoup
 import pdf_parser
 from pdf_parser import extract_data_from_pdf
-print(f"DEBUG: CWD = {os.getcwd()}")
-print(f"DEBUG: Files in CWD = {os.listdir('.')}")
+sys.stderr.write(f"DEBUG: CWD = {os.getcwd()}\n")
+sys.stderr.write(f"DEBUG: Files in CWD = {os.listdir('.')}\n")
+sys.stderr.flush()
 try:
     import ocr_engine
 except Exception as e:
-    print(f"DEBUG: Failed to import ocr_engine: {e}")
+    sys.stderr.write(f"DEBUG: Failed to import ocr_engine: {e}\n")
+    sys.stderr.flush()
     raise
 import io
 from email.mime.application import MIMEApplication
