@@ -6179,8 +6179,22 @@ async function renderHelp() {
                 <div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">12. 05. 2026</span>
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">15. 05. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li><strong>Modularna nadzorna plošča:</strong> Prilagodljiv gradnik blokov (Block Builder) za osebno nadzorno ploščo.</li>
+                            <li><strong>Modernizacija vmesnika:</strong> Prehod na celovit sistem pojavnih oken (popups) za vse dokumente in entitete.</li>
+                            <li><strong>Hitrejša navigacija:</strong> Odstranjeni nepotrebni "Nalagam..." zasloni; neposreden dostop do urejanja s klikom na vrstico tabele.</li>
+                            <li><strong>Samodejno številčenje:</strong> Vsi dokumenti (izdani, prejeti, ponudbe) zdaj uporabljajo samodejno zaporedno številčenje.</li>
+                            <li><strong>Izboljšana odzivnost:</strong> Optimizirano delovanje aplikacije kot enostranska aplikacija (SPA).</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">12. 05. 2026</span>
+                            
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Materialno vodenje:</strong> Zaloga se zdaj posodablja v realnem času takoj ob shranjevanju dokumentov (prejeti in izdani računi).</li>

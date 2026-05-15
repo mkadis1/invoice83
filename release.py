@@ -14,7 +14,7 @@ DEMO_DIR = os.path.join(BASE_DIR, 'demo')
 ZIP_OUTPUT_PATH = r'c:\Users\mihak\My Drive\Dokumenti\Antigravity\Invoice83_tester.zip'
 
 def clean():
-    print("🧹 Čiščenje začasnih datotek...")
+    print("--- Ciscenje zacasnih datotek...")
     # __pycache__
     for root, dirs, files in os.walk(BASE_DIR):
         for d in dirs:
@@ -22,7 +22,7 @@ def clean():
                 try:
                     shutil.rmtree(os.path.join(root, d))
                 except Exception as e:
-                    print(f"  ⚠️ Ni mogoče pobrisati {d}: {e}")
+                    print(f"  [!] Ni mogoce pobrisati {d}: {e}")
     
     # build, dist
     for d in ['build', 'dist']:
@@ -33,8 +33,8 @@ def clean():
                 # ignore_errors=True bi sicer preskočil, a mi želimo vsaj poskusiti
                 shutil.rmtree(path)
             except Exception as e:
-                print(f"  ⚠️ Ni mogoče popolnoma pobrisati {d}: {e}")
-                print(f"  💡 Nasvet: Zaprite vse programe, ki morda uporabljajo datoteke v {d}.")
+                print(f"  [!] Ni mogoce popolnoma pobrisati {d}: {e}")
+                print(f"  [*] Nasvet: Zaprite vse programe, ki morda uporabljajo datoteke v {d}.")
             
     # sessions
     sessions_dir = os.path.join(BASE_DIR, 'sessions')
@@ -55,12 +55,12 @@ def clean():
                     os.remove(os.path.join(uploads_dir, f))
                 except:
                     pass
-    print("✅ Čiščenje končano.")
+    print("[OK] Ciscenje koncano.")
 
 def backup():
     today = datetime.datetime.now().strftime("%d-%m-%Y")
     backup_folder = os.path.join(BASE_DIR, f"BACKUP-{today}")
-    print(f"📦 Ustvarjanje varnostne kopije v {backup_folder}...")
+    print(f"--- Ustvarjanje varnostne kopije v {backup_folder}...")
     
     if not os.path.exists(backup_folder):
         os.makedirs(backup_folder)
@@ -82,8 +82,8 @@ def backup():
                 else:
                     shutil.copy2(src, dst)
             except Exception as e:
-                print(f"  ⚠️ Napaka pri backupu {item}: {e}")
-    print("✅ Backup uspešno opravljen.")
+                print(f"  [!] Napaka pri backupu {item}: {e}")
+    print("[OK] Backup uspesno opravljen.")
 
 def get_git_changes():
     """Poskusi pridobiti spremembe iz git log-a od zadnje izdaje."""
@@ -133,7 +133,7 @@ def get_git_changes():
             
         return useful_changes
     except Exception as e:
-        print(f"  ⚠️ Napaka pri branju git log-a: {e}")
+        print(f"  [!] Napaka pri branju git log-a: {e}")
         return []
 
 def update_changelog():
@@ -141,24 +141,23 @@ def update_changelog():
     changes_file = os.path.join(BASE_DIR, 'changes.txt')
     
     if os.path.exists(changes_file):
-        print(f"📄 Berem spremembe iz {changes_file}...")
+        print(f"[*] Berem spremembe iz {changes_file}...")
         with open(changes_file, 'r', encoding='utf-8') as f:
             changes = [line.strip() for line in f if line.strip()]
         os.remove(changes_file)
     else:
-        # Avtomatsko zaznavanje iz git-a
-        print("🔍 Iščem nove spremembe v git zgodovini...")
+        print("[*] Iscem nove spremembe v git zgodovini...")
         changes = get_git_changes()
         
         if changes:
-            print("✨ Zaznane spremembe (samodejno potrjeno):")
+            print("+++ Zaznane spremembe (samodejno potrjeno):")
             for ch in changes:
                 print(f"  - {ch}")
         else:
-            print("ℹ️ Ni novih pomembnih sprememb v git zgodovini.")
+            print("[*] Ni novih pomembnih sprememb v git zgodovini.")
     
     if not changes:
-        print("⏭️ Ni sprememb, preskakujem posodobitev zgodovine.")
+        print("[SKIP] Ni sprememb, preskakujem posodobitev zgodovine.")
         return
 
     today_str = datetime.datetime.now().strftime("%d. %m. %Y")
@@ -202,31 +201,31 @@ def update_changelog():
         new_content = content.replace(marker, marker + new_entry)
         with open(APP_JS, 'w', encoding='utf-8') as f:
             f.write(new_content)
-        print(f"✅ Zgodovina sprememb posodobljena v {APP_JS}.")
+        print(f"[OK] Zgodovina sprememb posodobljena v {APP_JS}.")
     else:
-        print("❌ Napaka: Marker za zgodovino v app.js ni bil najden!")
+        print("[ERR] Napaka: Marker za zgodovino v app.js ni bil najden!")
 
 def run_scripts():
-    print("🚀 Posodabljanje demo verzije (update_demo.py)...")
+    print(">>> Posodabljanje demo verzije (update_demo.py)...")
     try:
         subprocess.run([sys.executable, 'update_demo.py'], check=True)
-        print("✅ Demo verzija pripravljena.")
+        print("[OK] Demo verzija pripravljena.")
     except Exception as e:
-        print(f"❌ Napaka pri posodabljanju demo verzije: {e}")
+        print(f"[ERR] Napaka pri posodabljanju demo verzije: {e}")
 
-    print("📦 Ustvarjanje ZIP arhiva za testerje (pakiranje.ps1)...")
+    print(">>> Ustvarjanje ZIP arhiva za testerje (pakiranje.ps1)...")
     try:
         subprocess.run(['powershell', '-File', 'pakiranje.ps1'], check=True)
-        print("✅ ZIP arhiv ustvarjen.")
+        print("[OK] ZIP arhiv ustvarjen.")
     except Exception as e:
-        print(f"❌ Napaka pri ustvarjanju ZIP arhiva: {e}")
+        print(f"[ERR] Napaka pri ustvarjanju ZIP arhiva: {e}")
 
 def git_push():
-    print("\n🐙 Priprava za potisk na GitHub/Railway...")
+    print("\n--- Priprava za potisk na GitHub/Railway...")
 
     # Preveri če je git inicializiran
     if not os.path.exists(os.path.join(BASE_DIR, '.git')):
-        print("⚠️ Git ni inicializiran. Inicializiram...")
+        print("[!] Git ni inicializiran. Inicializiram...")
         subprocess.run(['git', 'init'], check=True)
     
     try:
@@ -241,9 +240,9 @@ def git_push():
             return
 
         subprocess.run(['git', 'push', '-u', 'origin', 'main'], check=True)
-        print("✅ Uspešno potisnjeno na GitHub.")
+        print("[OK] Uspesno potisnjeno na GitHub.")
     except Exception as e:
-        print(f"❌ Napaka pri Git operacijah: {e}")
+        print(f"[ERR] Napaka pri Git operacijah: {e}")
 
 if __name__ == "__main__":
     print("=== AVTOMATSKA IZDAJA (RELEASE) ===")
@@ -252,4 +251,4 @@ if __name__ == "__main__":
     update_changelog()
     run_scripts()
     git_push()
-    print("\n🎉 Vse končano!")
+    print("\n[OK] Vse koncano!")
