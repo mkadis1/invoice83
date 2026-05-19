@@ -1,0 +1,43 @@
+{
+  "stevilka": "26000154",
+  "datum_izdaje": "2026-01-12",
+  "datum_zapadlosti": "2026-01-12",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 86.27,
+  "znesek_ddv": 15.56,
+  "znesek_brez_ddv": 70.71,
+  "partner": {
+    "naziv": "TULI d.o.o.",
+    "davcna_stevilka": "SI31878229"
+  },
+  "postavke": [
+    {
+      "opis": "Alu profil 40x80 U10",
+      "kolicina": 2.0,
+      "enota_mere": "kos",
+      "cena_enote": 21.86,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 26.0
+    },
+    {
+      "opis": "Vijak s cilindri no glavo M8 L16",
+      "kolicina": 200000.0,
+      "enota_mere": "kos",
+      "cena_enote": 0.13,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 26.0
+    },
+    {
+      "opis": "Po!tnina",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 5.36,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 5.36
+    }
+  ]
+}

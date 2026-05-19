@@ -1,0 +1,70 @@
+{
+  "stevilka": "CLB-S1-2000063148",
+  "datum_izdaje": "2026-03-31",
+  "datum_zapadlosti": "2026-04-25",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 97.08,
+  "znesek_ddv": 9.83,
+  "znesek_brez_ddv": 44.75,
+  "partner": {
+    "naziv": "Telemach Slovenija d.o.o.",
+    "davcna_stevilka": "SI56 0400 0027 7723 551"
+  },
+  "postavke": [
+    {
+      "opis": "EON Light",
+      "kolicina": 1.0,
+      "enota_mere": "EN",
+      "cena_enote": 20.86,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 25.45
+    },
+    {
+      "opis": "Paket Dodatna razširjena shema",
+      "kolicina": 1.0,
+      "enota_mere": "EN",
+      "cena_enote": 0.0,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 0.0
+    },
+    {
+      "opis": "Paket Voyo",
+      "kolicina": 1.0,
+      "enota_mere": "EN",
+      "cena_enote": 0.0,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 0.0
+    },
+    {
+      "opis": "Mobilni paket ŠE VEČ",
+      "kolicina": 1.0,
+      "enota_mere": "EN",
+      "cena_enote": 5.66,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 6.9
+    },
+    {
+      "opis": "Mobilni paket NAJVEČ",
+      "kolicina": 0.388,
+      "enota_mere": "EN",
+      "cena_enote": 9.1,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 11.1
+    },
+    {
+      "opis": "Mobilni paket ŠE VEČ",
+      "kolicina": 0.613,
+      "enota_mere": "EN",
+      "cena_enote": 3.47,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 4.23
+    }
+  ]
+}

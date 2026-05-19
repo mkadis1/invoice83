@@ -1,0 +1,70 @@
+{
+  "stevilka": "2619989",
+  "datum_izdaje": "2026-03-31",
+  "datum_zapadlosti": "2026-04-15",
+  "datum_storitve_od": "2026-03-01",
+  "datum_storitve_do": "2026-03-31",
+  "znesek_skupaj": 60.68,
+  "znesek_ddv": 5.26,
+  "znesek_brez_ddv": 55.42,
+  "partner": {
+    "naziv": "JKP Ravne na Koroškem, d.o.o.",
+    "davcna_stevilka": "SI20356846"
+  },
+  "postavke": [
+    {
+      "opis": "CENA JAVNE INFRASTRUKTURE",
+      "kolicina": 143.83,
+      "enota_mere": "KG",
+      "cena_enote": 0.0378,
+      "popust": 0.0,
+      "stopnja_ddv": 9.5,
+      "znesek_skupaj": 5.96
+    },
+    {
+      "opis": "CENA STORITEV",
+      "kolicina": 143.83,
+      "enota_mere": "KG",
+      "cena_enote": 0.1775,
+      "popust": 0.0,
+      "stopnja_ddv": 9.5,
+      "znesek_skupaj": 27.96
+    },
+    {
+      "opis": "CENA JAVNE INFRASTRUKTURE",
+      "kolicina": 117.0,
+      "enota_mere": "KG",
+      "cena_enote": 0.0262,
+      "popust": 0.0,
+      "stopnja_ddv": 9.5,
+      "znesek_skupaj": 3.36
+    },
+    {
+      "opis": "CENA STORITEV",
+      "kolicina": 117.0,
+      "enota_mere": "KG",
+      "cena_enote": 0.1326,
+      "popust": 0.0,
+      "stopnja_ddv": 9.5,
+      "znesek_skupaj": 16.98
+    },
+    {
+      "opis": "CENA JAVNE INFRASTRUKTURE",
+      "kolicina": 35.15,
+      "enota_mere": "KG",
+      "cena_enote": 0.0944,
+      "popust": 0.0,
+      "stopnja_ddv": 9.5,
+      "znesek_skupaj": 3.64
+    },
+    {
+      "opis": "CENA STORITEV",
+      "kolicina": 35.15,
+      "enota_mere": "KG",
+      "cena_enote": 0.0725,
+      "popust": 0.0,
+      "stopnja_ddv": 9.5,
+      "znesek_skupaj": 2.79
+    }
+  ]
+}

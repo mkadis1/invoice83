@@ -1,0 +1,25 @@
+{
+  "stevilka": "43-9038-2054",
+  "datum_izdaje": "2026-04-01",
+  "datum_zapadlosti": "2026-05-01",
+  "datum_storitve_od": "2026-04-01",
+  "datum_storitve_do": "2026-04-01",
+  "znesek_skupaj": 17.75,
+  "znesek_ddv": 3.2,
+  "znesek_brez_ddv": 14.55,
+  "partner": {
+    "naziv": "INPOS, d.o.o., Celje",
+    "davcna_stevilka": "SI70868565"
+  },
+  "postavke": [
+    {
+      "opis": "Ploša lepljena 1000x500x18mm, smreka 1,000 KOS",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 15.812,
+      "popust": 8.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 17.75
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "stevilka": "43-9038-2430",
+  "datum_izdaje": "2026-04-24",
+  "datum_zapadlosti": "2026-05-24",
+  "datum_storitve_od": "2026-04-24",
+  "datum_storitve_do": "2026-04-24",
+  "znesek_skupaj": 62.72,
+  "znesek_ddv": 11.31,
+  "znesek_brez_ddv": 51.41,
+  "partner": {
+    "naziv": "INPOS, d.o.o., Celje",
+    "davcna_stevilka": "SI70868565"
+  },
+  "postavke": [
+    {
+      "opis": "HobbyBeton 25kg Baumit",
+      "kolicina": 2.0,
+      "enota_mere": "kos",
+      "cena_enote": 4.992,
+      "popust": 8.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 11.21
+    },
+    {
+      "opis": "ROBNIK VRTNI 5 CM RAVEN SIV1",
+      "kolicina": 2.0,
+      "enota_mere": "kos",
+      "cena_enote": 2.573,
+      "popust": 5.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 5.97
+    },
+    {
+      "opis": "Zemija bio plantela ZA BOROVNICE",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 10.377,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 12.66
+    },
+    {
+      "opis": "FILTER VLOZEK MREZA 50mcr RL10BX",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 12.205,
+      "popust": 10.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 13.4
+    },
+    {
+      "opis": "O-ring x2 + mast za ATLAS 3p filter",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 7.533,
+      "popust": 10.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 8.27
+    },
+    {
+      "opis": "HobbyBeton 25kg Baumit",
+      "kolicina": 2.0,
+      "enota_mere": "kos",
+      "cena_enote": 4.992,
+      "popust": 8.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 11.21
+    }
+  ]
+}

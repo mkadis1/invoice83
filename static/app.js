@@ -329,7 +329,7 @@ window.potrdiTemeljnicaPopup = function() {
 };
 
 window.refreshCurrentModule = function(moduleOverride = null) {
-    const mod = moduleOverride || window.appSelection.module;
+    const mod = moduleOverride || sessionStorage.getItem('activeModule') || window.appSelection.module;
     if (mod === 'partnerji') renderPartnerji();
     else if (mod === 'izpiski') renderIzpiski();
     else if (mod === 'zaposleni') renderZaposleni();
@@ -338,8 +338,12 @@ window.refreshCurrentModule = function(moduleOverride = null) {
     else if (mod === 'place') renderPlace();
     else if (mod === 'konti') osveziKontiUI();
     else if (mod === 'artikli_storitve') renderArtikliStoritve();
-    else if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'delovni_nalogi'].includes(mod)) {
-        const titles = { 'izdani_racuni': 'Izdani računi', 'prejeti_racuni': 'Prejeti računi', 'ponudbe': 'Ponudbe', 'dobropisi': 'Dobropisi', 'delovni_nalogi': 'Delovni nalogi' };
+    else if (mod === 'dashboard') renderDashboard();
+    else if (mod === 'glavna_knjiga') renderGlavnaKnjiga();
+    else if (mod === 'konto_kartica') renderKontoKartica();
+    else if (mod === 'help') renderHelp();
+    else if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'prejeti_dobropisi', 'delovni_nalogi'].includes(mod)) {
+        const titles = { 'izdani_racuni': 'Izdani računi', 'prejeti_racuni': 'Prejeti računi', 'ponudbe': 'Ponudbe', 'dobropisi': 'Dobropisi', 'prejeti_dobropisi': 'Prejeti dobropisi', 'delovni_nalogi': 'Delovni nalogi' };
         renderDokumenti(mod, titles[mod]);
     }
 };
@@ -2080,6 +2084,35 @@ async function showDodajDokument(tip, naslov, editData = null) {
         window.initPartnerSearch(document.getElementById('d_partner_search'), document.getElementById('d_partner'));
     }
     window.kalkulirajZneske();
+
+    // Preverjanje podvojene stevilke ob izhodu iz polja
+    const stevilkaInput = document.getElementById('d_stevilka');
+    if (stevilkaInput) {
+        stevilkaInput.addEventListener('blur', async function() {
+            const st = this.value.trim();
+            if (!st) return;
+            const tip = window._currentTip || 'prejeti_racuni';
+            const excludeId = window._currentEditId || null;
+            let url = `/api/dokumenti/check_stevilka?stevilka=${encodeURIComponent(st)}&tip=${tip}`;
+            if (excludeId) url += `&exclude_id=${excludeId}`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                let warn = document.getElementById('stevilka-dup-warn');
+                if (data.obstaja) {
+                    if (!warn) {
+                        warn = document.createElement('div');
+                        warn.id = 'stevilka-dup-warn';
+                        warn.style = 'background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:6px 12px;margin-top:4px;font-size:0.85rem;color:#856404;';
+                        stevilkaInput.parentNode.appendChild(warn);
+                    }
+                    warn.innerHTML = `⚠️ Dokument s številko <strong>${st}</strong> že obstaja (ID #${data.id}). Ali ste prepričani, da vnašate nov dokument?`;
+                } else {
+                    if (warn) warn.remove();
+                }
+            } catch(e) {}
+        });
+    }
 }
 
 window.dodajPostavkoR = function(data = null) {
@@ -2283,7 +2316,7 @@ async function shraniDokument(e, tip, naslov, id = null) {
     const res = await fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
     if (res.ok) {
         const saved = await res.json();
-        showUrediDokument(saved.id, tip, naslov);
+        window.zapriGlavniPopup();
     } else {
         const err = await res.json();
         alert("Napaka pri shranjevanju: " + (err.detail || res.statusText));
@@ -2502,6 +2535,7 @@ async function showImportPreview(data) {
                 <div>
                     <label style="color:var(--text-muted); font-size:0.8rem;">ŠTEVILKA RAČUNA</label>
                     <p style="font-weight:bold; font-size:1.1rem;">${data.stevilka}</p>
+                    <div id="import-dup-warn" style="display:none; background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:6px 10px;font-size:0.82rem;color:#856404;margin-top:4px;"></div>
                 </div>
                 <div>
                     <label style="color:var(--text-muted); font-size:0.8rem;">DOBAVITELJ</label>
@@ -2611,6 +2645,20 @@ async function showImportPreview(data) {
     `;
 
     document.body.appendChild(modal);
+
+    // Avtomatsko preveri podvojeno stevilko ob odprtju
+    (async () => {
+        if (!data.stevilka || data.stevilka === 'Neznano') return;
+        try {
+            const res = await fetch(`/api/dokumenti/check_stevilka?stevilka=${encodeURIComponent(data.stevilka)}&tip=prejeti_racuni`);
+            const check = await res.json();
+            const warnEl = document.getElementById('import-dup-warn');
+            if (check.obstaja && warnEl) {
+                warnEl.style.display = 'block';
+                warnEl.innerHTML = `⚠️ Dokument s to številko (<strong>${data.stevilka}</strong>) je bil že uvožen (ID #${check.id}). Preverite, da ne uvažate duplikata!`;
+            }
+        } catch(e) {}
+    })();
 
     return new Promise((resolve) => {
         const closeImportModal = () => {
@@ -2764,6 +2812,9 @@ window.uvoziEslog = async function(input) {
                 const editRes = await fetch(`/api/dokumenti/detajl/${docId}`);
                 if (editRes.ok) {
                     const editData = await editRes.json();
+                    if (editData.poslovno_leto && editData.poslovno_leto !== getLeto()) {
+                        document.getElementById('poslovno-leto').value = editData.poslovno_leto;
+                    }
                     titleEl.textContent = "Prejeti računi";
                     await showDodajDokument('prejeti_racuni', 'Prejeti računi', editData);
                 } else {

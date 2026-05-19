@@ -1,0 +1,25 @@
+{
+  "stevilka": "5511723740",
+  "datum_izdaje": "28-02-2026",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "01-02-2026",
+  "datum_storitve_do": "28-02-2026",
+  "znesek_skupaj": -0.24,
+  "znesek_ddv": 0.0,
+  "znesek_brez_ddv": -0.24,
+  "partner": {
+    "naziv": "Google Ireland Limited",
+    "davcna_stevilka": "IE 6388047V"
+  },
+  "postavke": [
+    {
+      "opis": "Neveljavna dejavnost – izvirna številka računa: 5485677030, izvirni mesec storitve: jan. 2026, ime oglaševalske akcije:",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": -0.24,
+      "popust": 0.0,
+      "stopnja_ddv": 0.0,
+      "znesek_skupaj": -0.24
+    }
+  ]
+}

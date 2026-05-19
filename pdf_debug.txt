@@ -1,75 +1,58 @@
-GMT d.o.o.
-Noršinska ulica 31, 9000 Murska Sobota
-ID za DDV: SI90084985
-GMT PE Ravne 0042
-Koroška cesta 7, SI-2390 Ravne na
-Koroškem
-SI56 0400 0027 8484 031 (OTP d.d.)
-SI56 2900 0005 0676 440 (UNICREDIT BANK d.d.)
-Kupec 00059107
-SIM 83 - Simulatorji vožnje, Miha Kadiš s.p. Kraj izdaje Ravne na Koroškem
-Dobja vas 253
-Datum izdaje 08.01.2026
-Datum in čas: 08.01.2026 12:13:01
-SI-2390 Ravne na Koroškem
-Blag. zaključek
-Prod. svetovalec Uroš Fortek
-Ravne na Koroškem
-ID za DDV 11648236
-Račun 0042-0B42-108 Interna številka 26-0B42-0000110
-Številka kopije 1
-Ident Naziv Količina EM MPC Cena R % DDV % MPC Vrednost
-PC Cena PC Vrednost
-11298216 SVEČKA ŽARILNA 4,00 KOM 23,85 35,00 22,00 62,01
-19,55 50,83
-Z besedo dvainšestdeset EUR 01/100 Skupaj 78,20
-Rabat 1 27,37
-DDV 11,18
-62,01 Za plačilo EUR
-DAVČNE STOPNJE Osnova DDV Vrednost
-Blago, od katerega se DDV obračuna po stopnji 22% 50,83 11,18 62,01
-Načini plačila Vrednost
-Visa 62,01
-ZOI: 9c3016fb57ffb83c274442bc1a30a452
-EOR: 22d1e94a-944f-4d2b-bdb1-8183701ec16a
-Odbitki pri vračilu
-do 10 dni (0% - Odbitka)
-do 20 dni (3% - Odbitka)
-do 30 dni (5% - Odbitka)
-do 60 dni (12% - Odbitka)
-od 61 dni (25% - Odbitka)
-KADIS - 26-0192-0018820
-Prosimo vas, da nakazilo izvršite na enega izmed zgoraj navedenih transakcijskih računov.
-V primeru da račun vsebuje blago, ki na pofdlagi Uredbe o okoljski dajatvi zaradi onesnaževanja okolja zaradi nastajanja izrabljenih gum (Ur.l.RS.št.32/28.3.2006)
-podleže plačilu okoljske dajatve, izjavljamo, da je okoljska dajatev obračunana, oziroma Uredbe o okoljski dajatvi zaradi onesnaževanja okolja zaradi mazalnih olj in
-tekočin (Ur.l.RS.št.53/2005 s spremembami).
-V primeru da račun vsebuje blago, ki na podlagi omenjene uredbe podleže plačilu okoljske dajatve, vendar skladno z določili omenjene uredbe nismo zavezanec,
-izjavljamo, da razpolagamo z izjavo, da je bila okoljska dajatev obračunana oz. da je blago oproščeno okoljske dajatve.
-Za odpadno embalažo je zagotovljeno predpisano ravnanje v skladu z Uredbo o ravnanju z embalažo in odpadno embalažo (Ur. l. RS, št. 84/06 z vsemi
-spremembami in dopolnitvami). Izjavljamo, da smo obveznosti iz naslova ravnanja z odpadno embalažo prenesli na družbo za ravnanje z odpadno embalažo
-SUROVINA d.o.o. po pogodbi številka OE00016/24. Dobavljeno blago je v lasti GMT d.o.o. do popolnega plačila računa.
-Po preteku roka plačila si pridržujemo pravico zaračunati zakonske zamudne obresti. Količinske reklamacije upoštevamo v roku 3. delovne dni od datuma izdaje
-blaga, ostale reklamacije in vračila pa v roku 8. dni ob predložitvi originalnega dokumenta in v nepoškodovani originalni embalaži.
-Stran 1/2
-GMT d.o.o.
-Noršinska ulica 31, 9000 Murska Sobota
-ID za DDV: SI90084985
-GMT PE Ravne 0042
-Koroška cesta 7, SI-2390 Ravne na
-Koroškem
-SI56 0400 0027 8484 031 (OTP d.d.)
-SI56 2900 0005 0676 440 (UNICREDIT BANK d.d.)
-Kupec 00059107
-SIM 83 - Simulatorji vožnje, Miha Kadiš s.p. Kraj izdaje Ravne na Koroškem
-Dobja vas 253
-Datum izdaje 08.01.2026
-Datum in čas: 08.01.2026 12:13:01
-SI-2390 Ravne na Koroškem
-Blag. zaključek
-Prod. svetovalec Uroš Fortek
-Ravne na Koroškem
-ID za DDV 11648236
-Račun 0042-0B42-108 Interna številka 26-0B42-0000110
-Številka kopije 1
-Fakturiral/a: Uroš Fortek Direktor: GIDER LAURA
-Stran 2/2
+Račun
+Prejemnik
+SIM 83 - SIMULATORJI VOŽNJE, MIHA KADIŠ MIHA KADIŠ S.P., DOBJA
+VAS 253, 2390 RAVNE NA KOROŠKEM Št. računa/Referenca: 2602011739412
+Obračunsko obdobje: 1. 1. - 31. 1. 2026
+Naročnik IBAN: SI56 2900 0015 9800 373
+SIM 83 - SIMULATORJI VOŽNJE, MIHA KADIŠ MIHA KADIŠ S.P., BIC/SWIFT: BACXSI22
+DOBJA VAS 253, 2390 RAVNE NA KOROŠKEM Kraj in datum izdaje: Ljubljana, 3. 2. 2026
+Rok plačila: 18. 2. 2026
+Šifra: 753537423 00001 Način plačila: Univerzalni plačilni nalog
+Storitev Število Količina Cena na enoto Vrednost Popust Končna
+dogodkov brez DDV brez DDV brez DDV vrednost
+brez DDV
+Naročnine
+Paket A1 Net 30 GB 1 0,26 12,287 3,17 3,17
+Paket A1 Net 30 GB 1 0,74 14,74 10,94 10,94
+Paket Ultra Xplore TV maxi 1 0,77 46,71 36,16 -18,08 18,08
+Dodatni Xplore Smart TV 1 0,77 1,64 1,27 1,27
+Voyo vključen v paket 1 0,77
+Časovni zamik 1 0,77 2,46 1,90 1,90
+Ostale storitve
+Vračilo ugodnosti/Nadomestilo za terminal. opremo* 1 107,59 107,59
+Stroški prekinitve pogodbe oz. zapiranja računa 1 8,19 8,19
+* Nadomestilo za obdelavo Pogodbe o zagotovitvi posebne ugodnosti znaša 12,29 € (ni vključen 22% DDV) in je vštet Skupaj vrednost brez DDV 151,14 EUR
+v Vračilo prejete ugodnosti, razen v primerih, ko je to v nasprotju s prisilnimi določili veljavnih predpisov (npr. 192. Osnova DDV (22%) 151,14
+člen) ali ko to določa ponudba A1.
+Znesek DDV (22%) 33,25
+ZNESEK ZA PLAČILO 184,39 EUR
+Vse cene so v EUR.
+Zbirna tabela uporabnikov
+Uporabnik Ime in priimek Stroškovno Paket Naročnine Storitve v Storitve Plačila in Storitve Ostale Vrednost Znesek Vrednost
+mesto Sloveniji v tujini nakupi z dodano storitve brez DDV DDV z DDV
+vrednostjo
+040231473 MIHA KADIŠ S.P. Ultra Xplore TV maxi 18,08 18,08 3,98 22,06
+070492607 MIHA KADIŠ S.P. A1 Net 30 GB 14,11 8,19 22,30 4,91 27,21
+T 1 V 47 _ 3 3864023 MIHA KADIŠ S.P. Televizija 3,17 3,17 0,70 3,87
+A1 Slovenija, telekomunikacijske storitve, d. d. - Ameriška ulica 4 - 1000 Ljubljana
+Identifikacijska oznaka prejemnika plačila: SI11ZZZ60595256, identifikacijska številka za DDV: SI 60595256, matična številka: 1196332000,
+SRG/29430/00 Okrožno sodišče v Ljubljani, kapital: 38.781.000 EUR, predsednik nadzornega sveta: Alejandro Douglass Plater.
+SIM 83 - SIMULATORJI VOŽNJE, MIHA KAD
+IŠ MIHA KADIŠ S.P., DOBJA VAS 253
+2390 RAVNE NA KOROŠKEM
+Storitve 1.1. do 31.1.2026, Rok: 18. SIM 83 - SIMULATORJI VOŽNJE, MIHA KADIŠ MIHA K
+2.2026 DOBJA VAS 253
+2390 RAVNE NA KOROŠKEM
+***184,39
+***184,39
+SI56 2900 0015 9800 373
+SI12 2602011739412
+OTLC Storitve 1.1. do 31.1.2026 18.02.2026
+A1 Slovenija, d. d. SI56 2900 0015 9800 373
+Ameriška ulica 4
+SI12 2602011739412
+1000 Ljubljana
+A1 Slovenija, d. d.
+Ameriška ulica 4
+1000 Ljubljana
+1

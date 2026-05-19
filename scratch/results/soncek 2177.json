@@ -1,0 +1,43 @@
+{
+  "stevilka": "1-10-2177",
+  "datum_izdaje": "2026-02-26",
+  "datum_zapadlosti": "2026-02-26",
+  "datum_storitve_od": "2026-02-26",
+  "datum_storitve_do": "2026-02-26",
+  "znesek_skupaj": 19.5,
+  "znesek_ddv": 3.52,
+  "znesek_brez_ddv": 15.98,
+  "partner": {
+    "naziv": "SONČEK d.o.o.",
+    "davcna_stevilka": "SI24011100"
+  },
+  "postavke": [
+    {
+      "opis": "1570MN IVERAL DIAMANTNO BELA 19mm 2800*2070*19mm",
+      "kolicina": 0.5,
+      "enota_mere": "m2",
+      "cena_enote": 15.19,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 7.6
+    },
+    {
+      "opis": "1570MN TRAK ROBNI ABS 23*1mm 1-011105-0699",
+      "kolicina": 4.25,
+      "enota_mere": "m",
+      "cena_enote": 0.7,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 2.98
+    },
+    {
+      "opis": "00084 ROBLJENJE DO 20 MM S PUR",
+      "kolicina": 4.25,
+      "enota_mere": "tm",
+      "cena_enote": 1.28,
+      "popust": 0.65,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 5.4
+    }
+  ]
+}

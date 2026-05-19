@@ -1,0 +1,25 @@
+{
+  "stevilka": "319002103013",
+  "datum_izdaje": "08.04.2026",
+  "datum_zapadlosti": "20.04.2026",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 13.37,
+  "znesek_ddv": 2.41,
+  "znesek_brez_ddv": 10.96,
+  "partner": {
+    "naziv": "PETROL, SLOVENSKA ENERGETSKA DRUŽBA, D.D.",
+    "davcna_stevilka": "SI80267432"
+  },
+  "postavke": [
+    {
+      "opis": "Električna energija",
+      "kolicina": 10.96,
+      "enota_mere": "kos",
+      "cena_enote": 0.14195,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 13.37
+    }
+  ]
+}

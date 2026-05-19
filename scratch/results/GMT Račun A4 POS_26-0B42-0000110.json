@@ -1,0 +1,25 @@
+{
+  "stevilka": "2602011739412",
+  "datum_izdaje": "2026-01-08",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 78.2,
+  "znesek_ddv": 11.18,
+  "znesek_brez_ddv": 62.01,
+  "partner": {
+    "naziv": "GMT d.o.o.",
+    "davcna_stevilka": "SI90084985"
+  },
+  "postavke": [
+    {
+      "opis": "SVEČKA ŽARILNA",
+      "kolicina": 4.0,
+      "enota_mere": "KOM",
+      "cena_enote": 23.85,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 62.01
+    }
+  ]
+}

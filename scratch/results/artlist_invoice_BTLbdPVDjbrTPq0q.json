@@ -1,0 +1,25 @@
+{
+  "stevilka": "24-898267",
+  "datum_izdaje": "2026-03-13",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 19.99,
+  "znesek_ddv": 0.0,
+  "znesek_brez_ddv": 19.99,
+  "partner": {
+    "naziv": "Artlist UK Ltd",
+    "davcna_stevilka": "EU372023885"
+  },
+  "postavke": [
+    {
+      "opis": "AI Suite 16.5K",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 19.99,
+      "popust": 0.0,
+      "stopnja_ddv": 0.0,
+      "znesek_skupaj": 19.99
+    }
+  ]
+}

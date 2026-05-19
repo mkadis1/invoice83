@@ -1,0 +1,25 @@
+{
+  "stevilka": "26-14482-27219",
+  "datum_izdaje": "2026-04-15",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 114.44,
+  "znesek_ddv": 20.64,
+  "znesek_brez_ddv": 93.8,
+  "partner": {
+    "naziv": "simpush",
+    "davcna_stevilka": ""
+  },
+  "postavke": [
+    {
+      "opis": "SIMPUSH GT F1 Simracing Wheel Mod For FANATEC ClubSport Standard Shipping from Greater Universal Hub (357000724117) China to worldwide",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 83.9,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 83.9
+    }
+  ]
+}

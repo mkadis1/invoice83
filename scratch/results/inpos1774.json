@@ -1,0 +1,25 @@
+{
+  "stevilka": "43-9038-1774",
+  "datum_izdaje": "2026-03-31",
+  "datum_zapadlosti": "2026-04-30",
+  "datum_storitve_od": "2026-03-31",
+  "datum_storitve_do": "2026-03-31",
+  "znesek_skupaj": 7.35,
+  "znesek_ddv": 1.33,
+  "znesek_brez_ddv": 6.02,
+  "partner": {
+    "naziv": "INPOS, d.o.o., Celje",
+    "davcna_stevilka": "SI70868565"
+  },
+  "postavke": [
+    {
+      "opis": "41 182222 PloSéa lepljena 600x400x18mm, smreka 1,000 KOS",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 6.549,
+      "popust": 8.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 7.35
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "stevilka": "43-9038-560",
+  "datum_izdaje": "2026-01-29",
+  "datum_zapadlosti": "2026-02-28",
+  "datum_storitve_od": "2026-01-29",
+  "datum_storitve_do": "2026-01-29",
+  "znesek_skupaj": 31.29,
+  "znesek_ddv": 5.64,
+  "znesek_brez_ddv": 25.65,
+  "partner": {
+    "naziv": "INPOS, d.o.o., Celje",
+    "davcna_stevilka": "SI70868565"
+  },
+  "postavke": [
+    {
+      "opis": "Kabel mehkodZilni PP/L 2x0,75 érn HO3VV-F",
+      "kolicina": 10.0,
+      "enota_mere": "m",
+      "cena_enote": 0.418,
+      "popust": 20.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 4.08
+    },
+    {
+      "opis": "Trak 20mmx 50m bel",
+      "kolicina": 4.0,
+      "enota_mere": "m",
+      "cena_enote": 1.631,
+      "popust": 20.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 6.37
+    },
+    {
+      "opis": "Trak Zameten 20mmx50m bel",
+      "kolicina": 4.0,
+      "enota_mere": "m",
+      "cena_enote": 1.631,
+      "popust": 20.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 6.37
+    },
+    {
+      "opis": "Kabel mehkoZilni PP/L 3x1,5 Erm HOSVV-F",
+      "kolicina": 8.5,
+      "enota_mere": "m",
+      "cena_enote": 0.975,
+      "popust": 20.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 8.1
+    },
+    {
+      "opis": "SPOJKA ploSéata 230V SP-01 érma TRITECH",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 1.549,
+      "popust": 20.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 1.51
+    },
+    {
+      "opis": "VTIKAC SUKO PVC P-02 ERNI TRITECH",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 2.943,
+      "popust": 20.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 2.87
+    },
+    {
+      "opis": "VTIKAG VT-L KOTNI GRNI TRITECH",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 2.041,
+      "popust": 20.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 1.99
+    }
+  ]
+}

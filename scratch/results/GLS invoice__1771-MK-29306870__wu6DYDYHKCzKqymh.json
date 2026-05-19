@@ -1,0 +1,34 @@
+{
+  "stevilka": "#1771-MK-29306870",
+  "datum_izdaje": "22.04.2026",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 4.7,
+  "znesek_ddv": 0.85,
+  "znesek_brez_ddv": 4.7,
+  "partner": {
+    "naziv": "GENERAL LOGISTICS SYSTEMS",
+    "davcna_stevilka": "SI74531891"
+  },
+  "postavke": [
+    {
+      "opis": "Paket 7010842082 Kos/p.",
+      "kolicina": 1.0,
+      "enota_mere": "Kos/p.",
+      "cena_enote": 3.49,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 2.86
+    },
+    {
+      "opis": "dostava do prejemnika Kos/p.",
+      "kolicina": 1.0,
+      "enota_mere": "Kos/p.",
+      "cena_enote": 1.21,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 0.99
+    }
+  ]
+}

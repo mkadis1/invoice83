@@ -1408,6 +1408,13 @@ def parse_eslog_xml(xml_data):
                     return v_el.text.strip()
         return ""
 
+    def find_child_val(tag_name, root_el=root):
+        """Poišče neposrednega otroka z določenim imenom taga."""
+        for el in root_el:
+            if get_tag(el) == tag_name:
+                return el.text.strip() if el.text else ""
+        return None
+
     # 1. Številka računa
     stevilka = find_edi_val('S_BGM', 'D_1001', '380', 'D_1004')
     if not stevilka:
@@ -1418,10 +1425,11 @@ def parse_eslog_xml(xml_data):
                 stevilka = v.text.strip()
                 break
     if not stevilka:
-        stevilka = find_path_val(['ID', 'ŠtevilkaRačuna', 'StevilkaRacuna', 'IdRačuna', 'InvoiceNumber', 'DocumentNumber'])
-    
-
-
+        for name in ['ID', 'ŠtevilkaRačuna', 'StevilkaRacuna', 'IdRačuna', 'InvoiceNumber', 'DocumentNumber']:
+            val = find_child_val(name, root)
+            if val:
+                stevilka = val
+                break
     # 2. Datumi
     datum_izdaje = find_edi_val('S_DTM', 'D_2005', '137', 'D_2380') or find_path_val(['IssueDate', 'DatumRačuna', 'DatumRacuna', 'DatumIzdaje', 'Datum'])
     if datum_izdaje and 'T' in datum_izdaje: datum_izdaje = datum_izdaje.split('T')[0]
@@ -1598,21 +1606,13 @@ async def import_eslog_pregled(file: UploadFile = File(...)):
                             if name.lower().endswith('.png'):
                                 parsed = extract_aliexpress_png(f_content)
                             else:
-                                parsed = extract_temu_pdf(f_content)
+                                parsed = invoice_ocr.process_invoice_data(f_content, name)
                             
                             if parsed:
                                 enriched = _enrich_eslog_data(parsed)
                                 enriched['file_data'] = base64.b64encode(f_content).decode('utf-8')
                                 enriched['file_name'] = name
                                 results.append(enriched)
-                            else:
-                                # Poskusimo še s splošnim invoice_ocr
-                                parsed = invoice_ocr.process_invoice_data(f_content, name)
-                                if parsed:
-                                    enriched = _enrich_eslog_data(parsed)
-                                    enriched['file_data'] = base64.b64encode(f_content).decode('utf-8')
-                                    enriched['file_name'] = name
-                                    results.append(enriched)
                         except Exception as e:
                             print(f"Error parsing {name}: {e}")
         else:
@@ -1631,11 +1631,13 @@ async def import_eslog_pregled(file: UploadFile = File(...)):
                     enriched['file_name'] = file.filename
                     results.append(enriched)
             elif file.filename.lower().endswith('.pdf'):
-                parsed = extract_temu_pdf(content)
-                enriched = _enrich_eslog_data(parsed)
-                enriched['file_data'] = base64.b64encode(content).decode('utf-8')
-                enriched['file_name'] = file.filename
-                results.append(enriched)
+                parsed = invoice_ocr.process_invoice_data(content, file.filename)
+                
+                if parsed:
+                    enriched = _enrich_eslog_data(parsed)
+                    enriched['file_data'] = base64.b64encode(content).decode('utf-8')
+                    enriched['file_name'] = file.filename
+                    results.append(enriched)
 
         return {"items": results, "count": len(results)}
     except Exception as e:
@@ -1748,21 +1750,37 @@ async def _save_imported_eslog(data):
         
         # 2. Dokument
         poslovno_leto = int(data['datum_izdaje'].split('-')[0]) if '-' in data['datum_izdaje'] else 2026
-        status = 'neplačano'
+        status = 'neplacano'
         datum_placila = None
         nacin_placila = None
         
         if data.get('placan'):
-            status = 'plačano'
+            status = 'placano'
             datum_placila = data['datum_izdaje']
             nacin_placila = 'Poslovna kartica'
 
+        # Generiranje interne stevilke
+        cursor.execute("SELECT interna_stevilka FROM dokumenti WHERE tip = 'prejeti_racuni' AND poslovno_leto = ? AND interna_stevilka LIKE '%-%'", (poslovno_leto,))
+        rows = cursor.fetchall()
+        max_int = 0
+        for r in rows:
+            st = r['interna_stevilka']
+            if not st: continue
+            try:
+                parts = st.split('-')
+                if len(parts) == 2:
+                    num = int(parts[0]) if parts[0].isdigit() and int(parts[0]) != poslovno_leto else int(parts[1])
+                    if num > max_int: max_int = num
+            except: pass
+        next_int = max_int + 1
+        interna_st = f"{next_int:03d}-{poslovno_leto}"
+
         cursor.execute("""
-            INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, 
+            INSERT INTO dokumenti (poslovno_leto, tip, stevilka, interna_stevilka, partner_id, datum_izdaje, datum_zapadlosti, 
                                    datum_storitve_od, datum_storitve_do, znesek_brez_ddv, znesek_ddv, 
                                    znesek_skupaj, valuta, tecaj, znesek_v_valuti, status, datum_placila, nacin_placila)
-            VALUES (?, 'prejeti_racuni', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (poslovno_leto, data['stevilka'], partner_id, data['datum_izdaje'], data['datum_zapadlosti'], 
+            VALUES (?, 'prejeti_racuni', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (poslovno_leto, data['stevilka'], interna_st, partner_id, data['datum_izdaje'], data['datum_zapadlosti'], 
               data['datum_storitve_od'], data['datum_storitve_do'], data['znesek_brez_ddv'], 
               data['znesek_ddv'], data['znesek_skupaj'], data.get('valuta', 'EUR'), 
               data.get('tecaj', 1.0), data.get('znesek_v_valuti', data['znesek_skupaj']),
@@ -2143,14 +2161,16 @@ def extract_generic_pdf(content):
     # Posebni primeri: 0% DDV (reverse charge - Google Ads, Artlist)
     explicit_zero_vat = bool(re.search(r'DDV\s*\(0%\)|0%.*reverse\s+charge|VAT\s+Exemption|self.account.*VAT', pdf_text, re.I))
 
-    # Izračun manjkajočih vrednosti
-    if total_val > 0 and net_val == 0 and vat_val == 0:
+    # Izračun in uskladitev zneskov
+    if total_val > 0 and net_val > 0:
+        vat_val = round(total_val - net_val, 2)
+    elif total_val > 0 and net_val == 0 and vat_val == 0:
         if explicit_zero_vat:
             net_val = total_val  # 0% DDV
         else:
             net_val = round(total_val / 1.22, 2); vat_val = round(total_val - net_val, 2)
-    elif total_val > 0 and net_val > 0 and vat_val == 0 and not explicit_zero_vat:
-        vat_val = round(total_val - net_val, 2)
+    elif total_val > 0 and net_val == 0 and vat_val > 0:
+        net_val = round(total_val - vat_val, 2)
     elif total_val == 0 and net_val > 0:
         total_val = round(net_val + vat_val, 2)
 
@@ -2227,6 +2247,28 @@ def extract_generic_pdf(content):
             if len(line) < 10: continue
             # Preskoči vrstice ki vsebujejo ključne besede za rekapitulacijo
             if re.search(r'(skupaj|ddv|pla[cč]ilo|znesek|osnova|popust|zapadlost|valuta|stran|iban|dobropis|podpis)', line, re.I): continue
+
+            # --- OBLIKA F: Minimax / E-računi s polno davčno tabelo ---
+            # Primer: 001 Delovna ura (60 min) 1,00 kos 35,00 0,00 D1 22,0 35,00
+            m_full = re.search(
+                r'^(?:\d{3,5}\s+)?(.+?)\s+(\d+[,\.]\d{2})\s+(?:kos|kg|m|kom|ur|h|uro|ura|kosa|kosi|kosov|lit|l|par|kpl|pak|pc|pcs|stk|pz|x|kom\.?)\s+([\d]+[,\.]\d{2,4})\s+([\d]+[,\.]\d{2,4})\s+(?:[A-Z0-9]{1,3})\s+([\d]+[,\.]\d{1,2})\s+([\d]+[,\.]\d{2,4})\s*$',
+                line, re.I)
+            if m_full:
+                opis = m_full.group(1).strip()
+                kol = cn(m_full.group(2))
+                cena = cn(m_full.group(3))
+                rabat = cn(m_full.group(4))
+                ddv_item = cn(m_full.group(5))
+                sk = cn(m_full.group(6))
+                if kol > 0 and cena > 0:
+                    postavke.append({
+                        "opis": opis,
+                        "kolicina": kol,
+                        "cena_enote": sk / kol if kol > 0 else cena,
+                        "stopnja_ddv": ddv_item,
+                        "znesek_skupaj": sk
+                    })
+                    continue
 
             # --- OBLIKA A: Conrad/Reichelt/Farnell ---
             # npr. "839605 Vijak s cilind. 1PAK K7 12,29 12,29 14,99 14,99"
@@ -2337,17 +2379,58 @@ def extract_generic_pdf(content):
                         "znesek_skupaj": sk
                     })
                     continue
+
+            # --- OBLIKA G: Shoppster / Maloprodaja (opis EM kol cena [ddv%] [popust] skupaj) ---
+            # "0709713 UGREEN DP na HDMI kabel KOM 2 12,90 22% 0 25,80"
+            m_shop = re.search(
+                r'^(?:\d{3,10}\s+)?(.+?)\s+(KOM|KOS|KG|L|M|KPL|PAK|PC|PCS|KOM\.?|KOSA|KOSI)\s+'
+                r'(\d+[,\.]?\d*)\s+([\d]+[,\.]\d{2,4})\s+(?:(\d+(?:[,\.]\d+)?)\s*%\s+)?(?:(\d+(?:[,\.]\d+)?)\s+)?([\d]+[,\.]\d{2,4})\s*$',
+                line, re.I)
+            if m_shop:
+                opis = m_shop.group(1).strip()
+                em = m_shop.group(2)
+                kol = cn(m_shop.group(3))
+                cena = cn(m_shop.group(4))
+                ddv_p = cn(m_shop.group(5)) if m_shop.group(5) else stopnja_ddv
+                popust = cn(m_shop.group(6)) if m_shop.group(6) else 0.0
+                sk = cn(m_shop.group(7))
+                
+                # Sanity check
+                calc = kol * cena * (1 - popust / 100)
+                if kol > 0 and cena > 0 and abs(calc - sk) <= max(0.10, sk * 0.02):
+                    postavke.append({
+                        "opis": opis,
+                        "kolicina": kol,
+                        "cena_enote": cena,
+                        "stopnja_ddv": ddv_p,
+                        "znesek_skupaj": sk,
+                        "enota_mere": em.lower()
+                    })
+                    continue
     except Exception as e:
         print(f"Napaka pri razčlenjevanju postavk: {e}")
 
-    # Prilagoditev: Če so izluščene postavke brez DDV (njihova vsota je blizu net_val), 
-    # jim dodamo DDV, saj naša aplikacija pričakuje cene z DDV!
+    # Prilagoditev: Ce so izluscene postavke brez DDV (njihova vsota je blizu net_val),
+    # pretvorimo znesek_skupaj v bruto. Ce so cene ze bruto, pa cena_enote pretvorimo v neto (UI jo sam mnozi)!
     if postavke and stopnja_ddv > 0:
         sum_skupaj = sum(p["znesek_skupaj"] for p in postavke)
         if abs(sum_skupaj - net_val) < abs(sum_skupaj - total_val):
+            # Cene so bile NETO -> znesek_skupaj pretvorimo v bruto
             for p in postavke:
-                p["cena_enote"] = round(p["cena_enote"] * (1 + stopnja_ddv / 100), 4)
-                p["znesek_skupaj"] = round(p["znesek_skupaj"] * (1 + stopnja_ddv / 100), 2)
+                ddv_p = p.get("stopnja_ddv", stopnja_ddv)
+                p["znesek_skupaj"] = round(p["znesek_skupaj"] * (1 + ddv_p / 100), 2)
+        else:
+            # Cene so bile BRUTO -> cena_enote pretvorimo v neto
+            for p in postavke:
+                ddv_p = p.get("stopnja_ddv", stopnja_ddv)
+                p["cena_enote"] = round(p["cena_enote"] / (1 + ddv_p / 100), 4)
+
+    # Pocisti opise: odstrani vodece stevilke vrstice (npr. "1 ", "001 ") in morebitni DDV%
+    for p in postavke:
+        opis = p["opis"].strip()
+        opis = re.sub(r'^\d{1,5}\s+', '', opis)          # "1 Alu profil" -> "Alu profil"
+        opis = re.sub(r'\s+\d{1,2}[,.]\d{2}\s*$', '', opis)  # trailing DDV% "22,00"
+        p["opis"] = opis.strip()
 
     # Fallback na generično postavko, če heuristika ni našla nič pametnega
     if not postavke:
@@ -2443,7 +2526,30 @@ def delete_dokument(id: int):
         print(f"Napaka pri brisanju dokumenta {id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Napaka pri brisanju: {str(e)}")
 
+
+@app.get("/api/dokumenti/check_stevilka")
+def check_stevilka(stevilka: str, tip: str, exclude_id: Optional[int] = None):
+    """Preveri, ali dokument s to številko že obstaja."""
+    conn = database.get_db()
+    cursor = conn.cursor()
+    if exclude_id:
+        cursor.execute(
+            "SELECT id, stevilka, partner_id FROM dokumenti WHERE tip = ? AND stevilka = ? AND id != ?",
+            (tip, stevilka.strip(), exclude_id)
+        )
+    else:
+        cursor.execute(
+            "SELECT id, stevilka, partner_id FROM dokumenti WHERE tip = ? AND stevilka = ?",
+            (tip, stevilka.strip())
+        )
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"obstaja": True, "id": row["id"]}
+    return {"obstaja": False}
+
 @app.get("/api/dokumenti/{tip}")
+
 def get_dokumenti(tip: str):
     conn = database.get_db()
     cursor = conn.cursor()

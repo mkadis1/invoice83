@@ -1,0 +1,34 @@
+{
+  "stevilka": "2602011739412",
+  "datum_izdaje": "2026-01-26",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 52.7,
+  "znesek_ddv": 9.5,
+  "znesek_brez_ddv": 43.2,
+  "partner": {
+    "naziv": "ELOKSIRANJE B&M d.o.o.",
+    "davcna_stevilka": "SI76037304"
+  },
+  "postavke": [
+    {
+      "opis": "Storitev eloksiranja E6/C8 ČRNA",
+      "kolicina": 4.0,
+      "enota_mere": "kos",
+      "cena_enote": 8.0,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 32.0
+    },
+    {
+      "opis": "Razluževanje",
+      "kolicina": 4.0,
+      "enota_mere": "kos",
+      "cena_enote": 2.8,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 11.2
+    }
+  ]
+}

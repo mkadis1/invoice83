@@ -1,0 +1,61 @@
+{
+  "stevilka": "2602011739412",
+  "datum_izdaje": "2026-02-03",
+  "datum_zapadlosti": "2026-02-18",
+  "datum_storitve_od": "2026-01-01",
+  "datum_storitve_do": "2026-01-31",
+  "znesek_skupaj": 184.39,
+  "znesek_ddv": 33.25,
+  "znesek_brez_ddv": 151.14,
+  "partner": {
+    "naziv": "A1 Slovenija d.d.",
+    "davcna_stevilka": "SI60595256"
+  },
+  "postavke": [
+    {
+      "opis": "Paket A1 Net 30 GB",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 14.74,
+      "popust": 10.94,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 27.21
+    },
+    {
+      "opis": "Paket Ultra Xplore TV maxi",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 46.71,
+      "popust": -18.08,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 36.16
+    },
+    {
+      "opis": "Dodatni Xplore Smart TV",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 1.64,
+      "popust": 1.27,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 1.27
+    },
+    {
+      "opis": "Vračilo ugodnosti/Nadomestilo za terminal. opremo*",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 107.59,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 151.14
+    },
+    {
+      "opis": "Stroški prekinitve pogodbe oz. zapiranja računa",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 8.19,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 8.19
+    }
+  ]
+}

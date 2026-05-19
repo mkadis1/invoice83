@@ -1,0 +1,72 @@
+FILE                                               OK   STEVILKA                  PARTNER                             DATUM        TOTAL      POST
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+A1 racun_2602011739412.pdf                         OK   2602011739412             Prejemnik                           2026-01-31   184.39     1
+Ajpes RAC_28042026_9182136000_11648236_2601118700_E_.PDF FAIL CT-01-2601118700          Račun št. CT-01-2601118700                       12.00      1
+BM Racun_00000047.pdf                              FAIL 47/26                     RAČUN 47/26                         2026-01-21   0.00       0
+Bauhaus 0110052001.pdf                             OK   929-ED1-92011151          Kadiš s.p                           2026-03-02   307.10     9
+Bauhaus 0110070375.pdf                             OK   929-ED1-92011579          Kadiš s.p                           2026-03-02   40.80      1
+CLB-S1-2000063148.pdf                              OK   CLB-S1-2000063148         Telemach Slovenija d.o.o            2026-03-01   97.08      1
+Conrad Invoice_9781842664.pdf                      OK   26001857                  Conrad Electronic d.o.o. k.d        2025-12-20   20.99      1
+ERAC_202643733_8354719.pdf                         OK   2619989                   Javno komunalno podjetje Ident. št. za DDV: SI20356846 2026-03-01   60.68      1
+Ebull Racun_st-_1389-2026.pdf                      OK   1389-2026                 eBull d.o.o                         2026-03-04   715.98     1
+Fanatec Invoice-F1276886.pdf                       FAIL F1276886                  Corsair Components Limited                       0.00       0
+GLS invoice__1771-MK-29304989__myCjsCUo2AYDjSw6.pdf OK   date                      iha Kadiš s.p. Logistične storitve d.o.o 2026-04-13   4.70       1
+GLS invoice__1771-MK-29306870__wu6DYDYHKCzKqymh.pdf OK   date                      iha Kadiš s.p. Logistične storitve d.o.o 2026-04-22   4.70       1
+GMT Račun A4 POS_26-0B42-0000110.pdf               FAIL 0042-0B42-108             SI56 0400 0027 8484 031 (OTP d.d.)  2026-01-08   0.00       0
+GSm aparati 1717-B1-135.pdf                        OK   SUCEHE                    KADIS S.P                           2026-02-06   19.96      1
+Google 5474306531.pdf                              FAIL evilka                    Google Cloud EMEA Limited                        18.98      1
+Google 5485677030.pdf                              FAIL evilka                    Google Ireland Limited                           147.57     1
+Google 5487631387.pdf                              FAIL evilka                    Google Ireland Limited                           17.98      1
+Google 5503509986.pdf                              FAIL evilka                    Google Cloud EMEA Limited                        18.98      1
+Google 5510509472.pdf                              FAIL evilka                    Google Ireland Limited                           30.39      1
+Google 5511723740.pdf                              FAIL evilka                    Google Ireland Limited                           0.00       0
+H_35988861.pdf                                     OK   hb_44089641               Hostinger International Ltd         2026-01-13   116.53     1
+Hotel Tabor Maribor - Račun za gosta G. in Ga. Kadiš, 27.-28.03.2026.pdf FAIL 0000000352                PODHOSTNIK d.0o.0.                  2026-03-27   0.00       0
+IKEA STO635-01-600254_TaxInvoice.pdf               FAIL 6275986                   1000 Ljubljana 2390 RAVNE NA KOROŠKEM              155.99     1
+JKP ERAC_202626733_8133692.pdf                     OK   2610312                   Javno komunalno podjetje Ident. št. za DDV: SI20356846 2026-01-31   60.68      1
+JKP ERAC_202636756_8258631.pdf                     OK   2615145                   Javno komunalno podjetje Ident. št. za DDV: SI20356846 2026-02-01   60.68      1
+JKP ERAC_202656929_8509814.pdf                     OK   2624838                   Javno komunalno podjetje Ident. št. za DDV: SI20356846 2026-04-01   60.68      1
+Lečnik Racun_st._2026-00145.pdf                    FAIL NEZNANA                   Št. dokumenta: 2026-00145           2026-01-29   38.00      1
+Mimorste-01-03-2026.PDF                            OK   SI0-SI0-10229983          Sklicna številka (navedite pri plačilu) 6211235529 2026-04-03   22.00      1
+Petrol racun_317002066117.pdf                      OK   317002066117              SI56 0451 5000 0225 742 SWIFT: KBMASI2X, OTP BANKA D.D 2026-01-31   31.01      1
+Petrol racun_317002116480.pdf                      OK   317002116480              SI56 0451 5000 0225 742 SWIFT: KBMASI2X, OTP BANKA D.D 2026-02-01   28.02      1
+Petrol racun_318002159705.pdf                      OK   318002159705              SI56 0451 5000 0225 742 SWIFT: KBMASI2X, OTP BANKA D.D 2026-04-01   30.04      1
+Petrol racun_319002103013.pdf                      OK   319002103013              SI56 0451 5000 0225 742 SWIFT: KBMASI2X, OTP BANKA D.D 2026-03-01   31.03      1
+SILVA VALENTAN s.p.-RAČUN-Številka_ 17_26.pdf      OK   evilka                    SILVA VALENTAN s.p                  2026-04-03   80.00      1
+SP 2097826011015.pdf                               OK   poravnate                 STANOVANJSKO PODJETJE D.O.O         2025-10-01   1.00       1
+SP 2097826021010.pdf                               OK   poravnate                 STANOVANJSKO PODJETJE D.O.O         2025-12-01   1.03       1
+Scanned_20260206-0919.pdf                          FAIL 2602011739412             BO SMa Mica Ss Oaks aS SASS 7M lc OPS i” UNRIMMSUR 2026-02-05   0.00       0
+Shopster invoice-5240a2ae-b65d-442c-9a97-53b583138e6c.pdf OK   2000-95-19331             Račun izdelal Shoppster d.o.o       2026-02-16   39.85      1
+SuperStrela račun_da1_mk_67334.pdf                 OK   7004265000                SUPER STRELA INTERNETNA PRODAJA, D.O.O 2026-03-03   99.95      1
+Telemach CLB-S1-1000427622.pdf                     OK   CLB-S1-1000427622         Telemach Slovenija d.o.o            2026-01-31   0.67       1
+Telemach CLB-S1-1000943244.pdf                     OK   CLB-S1-1000943244         Telemach Slovenija d.o.o            2026-02-01   108.84     1
+Telemach CLB-S1-1001885563.pdf                     OK   CLB-S1-1001885563         Telemach Slovenija d.o.o            2026-04-01   88.65      1
+Telemach CLB-S1-2000013088.pdf                     OK   CLB-S1-2000013088         Telemach Slovenija d.o.o            2026-01-31   20.46      1
+Telemach dobropis TCLB-CLB-385414.pdf              FAIL NEZNANA                   Please wait...                                   0.00       0
+Tuli Raccun-8018613-2-1-S2-26000154.pdf            OK   26000154                  TULI d.o.o., Ljubljana              2026-01-05   86.27      1
+Tuli Raccun-8018613-2-1-S2-26001077.pdf            OK   26001077                  TULI d.o.o., Ljubljana              2026-02-11   59.33      1
+Vanc Račun Kadiš jan 2026.pdf                      OK   evilka:90-90-26900000     VANCWORK DETAILING, AVTOKOZMETIKA, ALEN ČEPIN SENICA, S.P 2026-01-15   42.70      1
+Vancwork Račun Kadiš marec 2026.pdf                OK   evilka:90-90-26900048     VANCWORK DETAILING, AVTOKOZMETIKA, ALEN ČEPIN SENICA, S.P 2026-03-21   244.00     1
+Zvezdar 142.pdf                                    FAIL REALIZIRANIH              Zvezdar d.o.o                                    25.77      1
+artlist_invoice_BTLbdPVDjbrTPq0q.pdf               OK   35627008                  Artlist UK Ltd PAID                 2026-03-13   19.99      1
+e-racuni Racun_st._2026-00650.pdf                  OK   evilka                    E-RAČUNI d.o.o                      2026-01-05   13.55      1
+e-racuni Racun_st._2026-01002.pdf                  OK   evilka                    E-RAČUNI d.o.o                      2026-01-26   13.55      1
+e-racuni Racun_st._2026-03859.pdf                  OK   evilka                    E-RAČUNI d.o.o                      2026-03-06   42.70      1
+e-racuni Racun_st._2026-05411.pdf                  OK   evilka                    E-RAČUNI d.o.o                      2026-04-09   74.82      1
+ebay 27219.pdf                                     FAIL 26-14482-27219            Bestellinformationen Lieferadresse Gesamtbetrag              114.44     1
+ebull 1321.pdf                                     OK   118717667                 a eBull d.o.o                       2026-03-04   573.76     1
+hartis 358.pdf                                     OK   EUR                       Tel., GSM: , Miha Kadié s.p         2026-03-09   18.89      1
+inpos 1111.pdf                                     OK   43-9038-1111              8 INPOS, D.O.0., CELJE Telefon +386 (0)3 42 86 100 2026-02-28   18.51      5
+inpos 1462.pdf                                     OK   43-9038-1462              4 INPOS, D.0.0., CELJE Telefon +386 (0)3 42 86 100 2026-03-11   32.43      3
+inpos 2054.pdf                                     OK   43-9038-2054              aaa ea ae beet ha eS ge             2026-04-01   17.75      1
+inpos 2430.pdf                                     OK   43-9038-2430              CE ee                               2026-04-24   62.72      6
+inpos 43-9038-560.pdf                              OK   43-9038-560               INPOS, D.0.0., CELJE Telefon +386 (0)3 42 86 100 2026-01-29   6.37       3
+inpos 845.pdf                                      OK   43-9038-845               . INPOS, D.O.0., CELJE Telefon +386 (0)3 42 86 100 2026-02-09   16.11      1
+inpos1774.pdf                                      OK   070838383                 8 INPOS, D.0.0., CELJE Telefon +386 (0)3 42 86 100 2026-03-31   7.35       1
+shopster 000178099576_0_nefiskalni_racun.pdf       OK   2000-95-9892              Račun izdelal Shoppster d.o.o       2026-01-22   44.65      1
+soncek 2177.pdf                                    OK   1-10-2177                 ee a a es                           2026-02-26   19.50      1
+soncek 2687.pdf                                    OK   1-1-2687                  i _ Naj sonéek posije ae ea ee cae tak id" Oe pep ip Pome pe ed. cea mp 2026-03-10   71.04      1
+sp 2097826031016.pdf                               OK   poravnate                 STANOVANJSKO PODJETJE D.O.O         2026-02-01   954.21     1
+sp 2097826041011.pdf                               OK   poravnate                 STANOVANJSKO PODJETJE D.O.O         2026-03-01   938.45     1
+stickerapp 3988626.pdf                             FAIL 3988626                   Size, inch 8" x 1.8"                             0.00       0
+telemach S059-CLB-5250.pdf                         OK   S059-CLB-5250             as Lad                              2026-02-06   40.00      1

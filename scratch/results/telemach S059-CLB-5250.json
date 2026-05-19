@@ -1,0 +1,25 @@
+{
+  "stevilka": "S059-CLB-5250",
+  "datum_izdaje": "2026-02-06",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 960.0,
+  "znesek_ddv": 173.12,
+  "znesek_brez_ddv": 786.88,
+  "partner": {
+    "naziv": "Telemach Slovenija d.o.o.",
+    "davcna_stevilka": ""
+  },
+  "postavke": [
+    {
+      "opis": "HONOR MAGIC8 PRO 5G 12",
+      "kolicina": 1.0,
+      "enota_mere": "KOS",
+      "cena_enote": 786.88,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 960.0
+    }
+  ]
+}

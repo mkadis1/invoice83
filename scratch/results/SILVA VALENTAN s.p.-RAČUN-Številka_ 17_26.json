@@ -1,0 +1,25 @@
+{
+  "stevilka": "17/26",
+  "datum_izdaje": "03.04.2026",
+  "datum_zapadlosti": "18.04.2026",
+  "datum_storitve_od": "03.04.2026",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 80.0,
+  "znesek_ddv": 0.0,
+  "znesek_brez_ddv": 80.0,
+  "partner": {
+    "naziv": "SILVA VALENTAN s.p.",
+    "davcna_stevilka": "54219060"
+  },
+  "postavke": [
+    {
+      "opis": "STORITEV RAČUNOVODSTVA",
+      "kolicina": 1.0,
+      "enota_mere": "EUR",
+      "cena_enote": 80.0,
+      "popust": 0.0,
+      "stopnja_ddv": 0.0,
+      "znesek_skupaj": 80.0
+    }
+  ]
+}

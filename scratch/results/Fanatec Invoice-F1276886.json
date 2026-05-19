@@ -1,0 +1,25 @@
+{
+  "stevilka": "F1276886",
+  "datum_izdaje": "2026-04-27",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 79.9,
+  "znesek_ddv": 14.41,
+  "znesek_brez_ddv": 65.49,
+  "partner": {
+    "naziv": "Corsair Components Limited",
+    "davcna_stevilka": ""
+  },
+  "postavke": [
+    {
+      "opis": "ClubSport Button Cluster Pack SKU: CS_BCP",
+      "kolicina": 2.0,
+      "enota_mere": "kos",
+      "cena_enote": 39.95,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 79.9
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "stevilka": "Receipt #3988626",
+  "datum_izdaje": "03/13/2026",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 32.0,
+  "znesek_ddv": 5.77,
+  "znesek_brez_ddv": 26.23,
+  "partner": {
+    "naziv": "StickerApp AB",
+    "davcna_stevilka": "SE556716239001"
+  },
+  "postavke": [
+    {
+      "opis": "Article #1 Product Die Cut Sticker",
+      "kolicina": 11.0,
+      "enota_mere": "pcs",
+      "cena_enote": 2.91,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 26.23
+    }
+  ]
+}

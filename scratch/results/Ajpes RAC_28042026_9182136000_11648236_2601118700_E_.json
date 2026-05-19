@@ -1,0 +1,25 @@
+{
+  "stevilka": "2601118700",
+  "datum_izdaje": "2026-04-28",
+  "datum_zapadlosti": "2026-05-18",
+  "datum_storitve_od": "2026-04-23",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 12.0,
+  "znesek_ddv": 2.16,
+  "znesek_brez_ddv": 9.84,
+  "partner": {
+    "naziv": "AJPES",
+    "davcna_stevilka": ""
+  },
+  "postavke": [
+    {
+      "opis": "Javna objava letnega poročila samostojnega podjetnika-letno poročilo, predloženo na poenotenih obrazcih na elektronski način",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 9.84,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 12.0
+    }
+  ]
+}

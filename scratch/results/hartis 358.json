@@ -1,0 +1,34 @@
+{
+  "stevilka": "SI00 358-8015884",
+  "datum_izdaje": "09.03.2026",
+  "datum_zapadlosti": "",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 18.89,
+  "znesek_ddv": 3.41,
+  "znesek_brez_ddv": 15.48,
+  "partner": {
+    "naziv": "Hartis",
+    "davcna_stevilka": ""
+  },
+  "postavke": [
+    {
+      "opis": "TRAK OLYMPIA DIN 2103 GR1 CRNO/RDEC ZA RPISALNI",
+      "kolicina": 1.0,
+      "enota_mere": "KOS",
+      "cena_enote": 14.89999,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 14.9
+    },
+    {
+      "opis": "POSTA SLOVENIJE do 2 kg",
+      "kolicina": 1.0,
+      "enota_mere": "KOS",
+      "cena_enote": 3.99,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 3.99
+    }
+  ]
+}

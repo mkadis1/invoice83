@@ -1,0 +1,25 @@
+{
+  "stevilka": "2026-00650",
+  "datum_izdaje": "05.01.2026",
+  "datum_zapadlosti": "05.01.2026",
+  "datum_storitve_od": "09.01.2026",
+  "datum_storitve_do": "08.02.2026",
+  "znesek_skupaj": 13.55,
+  "znesek_ddv": 2.44,
+  "znesek_brez_ddv": 11.11,
+  "partner": {
+    "naziv": "E-RAČUNI d.o.o.",
+    "davcna_stevilka": "SI95985352"
+  },
+  "postavke": [
+    {
+      "opis": "e-racuni.com paket BASIC",
+      "kolicina": 1.0,
+      "enota_mere": "mes.",
+      "cena_enote": 11.11,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 11.11
+    }
+  ]
+}

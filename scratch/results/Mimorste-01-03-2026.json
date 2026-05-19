@@ -1,0 +1,25 @@
+{
+  "stevilka": "SI0-SI0-10229983",
+  "datum_izdaje": "03.04.2026",
+  "datum_zapadlosti": "03.04.2026",
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 15.89,
+  "znesek_ddv": 2.87,
+  "znesek_brez_ddv": 13.02,
+  "partner": {
+    "naziv": "Mimovrste d.o.o.",
+    "davcna_stevilka": ""
+  },
+  "postavke": [
+    {
+      "opis": "shumee Olje za striženje las Wahl",
+      "kolicina": 118.3,
+      "enota_mere": "MJ",
+      "cena_enote": 13.02,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 15.89
+    }
+  ]
+}
