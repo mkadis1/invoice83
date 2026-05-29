@@ -1,7 +1,7 @@
 {
   "stevilka": "5503509986",
-  "datum_izdaje": "",
-  "datum_zapadlosti": "",
+  "datum_izdaje": "2026-02-28",
+  "datum_zapadlosti": "2026-03-31",
   "datum_storitve_od": "2026-02-01",
   "datum_storitve_do": "2026-02-28",
   "znesek_skupaj": 18.98,
@@ -9,7 +9,12 @@
   "znesek_brez_ddv": 18.98,
   "partner": {
     "naziv": "Google Cloud EMEA Limited",
-    "davcna_stevilka": ""
+    "davcna_stevilka": "IE3668997OH",
+    "drzava": "Ireland",
+    "ulica": "",
+    "kraj": "Dublin 2",
+    "postna_stevilka": "4",
+    "tuji_partner_neprebran": true
   },
   "postavke": [
     {

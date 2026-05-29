@@ -86,11 +86,21 @@ def main():
             else:
                 # Create partner
                 cursor.execute(
-                    "INSERT INTO partnerji (naziv, davcna_stevilka, drzava, vrsta) VALUES (?, ?, ?, ?)",
-                    (naziv, davcna, "Slovenija", "dobavitelj")
+                    """
+                    INSERT INTO partnerji (naziv, ulica, postna_stevilka, kraj, drzava, davcna_stevilka, vrsta)
+                    VALUES (?, ?, ?, ?, ?, ?, 'dobavitelj')
+                    """,
+                    (
+                        naziv, 
+                        partner_data.get("ulica", ""), 
+                        partner_data.get("postna_stevilka", ""), 
+                        partner_data.get("kraj", ""), 
+                        partner_data.get("drzava") or "Slovenija", 
+                        davcna
+                    )
                 )
                 partner_id = cursor.lastrowid
-                safe_print(f"Created new partner: {naziv} ({davcna})")
+                safe_print(f"Created new partner: {naziv} ({davcna}), {partner_data.get('drzava') or 'Slovenija'}")
                 
         # 2. Document
         stevilka = data.get("stevilka", "").strip()

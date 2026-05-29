@@ -1,5 +1,5 @@
 {
-  "stevilka": "2601118700",
+  "stevilka": "CT-01-2601118700",
   "datum_izdaje": "2026-04-28",
   "datum_zapadlosti": "2026-05-18",
   "datum_storitve_od": "2026-04-23",
@@ -9,7 +9,12 @@
   "znesek_brez_ddv": 9.84,
   "partner": {
     "naziv": "AJPES",
-    "davcna_stevilka": ""
+    "davcna_stevilka": "",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {

@@ -1,22 +1,27 @@
 {
   "stevilka": "STO635-01-600254",
   "datum_izdaje": "2026-02-11",
-  "datum_zapadlosti": "",
-  "datum_storitve_od": "",
-  "datum_storitve_do": "",
+  "datum_zapadlosti": null,
+  "datum_storitve_od": null,
+  "datum_storitve_do": null,
   "znesek_skupaj": 155.99,
   "znesek_ddv": 28.13,
   "znesek_brez_ddv": 127.86,
   "partner": {
     "naziv": "IKEA Slovenija, trgovina na drobno, d.o.o.",
-    "davcna_stevilka": "SI62033930"
+    "davcna_stevilka": "SI62033930",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
       "opis": "MARKUS pis stl Malo VISSLE temno siva",
       "kolicina": 1.0,
       "enota_mere": "kos",
-      "cena_enote": 149.0,
+      "cena_enote": 122.13,
       "popust": 0.0,
       "stopnja_ddv": 22.0,
       "znesek_skupaj": 149.0
@@ -25,7 +30,7 @@
       "opis": "Paketna dostava",
       "kolicina": 1.0,
       "enota_mere": "kos",
-      "cena_enote": 6.99,
+      "cena_enote": 5.73,
       "popust": 0.0,
       "stopnja_ddv": 22.0,
       "znesek_skupaj": 6.99

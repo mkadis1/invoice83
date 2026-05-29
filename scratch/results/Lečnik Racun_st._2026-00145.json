@@ -1,15 +1,20 @@
 {
   "stevilka": "2026-00145",
-  "datum_izdaje": "29.01.2026",
-  "datum_zapadlosti": "13.02.2026",
-  "datum_storitve_od": "29.01.2026",
+  "datum_izdaje": "2026-01-29",
+  "datum_zapadlosti": "2026-02-13",
+  "datum_storitve_od": "2026-01-29",
   "datum_storitve_do": "",
   "znesek_skupaj": 38.0,
   "znesek_ddv": 6.85,
   "znesek_brez_ddv": 31.15,
   "partner": {
     "naziv": "LEČNIK Zorko s.p.",
-    "davcna_stevilka": "SI91796741"
+    "davcna_stevilka": "SI91796741",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {

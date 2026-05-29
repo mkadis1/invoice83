@@ -9,13 +9,18 @@
   "znesek_brez_ddv": 13.02,
   "partner": {
     "naziv": "Mimovrste d.o.o.",
-    "davcna_stevilka": ""
+    "davcna_stevilka": "SI81241038",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
       "opis": "shumee Olje za striženje las Wahl",
-      "kolicina": 118.3,
-      "enota_mere": "MJ",
+      "kolicina": 1.0,
+      "enota_mere": "Kos",
       "cena_enote": 13.02,
       "popust": 0.0,
       "stopnja_ddv": 22.0,

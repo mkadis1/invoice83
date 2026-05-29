@@ -1,22 +1,27 @@
 {
   "stevilka": "1717-B1-135",
   "datum_izdaje": "2026-02-06",
-  "datum_zapadlosti": "",
-  "datum_storitve_od": "",
-  "datum_storitve_do": "",
+  "datum_zapadlosti": null,
+  "datum_storitve_od": null,
+  "datum_storitve_do": null,
   "znesek_skupaj": 19.96,
   "znesek_ddv": 0.0,
   "znesek_brez_ddv": 19.96,
   "partner": {
     "naziv": "GSM APARAT| D.0.0., PE Ravne na Koroskem",
-    "davcna_stevilka": ""
+    "davcna_stevilka": null,
+    "drzava": "Slovenija",
+    "ulica": "Korogka cesta 6, 2380 RAVNENA KOROSKEM",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
-      "opis": "BOOK Honor Magic 8 Pro Black Slim MM",
+      "opis": "Honor Magic 8 Pro Black Slim MM",
       "kolicina": 1.0,
       "enota_mere": "KOS",
-      "cena_enote": 19.06,
+      "cena_enote": 18.06,
       "popust": 0.0,
       "stopnja_ddv": 22.0,
       "znesek_skupaj": 19.96

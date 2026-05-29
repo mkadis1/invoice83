@@ -1,34 +1,39 @@
 {
-  "stevilka": "5487631387",
-  "datum_izdaje": "",
-  "datum_zapadlosti": "",
-  "datum_storitve_od": "1. jan. 2026",
-  "datum_storitve_do": "31. jan. 2026",
+  "stevilka": "43-9038-2054",
+  "datum_izdaje": "2026-01-31",
+  "datum_zapadlosti": "2026-02-28",
+  "datum_storitve_od": "2026-01-01",
+  "datum_storitve_do": "2026-01-31",
   "znesek_skupaj": 17.98,
-  "znesek_ddv": 0.0,
-  "znesek_brez_ddv": 17.98,
+  "znesek_ddv": 3.24,
+  "znesek_brez_ddv": 14.74,
   "partner": {
-    "naziv": "Google Ireland Limited",
-    "davcna_stevilka": "IE 6388047V"
+    "naziv": "INPOS, d.o.o., Celje",
+    "davcna_stevilka": "SI70868565",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
       "opis": "Teambuilding s simulatorjem",
-      "kolicina": 9.48,
+      "kolicina": 15258,
       "enota_mere": "Prikazi",
       "cena_enote": 9.48,
       "popust": 0.0,
-      "stopnja_ddv": 0.0,
-      "znesek_skupaj": 89.52
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 8.5
     },
     {
       "opis": "Teambuilding s simulatorjem",
-      "kolicina": 8.5,
+      "kolicina": 108,
       "enota_mere": "Kliki",
       "cena_enote": 8.5,
       "popust": 0.0,
-      "stopnja_ddv": 0.0,
-      "znesek_skupaj": 85.25
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 9.48
     }
   ]
 }

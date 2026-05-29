@@ -32,8 +32,30 @@ body {
 }
 
 .brand {
-    padding: 20px;
+    padding: 15px;
     border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 65px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.brand:hover {
+    background-color: var(--hover-bg);
+}
+
+.brand:hover::after {
+    content: "📷";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.95rem;
+    opacity: 0.7;
 }
 
 .brand h1 {
@@ -41,6 +63,13 @@ body {
     color: var(--primary-blue);
     text-transform: uppercase;
     letter-spacing: 1px;
+    margin: 0;
+}
+
+.brand img {
+    max-width: 100%;
+    max-height: 45px;
+    object-fit: contain;
 }
 
 nav {

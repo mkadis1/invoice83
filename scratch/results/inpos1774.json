@@ -9,11 +9,16 @@
   "znesek_brez_ddv": 6.02,
   "partner": {
     "naziv": "INPOS, d.o.o., Celje",
-    "davcna_stevilka": "SI70868565"
+    "davcna_stevilka": "SI70868565",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
-      "opis": "41 182222 PloSéa lepljena 600x400x18mm, smreka 1,000 KOS",
+      "opis": "41 182222 Ploša lepljena 600x400x18mm, smreka 1,000 KOS",
       "kolicina": 1.0,
       "enota_mere": "kos",
       "cena_enote": 6.549,

@@ -1,34 +1,30 @@
 {
-  "stevilka": "5485677030",
+  "stevilka": "43-9038-2054",
   "datum_izdaje": "2026-01-13",
   "datum_zapadlosti": "2026-01-31",
-  "datum_storitve_od": "",
-  "datum_storitve_do": "",
-  "znesek_skupaj": 147.57,
-  "znesek_ddv": 0.82,
-  "znesek_brez_ddv": 146.75,
+  "datum_storitve_od": "2026-03-01",
+  "datum_storitve_do": "2026-03-31",
+  "znesek_skupaj": 146.75,
+  "znesek_ddv": 26.46,
+  "znesek_brez_ddv": 120.29,
   "partner": {
-    "naziv": "Google Ireland Limited",
-    "davcna_stevilka": "IE6388047V"
+    "naziv": "INPOS, d.o.o., Celje",
+    "davcna_stevilka": "SI70868565",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
       "opis": "Search - Calculator",
-      "kolicina": 198,
+      "kolicina": 198.0,
       "enota_mere": "Kliki",
       "cena_enote": 0.74,
       "popust": 0.0,
       "stopnja_ddv": 22.0,
       "znesek_skupaj": 146.75
-    },
-    {
-      "opis": "Davek na digitalne storitve v Združenem kraljestvu",
-      "kolicina": 1,
-      "enota_mere": "",
-      "cena_enote": 0.82,
-      "popust": 0.0,
-      "stopnja_ddv": 22.0,
-      "znesek_skupaj": 0.82
     }
   ]
 }

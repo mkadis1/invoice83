@@ -179,6 +179,9 @@ def heartbeat():
     _last_heartbeat = time.time()
     return {"ok": True}
 
+class LlamaSettings(BaseModel):
+    learning_mode: bool
+
 # --- Partnerji ---
 class Partner(BaseModel):
     id: Optional[int] = None
@@ -617,7 +620,35 @@ def get_nastavitve():
     cursor.execute("SELECT * FROM nastavitve WHERE id = 1")
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else {}
+    
+    res = dict(row) if row else {}
+    
+    # Preveri obstoj logotipa
+    active_id = "default"
+    if "get_companies_registry" in globals():
+        try:
+            registry = globals()["get_companies_registry"]()
+            active_id = registry.get("active_id", "default")
+        except Exception:
+            pass
+            
+    import os
+    logo_url = None
+    for ext in ['png', 'jpg', 'jpeg', 'gif', 'PNG', 'JPG', 'JPEG', 'GIF']:
+        p_comp = f"static/uploads/logo_{active_id}.{ext}"
+        if os.path.exists(p_comp):
+            logo_url = f"/static/uploads/logo_{active_id}.{ext}"
+            break
+            
+    if not logo_url:
+        for ext in ['png', 'jpg', 'jpeg', 'gif', 'PNG', 'JPG', 'JPEG', 'GIF']:
+            p_glob = f"static/uploads/logo.{ext}"
+            if os.path.exists(p_glob):
+                logo_url = f"/static/uploads/logo.{ext}"
+                break
+                
+    res["logo_url"] = logo_url
+    return res
 
 @app.post("/api/nastavitve")
 @app.put("/api/nastavitve")
@@ -650,6 +681,26 @@ def save_nastavitve(n: Nastavitve):
                 break
         save_companies_registry(registry)
         
+    return {"status": "success"}
+
+@app.get("/api/settings/llama")
+def get_llama_settings():
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT vrednost FROM llama_settings WHERE kljuc = 'learning_mode'")
+    row = cursor.fetchone()
+    conn.close()
+    val = row['vrednost'] if row else '0'
+    return {"learning_mode": val == '1'}
+
+@app.post("/api/settings/llama")
+def save_llama_settings(settings: LlamaSettings):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    val = '1' if settings.learning_mode else '0'
+    cursor.execute("INSERT OR REPLACE INTO llama_settings (kljuc, vrednost) VALUES ('learning_mode', ?)", (val,))
+    conn.commit()
+    conn.close()
     return {"status": "success"}
 
 # --- Kontni načrt ---
@@ -810,11 +861,61 @@ async def upload_logo(file: UploadFile = File(...)):
         if ext not in ['png', 'jpg', 'jpeg', 'gif']:
             raise HTTPException(status_code=400, detail="Nepodprt format slike.")
             
-        file_path = f"static/uploads/logo.{ext}"
+        active_id = "default"
+        if "get_companies_registry" in globals():
+            try:
+                registry = globals()["get_companies_registry"]()
+                active_id = registry.get("active_id", "default")
+            except Exception:
+                pass
+                
+        # Izbrišemo prejšnje logotipe te firme z vsemi podprtimi končnicami, da se izognemo duplikatom
+        for e in ['png', 'jpg', 'jpeg', 'gif', 'PNG', 'JPG', 'JPEG', 'GIF']:
+            old_p = f"static/uploads/logo_{active_id}.{e}"
+            if os.path.exists(old_p):
+                try: os.remove(old_p)
+                except: pass
+                
+        file_path = f"static/uploads/logo_{active_id}.{ext}"
         with open(file_path, "wb") as f:
             f.write(content)
             
-        return {"status": "success", "path": f"/static/uploads/logo.{ext}"}
+        return {"status": "success", "path": f"/static/uploads/logo_{active_id}.{ext}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/nastavitve/logo")
+def delete_logo():
+    try:
+        active_id = "default"
+        if "get_companies_registry" in globals():
+            try:
+                registry = globals()["get_companies_registry"]()
+                active_id = registry.get("active_id", "default")
+            except Exception:
+                pass
+                
+        import os
+        deleted = False
+        for ext in ['png', 'jpg', 'jpeg', 'gif', 'PNG', 'JPG', 'JPEG', 'GIF']:
+            p = f"static/uploads/logo_{active_id}.{ext}"
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                    deleted = True
+                except:
+                    pass
+        # preveri še globalnega
+        for ext in ['png', 'jpg', 'jpeg', 'gif', 'PNG', 'JPG', 'JPEG', 'GIF']:
+            p = f"static/uploads/logo.{ext}"
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                    deleted = True
+                except:
+                    pass
+                    
+        return {"status": "success", "deleted": deleted}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -852,13 +953,27 @@ def generate_pdf_invoice(invoice_data, company_data, partner_data, items):
 
     class PDF(FPDF):
         def header(self):
-            # Iskanje logotipa - preverimo vse možne končnice
+            active_id = "default"
+            if "get_companies_registry" in globals():
+                try:
+                    registry = globals()["get_companies_registry"]()
+                    active_id = registry.get("active_id", "default")
+                except Exception:
+                    pass
+            
+            # Iskanje logotipa - preverimo vse možne končnice (podjetju-lasten ali globalni)
             logo_path = None
-            for ext in ['png', 'jpg', 'jpeg', 'PNG', 'JPG', 'JPEG']:
-                p = f"static/uploads/logo.{ext}"
+            for ext in ['png', 'jpg', 'jpeg', 'gif', 'PNG', 'JPG', 'JPEG', 'GIF']:
+                p = f"static/uploads/logo_{active_id}.{ext}"
                 if os.path.exists(p):
                     logo_path = p
                     break
+            if not logo_path:
+                for ext in ['png', 'jpg', 'jpeg', 'gif', 'PNG', 'JPG', 'JPEG', 'GIF']:
+                    p = f"static/uploads/logo.{ext}"
+                    if os.path.exists(p):
+                        logo_path = p
+                        break
             
             if logo_path:
                 # Če logotip obstaja, narišemo samo sliko
@@ -1688,18 +1803,28 @@ def _enrich_eslog_data(data):
     davcna = (data['partner'].get('davcna_stevilka') or "").strip()
     naziv = (data['partner'].get('naziv') or "").strip()
     
+    # Čiščenje davčne številke in TRR preprečevanje zamenjave (IBAN v davčni številki)
+    if davcna:
+        # Preveri, če je davčna številka dejansko IBAN (npr. začne se z SI56 ali je predolga)
+        davcna_clean = re.sub(r'\s+', '', davcna).upper()
+        if len(davcna_clean) > 12 or davcna_clean.startswith('SI56') or re.match(r'^[A-Z]{2}\d{2}[A-Z0-9]{10,}', davcna_clean):
+            # To je IBAN! Premakni v TRR in sprazni davčno številko
+            data['partner']['trr'] = davcna
+            data['partner']['davcna_stevilka'] = ""
+            davcna = ""
+            
     conn = database.get_db()
     cursor = conn.cursor()
     row = None
     
     if davcna:
         # 1. Poskusi ujemanje po davčni številki (samo če ni prazna)
-        cursor.execute("SELECT id, naziv FROM partnerji WHERE davcna_stevilka = ?", (davcna,))
+        cursor.execute("SELECT id, naziv, davcna_stevilka, ulica, postna_stevilka, kraj, drzava, trr, telefon, email FROM partnerji WHERE davcna_stevilka = ?", (davcna,))
         row = cursor.fetchone()
     
     if not row and naziv:
         # 2. Poskusi ujemanje po točnem nazivu
-        cursor.execute("SELECT id, naziv FROM partnerji WHERE UPPER(naziv) = UPPER(?)", (naziv,))
+        cursor.execute("SELECT id, naziv, davcna_stevilka, ulica, postna_stevilka, kraj, drzava, trr, telefon, email FROM partnerji WHERE UPPER(naziv) = UPPER(?)", (naziv,))
         row = cursor.fetchone()
         
     if not row and naziv:
@@ -1707,16 +1832,16 @@ def _enrich_eslog_data(data):
         # Odstranimo vse do vejice ali pike ali d.o.o.
         koren = re.split(r'[,.\s]+(?:d\.?\s*o\.?\s*o\.?|s\.?\s*p\.?|d\.?\s*d\.?)\b', naziv, flags=re.IGNORECASE)[0].strip()
         if len(koren) > 3:
-            cursor.execute("SELECT id, naziv FROM partnerji WHERE UPPER(naziv) LIKE UPPER(?)", (f"%{koren}%",))
+            cursor.execute("SELECT id, naziv, davcna_stevilka, ulica, postna_stevilka, kraj, drzava, trr, telefon, email FROM partnerji WHERE UPPER(naziv) LIKE UPPER(?)", (f"%{koren}%",))
             row = cursor.fetchone()
         
     if not row and naziv:
         # 3. Posebna pravila za tuje platforme
         if naziv.lower() == 'aliexpress':
-            cursor.execute("SELECT id, naziv FROM partnerji WHERE UPPER(naziv) LIKE '%ALIBABA%' OR UPPER(naziv) = 'ALIEXPRESS'")
+            cursor.execute("SELECT id, naziv, davcna_stevilka, ulica, postna_stevilka, kraj, drzava, trr, telefon, email FROM partnerji WHERE UPPER(naziv) LIKE '%ALIBABA%' OR UPPER(naziv) = 'ALIEXPRESS'")
             row = cursor.fetchone()
         elif naziv.lower() == 'temu':
-            cursor.execute("SELECT id, naziv FROM partnerji WHERE UPPER(naziv) LIKE '%WHALECO%' OR UPPER(naziv) = 'TEMU'")
+            cursor.execute("SELECT id, naziv, davcna_stevilka, ulica, postna_stevilka, kraj, drzava, trr, telefon, email FROM partnerji WHERE UPPER(naziv) LIKE '%WHALECO%' OR UPPER(naziv) = 'TEMU'")
             row = cursor.fetchone()
 
     conn.close()
@@ -1727,30 +1852,62 @@ def _enrich_eslog_data(data):
     if row:
         data['partner']['id'] = row['id']
         data['partner']['naziv'] = row['naziv']
+        data['partner']['davcna_stevilka'] = row['davcna_stevilka']
+        data['partner']['ulica'] = row['ulica']
+        data['partner']['postna_stevilka'] = row['postna_stevilka']
+        data['partner']['kraj'] = row['kraj']
+        data['partner']['drzava'] = row['drzava']
+        data['partner']['trr'] = row['trr']
+        data['partner']['telefon'] = row['telefon']
+        data['partner']['email'] = row['email']
     else:
-        # Novi partner — obogatimo podatke z Bizi.si
-        naziv_za_iskanje = data['partner'].get('naziv', '')
-        if naziv_za_iskanje:
-            try:
-                bizi_results = search_bizi(naziv_za_iskanje)
-                if bizi_results:
-                    best = bizi_results[0]
-                    posta_kraj_split = best.get('posta_kraj', '').split(' ', 1)
-                    postna = posta_kraj_split[0] if len(posta_kraj_split) > 0 else ''
-                    kraj = posta_kraj_split[1] if len(posta_kraj_split) > 1 else ''
-                    
-                    detail = bizi_detail(best['link'])
-                    data['partner']['naziv'] = best['naziv'] or data['partner']['naziv']
-                    data['partner']['ulica'] = best.get('naslov') or data['partner'].get('ulica', '')
-                    data['partner']['postna_stevilka'] = postna or data['partner'].get('postna_stevilka', '')
-                    data['partner']['kraj'] = kraj or data['partner'].get('kraj', '')
-                    data['partner']['telefon'] = detail.get('telefon') or data['partner'].get('telefon', '')
-                    data['partner']['email'] = detail.get('email') or data['partner'].get('email', '')
-                    data['partner']['trr'] = detail.get('trr') or data['partner'].get('trr', '')
-                    data['partner']['zavezanec_za_ddv'] = detail.get('zavezanec_za_ddv', best.get('zavezanec_za_ddv', False))
-                    data['bizi_enriched'] = True
-            except Exception as bizi_err:
-                print(f"Bizi.si enrichment failed: {bizi_err}")
+        # Novi partner
+        drzava = data['partner'].get('drzava', 'Slovenija')
+        
+        # Enforce that if tax ID has typical Slovenian markers, it is Slovenia
+        davcna = (data['partner'].get('davcna_stevilka') or "").strip()
+        if davcna.startswith('SI') or (davcna.isdigit() and len(davcna) == 8):
+            drzava = 'Slovenija'
+            data['partner']['drzava'] = 'Slovenija'
+            
+        if drzava == 'Slovenija':
+            # Novi slovenski partner — obogatimo podatke z Bizi.si
+            naziv_za_iskanje = data['partner'].get('naziv', '')
+            if naziv_za_iskanje:
+                try:
+                    bizi_results = search_bizi(naziv_za_iskanje)
+                    if bizi_results:
+                        best = bizi_results[0]
+                        posta_kraj_split = best.get('posta_kraj', '').split(' ', 1)
+                        postna = posta_kraj_split[0] if len(posta_kraj_split) > 0 else ''
+                        kraj = posta_kraj_split[1] if len(posta_kraj_split) > 1 else ''
+                        
+                        detail = bizi_detail(best['link'])
+                        data['partner']['naziv'] = best['naziv'] or data['partner']['naziv']
+                        data['partner']['ulica'] = best.get('naslov') or data['partner'].get('ulica', '')
+                        data['partner']['postna_stevilka'] = postna or data['partner'].get('postna_stevilka', '')
+                        data['partner']['kraj'] = kraj or data['partner'].get('kraj', '')
+                        data['partner']['telefon'] = detail.get('telefon') or data['partner'].get('telefon', '')
+                        data['partner']['email'] = detail.get('email') or data['partner'].get('email', '')
+                        
+                        # Preveri, če Bizi vrne IBAN v polju davčne ali TRR
+                        bizi_trr = detail.get('trr') or data['partner'].get('trr', '')
+                        bizi_davcna = detail.get('davcna_stevilka') or best.get('davcna_stevilka') or ''
+                        
+                        # Čiščenje bizi rezultatov
+                        if bizi_davcna:
+                            bizi_davcna_clean = re.sub(r'\s+', '', bizi_davcna).upper()
+                            if bizi_davcna_clean.startswith('SI56') or len(bizi_davcna_clean) > 12:
+                                bizi_trr = bizi_davcna
+                                bizi_davcna = ""
+                                
+                        data['partner']['trr'] = bizi_trr
+                        if bizi_davcna:
+                            data['partner']['davcna_stevilka'] = bizi_davcna
+                        data['partner']['zavezanec_za_ddv'] = detail.get('zavezanec_za_ddv', best.get('zavezanec_za_ddv', False))
+                        data['bizi_enriched'] = True
+                except Exception as bizi_err:
+                    print(f"Bizi.si enrichment failed: {bizi_err}")
     return data
 
 @app.post("/api/dokumenti/import_eslog_bulk_potrdi")
@@ -1773,19 +1930,25 @@ async def _save_imported_eslog(data):
     conn = database.get_db()
     cursor = conn.cursor()
     try:
-        # 1. Partner
+        # 1. Partner — mora obstajati v bazi; samodejno ustvarjanje ni dovoljeno
         partner_id = data['partner'].get('id')
         if not partner_id:
+            # Zadnja obramba: preverimo po davčni ali nazivu
             p = data['partner']
-            cursor.execute("""
-                INSERT INTO partnerji (naziv, ulica, postna_stevilka, kraj, drzava, davcna_stevilka, zavezanec_za_ddv, trr, telefon, email, vrsta)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'dobavitelj')
-            """, (
-                p.get('naziv', ''), p.get('ulica', ''), p.get('postna_stevilka', ''),
-                p.get('kraj', ''), p.get('drzava', 'Slovenija'), p.get('davcna_stevilka', ''),
-                1 if p.get('zavezanec_za_ddv') else 0, p.get('trr', ''), p.get('telefon', ''), p.get('email', '')
-            ))
-            partner_id = cursor.lastrowid
+            davcna = (p.get('davcna_stevilka') or '').strip()
+            naziv = (p.get('naziv') or '').strip()
+            if davcna:
+                cursor.execute("SELECT id FROM partnerji WHERE davcna_stevilka = ?", (davcna,))
+                row = cursor.fetchone()
+                if row:
+                    partner_id = row['id']
+            if not partner_id and naziv:
+                cursor.execute("SELECT id FROM partnerji WHERE UPPER(naziv) = UPPER(?)", (naziv,))
+                row = cursor.fetchone()
+                if row:
+                    partner_id = row['id']
+            if not partner_id:
+                raise ValueError(f"Partner '{naziv or davcna or 'neznano'}' ni v bazi. Dodajte ga najprej prek gumba '+ Nov partner'.")
         
         # 2. Dokument
         poslovno_leto = int(data['datum_izdaje'].split('-')[0]) if '-' in data['datum_izdaje'] else 2026
@@ -1817,13 +1980,13 @@ async def _save_imported_eslog(data):
         cursor.execute("""
             INSERT INTO dokumenti (poslovno_leto, tip, stevilka, interna_stevilka, partner_id, datum_izdaje, datum_zapadlosti, 
                                    datum_storitve_od, datum_storitve_do, znesek_brez_ddv, znesek_ddv, 
-                                   znesek_skupaj, valuta, tecaj, znesek_v_valuti, status, datum_placila, nacin_placila)
-            VALUES (?, 'prejeti_racuni', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                   znesek_skupaj, valuta, tecaj, znesek_v_valuti, status, datum_placila, nacin_placila, sklic)
+            VALUES (?, 'prejeti_racuni', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (poslovno_leto, data['stevilka'], interna_st, partner_id, data['datum_izdaje'], data['datum_zapadlosti'], 
               data['datum_storitve_od'], data['datum_storitve_do'], data['znesek_brez_ddv'], 
               data['znesek_ddv'], data['znesek_skupaj'], data.get('valuta', 'EUR'), 
               data.get('tecaj', 1.0), data.get('znesek_v_valuti', data['znesek_skupaj']),
-              status, datum_placila, nacin_placila))
+              status, datum_placila, nacin_placila, data.get('sklic', '')))
         
         doc_id = cursor.lastrowid
 
@@ -1859,7 +2022,26 @@ async def _save_imported_eslog(data):
 @app.post("/api/dokumenti/import_eslog_potrdi")
 async def import_eslog_potrdi(data: dict):
     try:
+        # Preveri, če je način učenja aktiven
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT vrednost FROM llama_settings WHERE kljuc = 'learning_mode'")
+        row = cursor.fetchone()
+        conn.close()
+        learning_active = (row['vrednost'] == '1') if row else False
+        
+        ocr_text = data.pop("ocr_text", None)
+        original_data = data.pop("original_data", None)
+        
         doc_id = await _save_imported_eslog(data)
+        
+        # Shrani primer učenja, če je način učenja aktiven in je prisotno OCR besedilo
+        if learning_active and ocr_text:
+            try:
+                invoice_ocr.save_llama_learning_example(ocr_text, data, original_data, data.get("file_name", ""))
+            except Exception as ex_err:
+                print(f"Napaka pri shranjevanju llama učenja: {ex_err}")
+                
         return {"status": "success", "id": doc_id}
     except Exception as e:
         traceback.print_exc()
@@ -2544,6 +2726,7 @@ class Dokument(BaseModel):
     znesek_v_valuti: Optional[float] = 0.0
     vkljuci_placilo: Optional[bool] = True
     odstotek_placila: Optional[float] = 100.0
+    sklic: Optional[str] = ""
     postavke: List[DokumentPostavka]
 
 @app.delete("/api/dokumenti/{id}")
@@ -2986,9 +3169,9 @@ def create_dokument(doc: Dokument):
         interna_st = stevilka
     
     cursor.execute("""
-        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila, interna_stevilka)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, interna_st))
+        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila, interna_stevilka, sklic)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, interna_st, doc.sklic))
     
     doc_id = cursor.lastrowid
     for p in doc.postavke:
@@ -3030,12 +3213,12 @@ def update_dokument(id: int, doc: Dokument):
             poslovno_leto=?, tip=?, stevilka=?, partner_id=?, datum_izdaje=?, datum_zapadlosti=?, 
             znesek_brez_ddv=?, znesek_ddv=?, znesek_skupaj=?, datum_storitve_od=?, datum_storitve_do=?, 
             status=?, datum_placila=?, nacin_placila=?, zakljucno_besedilo=?, noga_dokumenta=?, opombe=?,
-            valuta=?, tecaj=?, znesek_v_valuti=?, vkljuci_placilo=?, odstotek_placila=?, interna_stevilka=?
+            valuta=?, tecaj=?, znesek_v_valuti=?, vkljuci_placilo=?, odstotek_placila=?, interna_stevilka=?, sklic=?
         WHERE id = ?
     """, (doc.poslovno_leto, doc.tip, doc.stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, 
           doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, 
           doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe,
-          doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, doc.interna_stevilka, id))
+          doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, doc.interna_stevilka, doc.sklic, id))
     
     # Vstavljanje novih postavk
     for p in doc.postavke:

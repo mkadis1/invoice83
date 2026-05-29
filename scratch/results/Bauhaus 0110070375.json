@@ -1,20 +1,25 @@
 {
   "stevilka": "929-ED1-92011579",
-  "datum_izdaje": "05.03.2026",
-  "datum_zapadlosti": "",
-  "datum_storitve_od": "",
-  "datum_storitve_do": "",
+  "datum_izdaje": "2026-03-05T14:06:15",
+  "datum_zapadlosti": null,
+  "datum_storitve_od": null,
+  "datum_storitve_do": null,
   "znesek_skupaj": 40.8,
   "znesek_ddv": 7.36,
   "znesek_brez_ddv": 33.44,
   "partner": {
     "naziv": "BAUHAUS d.o.o., k.d.",
-    "davcna_stevilka": "SI86657593"
+    "davcna_stevilka": "SI86657593",
+    "drzava": "Slovenija",
+    "ulica": "Kajuhova ulica 45, 1000 Ljubljana",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
       "opis": "Dolle Regalni nosilec",
-      "kolicina": 16,
+      "kolicina": 2.0,
       "enota_mere": "kos",
       "cena_enote": 2.09,
       "popust": 0.0,

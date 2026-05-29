@@ -1,15 +1,20 @@
 {
   "stevilka": "2000-95-19331",
-  "datum_izdaje": "16.02.2026",
-  "datum_zapadlosti": "16.02.2026",
-  "datum_storitve_od": "",
-  "datum_storitve_do": "",
+  "datum_izdaje": "2026-02-16",
+  "datum_zapadlosti": "2026-02-16",
+  "datum_storitve_od": "2026-03-01",
+  "datum_storitve_do": "2026-03-31",
   "znesek_skupaj": 39.85,
   "znesek_ddv": 7.18,
   "znesek_brez_ddv": 32.67,
   "partner": {
     "naziv": "Shoppster d.o.o.",
-    "davcna_stevilka": ""
+    "davcna_stevilka": "",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {

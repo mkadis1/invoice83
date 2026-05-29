@@ -1,7 +1,7 @@
 {
   "stevilka": "F1276886",
   "datum_izdaje": "2026-04-27",
-  "datum_zapadlosti": "",
+  "datum_zapadlosti": "2026-04-27",
   "datum_storitve_od": "",
   "datum_storitve_do": "",
   "znesek_skupaj": 79.9,
@@ -9,13 +9,18 @@
   "znesek_brez_ddv": 65.49,
   "partner": {
     "naziv": "Corsair Components Limited",
-    "davcna_stevilka": ""
+    "davcna_stevilka": "",
+    "drzava": "UK",
+    "ulica": "1020 ESKDALE ROAD, WINNERSH",
+    "kraj": "WOKINGHAM",
+    "postna_stevilka": "RG41 5TS",
+    "tuji_partner_neprebran": true
   },
   "postavke": [
     {
       "opis": "ClubSport Button Cluster Pack SKU: CS_BCP",
-      "kolicina": 2.0,
-      "enota_mere": "kos",
+      "kolicina": 2,
+      "enota_mere": "",
       "cena_enote": 39.95,
       "popust": 0.0,
       "stopnja_ddv": 22.0,

@@ -2,14 +2,19 @@
   "stevilka": "1389-2026",
   "datum_izdaje": "2026-03-04",
   "datum_zapadlosti": "2026-03-09",
-  "datum_storitve_od": "",
-  "datum_storitve_do": "",
+  "datum_storitve_od": "2026-03-01",
+  "datum_storitve_do": "2026-03-31",
   "znesek_skupaj": 715.98,
   "znesek_ddv": 129.11,
   "znesek_brez_ddv": 586.87,
   "partner": {
     "naziv": "eBull d.o.o.",
-    "davcna_stevilka": "SI18717667"
+    "davcna_stevilka": "SI18717667",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "Vrhnika",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
@@ -17,7 +22,7 @@
       "kolicina": 1.0,
       "enota_mere": "Kos",
       "cena_enote": 737.697,
-      "popust": 0.0,
+      "popust": 22.22,
       "stopnja_ddv": 22.0,
       "znesek_skupaj": 573.76
     },

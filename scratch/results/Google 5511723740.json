@@ -1,15 +1,20 @@
 {
-  "stevilka": "5511723740",
-  "datum_izdaje": "28-02-2026",
-  "datum_zapadlosti": "",
-  "datum_storitve_od": "01-02-2026",
-  "datum_storitve_do": "28-02-2026",
+  "stevilka": "391-167-6074",
+  "datum_izdaje": "2026-02-01",
+  "datum_zapadlosti": null,
+  "datum_storitve_od": "2026-02-01",
+  "datum_storitve_do": "2026-02-28",
   "znesek_skupaj": -0.24,
   "znesek_ddv": 0.0,
   "znesek_brez_ddv": -0.24,
   "partner": {
     "naziv": "Google Ireland Limited",
-    "davcna_stevilka": "IE 6388047V"
+    "davcna_stevilka": "IE6388047V",
+    "drzava": "Ireland",
+    "ulica": "Gordon House, Barrow Street",
+    "kraj": "Dublin 4",
+    "postna_stevilka": "4",
+    "tuji_partner_neprebran": true
   },
   "postavke": [
     {

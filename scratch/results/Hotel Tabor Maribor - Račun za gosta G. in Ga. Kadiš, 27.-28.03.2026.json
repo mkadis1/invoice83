@@ -1,21 +1,26 @@
 {
   "stevilka": "1001000-10-116383",
-  "datum_izdaje": "2026-03-27",
-  "datum_zapadlosti": "",
-  "datum_storitve_od": "",
-  "datum_storitve_do": "",
+  "datum_izdaje": "2026-03-27T15:32:39",
+  "datum_zapadlosti": "2026-03-28",
+  "datum_storitve_od": "2026-03-01",
+  "datum_storitve_do": "2026-03-31",
   "znesek_skupaj": 101.26,
   "znesek_ddv": 8.24,
-  "znesek_brez_ddv": 95.0,
+  "znesek_brez_ddv": 93.02,
   "partner": {
-    "naziv": "Hotel Tabor Maribor",
-    "davcna_stevilka": ""
+    "naziv": "PODHOSTNIK d.o.o.",
+    "davcna_stevilka": "S172798696",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "Maribor",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
       "opis": "Nogitev 1/2 - dva N",
-      "kolicina": 2,
-      "enota_mere": "",
+      "kolicina": 2.0,
+      "enota_mere": "kos",
       "cena_enote": 43.38,
       "popust": 0.0,
       "stopnja_ddv": 9.5,
@@ -23,8 +28,8 @@
     },
     {
       "opis": "TUR.TAKSA - obéina Maribor",
-      "kolicina": 2,
-      "enota_mere": "",
+      "kolicina": 2.0,
+      "enota_mere": "kos",
       "cena_enote": 3.13,
       "popust": 0.0,
       "stopnja_ddv": 0.0,

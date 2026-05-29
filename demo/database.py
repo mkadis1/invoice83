@@ -54,6 +54,7 @@ def init_db():
         noga_dokumenta TEXT,
         opombe TEXT,
         interna_stevilka TEXT,
+        sklic TEXT,
         FOREIGN KEY (partner_id) REFERENCES partnerji(id)
     );
 
@@ -309,6 +310,20 @@ def init_db():
         zadnja_sprememba TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (artikel_id) REFERENCES artikli_storitve(id)
     );
+
+    -- Llama nastavitve in primeri učenja
+    CREATE TABLE IF NOT EXISTS llama_settings (
+        kljuc TEXT PRIMARY KEY,
+        vrednost TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS llama_learning_examples (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT,
+        ocr_text TEXT,
+        corrected_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
     """)
     # Migracija: Dodaj kratko_ime v nastavitve, če ne obstaja
     try:
@@ -395,6 +410,18 @@ def init_db():
         
     try:
         cursor.execute("ALTER TABLE nastavitve ADD COLUMN dashboard_config TEXT")
+    except:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE dokumenti ADD COLUMN sklic TEXT")
+    except:
+        pass
+
+    try:
+        cursor.execute("SELECT 1 FROM llama_settings WHERE kljuc = 'learning_mode'")
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO llama_settings (kljuc, vrednost) VALUES ('learning_mode', '1')")
     except:
         pass
 

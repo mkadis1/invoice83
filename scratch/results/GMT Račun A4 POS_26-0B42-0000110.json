@@ -1,15 +1,20 @@
 {
-  "stevilka": "2602011739412",
+  "stevilka": "26-0B42-0000110",
   "datum_izdaje": "2026-01-08",
-  "datum_zapadlosti": "",
+  "datum_zapadlosti": null,
   "datum_storitve_od": "",
   "datum_storitve_do": "",
   "znesek_skupaj": 78.2,
   "znesek_ddv": 11.18,
-  "znesek_brez_ddv": 62.01,
+  "znesek_brez_ddv": 66.02,
   "partner": {
     "naziv": "GMT d.o.o.",
-    "davcna_stevilka": "SI90084985"
+    "davcna_stevilka": "SI90084985",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
@@ -17,7 +22,7 @@
       "kolicina": 4.0,
       "enota_mere": "KOM",
       "cena_enote": 23.85,
-      "popust": 0.0,
+      "popust": 35.0,
       "stopnja_ddv": 22.0,
       "znesek_skupaj": 62.01
     }

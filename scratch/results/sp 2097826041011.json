@@ -1,7 +1,9 @@
 {
-  "supplier": {
-    "name": "STANOVANJSKO PODJETJE D.O.O.",
-    "vat_number": "SI42865409",
-    "address": "Ob Suhi 19, Ravne na Koroškem"
+  "partner": {
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   }
 }

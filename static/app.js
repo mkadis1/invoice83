@@ -1586,7 +1586,12 @@ async function renderDokumenti(tip, naslov) {
                     <button class="btn btn-blue" onclick="showDodajDokument('${tip}', '${naslov}')">+ Nov dokument</button>
                     ${tip === 'prejeti_racuni' ? `
                         <button class="btn" style="background:#495057; color:white; border:none;" onclick="document.getElementById('eslog-upload').click()">Uvozi račune (XML/ZIP/PNG/PDF)</button>
-                        <input type="file" id="eslog-upload" accept=".xml,.zip,.png,.pdf" style="display:none" onchange="window.uvoziEslog(this)">
+                        <input type="file" id="eslog-upload" accept=".xml,.zip,.png,.pdf" style="display:none" multiple onchange="window.uvoziEslog(this)">
+                        
+                        <label class="llama-toggle-container" style="display:inline-flex; align-items:center; gap:8px; margin-left:15px; background:${window.llamaLearningMode ? 'linear-gradient(135deg, #e7f5ff, #d0ebff)' : 'linear-gradient(135deg, #f1f3f5, #e9ecef)'}; padding:6px 14px; border-radius:30px; border:1px solid ${window.llamaLearningMode ? '#a5d8ff' : '#ced4da'}; cursor:pointer; user-select:none; font-size:0.85em; font-weight:600; color:${window.llamaLearningMode ? '#1971c2' : '#495057'}; box-shadow:${window.llamaLearningMode ? '0 2px 8px rgba(28, 126, 214, 0.15)' : '0 2px 5px rgba(0,0,0,0.05)'}; transition:all 0.2s;">
+                            <input type="checkbox" id="llama-learning-toggle" style="width:16px; height:16px; cursor:pointer; accent-color:#1c7ed6; margin:0;" ${window.llamaLearningMode ? 'checked' : ''} onchange="window.toggleLlamaLearningMode(this.checked)">
+                            <span style="display:inline-flex; align-items:center; gap:4px;">🤖 Način učenja Llama: <strong style="text-decoration: underline; text-underline-offset: 3px;">${window.llamaLearningMode ? 'VKLOPLJEN' : 'IZKLOPLJEN'}</strong></span>
+                        </label>
                     ` : ''}
                 </div>
                 ${window.renderSortControls(tip, sortFields, `renderDokumenti('${tip}', '${naslov}')`)}
@@ -1744,6 +1749,7 @@ window.odpriGlavniPopup = function(title, innerHtml, footerHtml = "", wide = fal
 async function showDodajDokument(tip, naslov, editData = null) {
     const pRes = await fetch('/api/partnerji');
     const partnerji = await pRes.json();
+    window._currentPartnerji = partnerji;
     let partnerOpts = partnerji.map(p => `<option value="${p.id}" ${editData && editData.partner_id === p.id ? 'selected' : ''}>${p.naziv}</option>`).join('');
 
     const nRes = await fetch('/api/nastavitve');
@@ -1912,8 +1918,8 @@ async function showDodajDokument(tip, naslov, editData = null) {
                 
                 <div style="margin-top: 20px; padding: 15px; background: #eef7ff; border-radius: 4px; border: 1px solid #cce5ff;">
                     <h4 style="margin:0 0 10px 0; color:var(--primary-blue);">Status plačila</h4>
-                    <div style="display: flex; gap: 15px;">
-                        <div class="form-group" style="flex: 1;">
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
                             <label>Status</label>
                             <select id="d_status">
                                 <option value="neplačano" ${editData && editData.status === 'neplačano' ? 'selected' : ''}>Neplačano</option>
@@ -1921,11 +1927,11 @@ async function showDodajDokument(tip, naslov, editData = null) {
                                 <option value="delno plačano" ${editData && editData.status === 'delno plačano' ? 'selected' : ''}>Delno plačano</option>
                             </select>
                         </div>
-                        <div class="form-group" style="flex: 1;">
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
                             <label>Datum plačila</label>
                             <input type="text" id="d_datum_placila" value="${editData ? formatDateJS(editData.datum_placila) : ''}" placeholder="DD.MM.YYYY">
                         </div>
-                        <div class="form-group" style="flex: 1;">
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
                             <label>Način plačila</label>
                             <select id="d_nacin_placila">
                                 <option value="" ${!editData || !editData.nacin_placila ? 'selected' : ''}>--- Izberi ---</option>
@@ -1935,8 +1941,29 @@ async function showDodajDokument(tip, naslov, editData = null) {
                                 <option value="Gotovina" ${editData && editData.nacin_placila === 'Gotovina' ? 'selected' : ''}>Gotovina</option>
                             </select>
                         </div>
+                        ${tip === 'prejeti_racuni' ? `
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label>Sklic za plačilo</label>
+                            <input type="text" id="d_sklic" value="${editData ? (editData.sklic || '') : ''}" placeholder="npr. SI12 123-456" oninput="if(window.updateDQR) window.updateDQR();">
+                        </div>
+                        ` : `<input type="hidden" id="d_sklic" value="">`}
                     </div>
                 </div>
+
+                ${tip === 'prejeti_racuni' ? `
+                <div style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6; display: flex; gap: 20px; align-items: center; justify-content: center;">
+                    <div id="d_qr_code_box" style="background: white; padding: 10px; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; width: 140px; height: 140px; flex-shrink: 0;">
+                        <div id="d_qr_code"></div>
+                    </div>
+                    <div style="flex: 1; font-size: 0.9em; color: #495057;">
+                        <h4 style="margin: 0 0 8px 0; color: var(--primary-blue); font-weight: 600;">Hitro plačilo (UPN-QR)</h4>
+                        <p style="margin: 2px 0;"><strong>Znesek:</strong> <span id="d_qr_val-znesek">0.00</span> €</p>
+                        <p style="margin: 2px 0;"><strong>Prejemnik:</strong> <span id="d_qr_val-prejemnik">---</span></p>
+                        <p style="margin: 2px 0;"><strong>TRR:</strong> <span id="d_qr_val-trr">---</span></p>
+                        <p style="margin: 2px 0;"><strong>Sklic:</strong> <span id="d_qr_val-sklic">---</span></p>
+                    </div>
+                </div>
+                ` : ''}
 
                 <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color);">
                     <button type="submit" class="btn btn-blue">${btnText}</button>
@@ -2081,8 +2108,117 @@ async function showDodajDokument(tip, naslov, editData = null) {
         }
     });
     if (window.initPartnerSearch) {
-        window.initPartnerSearch(document.getElementById('d_partner_search'), document.getElementById('d_partner'));
+        window.initPartnerSearch(document.getElementById('d_partner_search'), document.getElementById('d_partner'), () => {
+            if (window.updateDQR) window.updateDQR();
+        });
     }
+
+    // UPN-QR Code generator za urejanje dokumentov
+    window.updateDQR = function() {
+        try {
+            const partner_id = parseInt(document.getElementById('d_partner')?.value) || 0;
+            const partner = (window._currentPartnerji || []).find(p => p.id === partner_id);
+            const sklic_input = document.getElementById('d_sklic')?.value.trim() || "";
+            
+            // Izračun zneska neposredno iz postavk
+            let znesek = 0;
+            document.querySelectorAll('#postavke-container .postavka-item').forEach(tr => {
+                const kol = parseNumberJS(tr.querySelector('.p-kol').value) || 1;
+                const cena = parseNumberJS(tr.querySelector('.p-cena').value) || 0;
+                const popEl = tr.querySelector('.p-popust');
+                const popust = popEl ? (parseNumberJS(popEl.value)) : 0;
+                const ddvEl = tr.querySelector('.p-ddv');
+                const ddv = ddvEl ? (parseNumberJS(ddvEl.value)) : 0;
+                
+                const netoZnesek = (kol * cena) * (1 - popust / 100);
+                const brutoZnesek = netoZnesek * (1 + ddv / 100);
+                znesek += brutoZnesek;
+            });
+            const tecaj = parseNumberJS(document.getElementById('d_tecaj')?.value || '1');
+            znesek = znesek * tecaj;
+
+            const znesekEl = document.getElementById('d_qr_val-znesek');
+            const prejemnikEl = document.getElementById('d_qr_val-prejemnik');
+            const trrEl = document.getElementById('d_qr_val-trr');
+            const sklicEl = document.getElementById('d_qr_val-sklic');
+            const qrDiv = document.getElementById('d_qr_code');
+
+            if (znesekEl) znesekEl.textContent = formatNumberJS(znesek);
+
+            if (!qrDiv) return;
+
+            if (!partner) {
+                if (prejemnikEl) prejemnikEl.textContent = "Brez partnerja";
+                if (trrEl) trrEl.textContent = "";
+                if (sklicEl) sklicEl.textContent = "";
+                qrDiv.innerHTML = '<span style="font-size:0.75rem; color:#868e96; padding:10px;">Izberite partnerja za QR</span>';
+                return;
+            }
+
+            const trr = (partner.trr || "").replace(/\s+/g, "");
+
+            if (prejemnikEl) prejemnikEl.textContent = partner.naziv;
+            if (sklicEl) sklicEl.textContent = sklic_input || "SI99";
+
+            if (!trr) {
+                if (trrEl) trrEl.textContent = "Brez TRR";
+                qrDiv.innerHTML = '<span style="font-size:0.75rem; color:#868e96; padding:10px;">Vnesite TRR partnerja za QR</span>';
+                return;
+            }
+
+            if (trrEl) trrEl.textContent = partner.trr;
+
+            const cents = Math.round(znesek * 100);
+            const amountStr = cents.toString().padStart(11, '0');
+
+            const fields = [
+                "UPNQR",                  // 1. Identifikator
+                "",                       // 2. IBAN plačnika
+                "",                       // 3. Polog gotovine
+                "",                       // 4. Koda valute
+                "",                       // 5. Znesek
+                "Plačnik",                // 6. Ime plačnika
+                "Naslov plačnika",        // 7. Naslov plačnika
+                "Kraj plačnika",          // 8. Kraj plačnika
+                amountStr,                // 9. Znesek
+                "",                       // 10. Datum plačila
+                "",                       // 11. Nujno
+                "OTHR",                   // 12. Koda namena
+                `PLAČILO RAČUNA ${document.getElementById('d_stevilka')?.value || ''}`.substring(0, 42).trim(), // 13. Namen
+                "",                       // 14. Rok plačila
+                trr,                      // 15. IBAN prejemnika
+                sklic_input || "SI99",    // 16. Sklic prejemnika
+                (partner.naziv || "Prejemnik").substring(0, 40), // 17. Ime prejemnika
+                (partner.naslov || "").substring(0, 40), // 18. Naslov prejemnika
+                ((partner.postna_stevilka || "") + " " + (partner.kraj || "Slovenija")).substring(0, 40).trim() // 19. Kraj prejemnika
+            ];
+
+            const rawBody = fields.join('\n') + '\n';
+            const totalLen = rawBody.length + 3;
+            const qrData = rawBody + totalLen.toString().padStart(3, '0');
+
+            qrDiv.innerHTML = '';
+            if (window.QRCode) {
+                try {
+                    new QRCode(qrDiv, {
+                        text: qrData,
+                        width: 140,
+                        height: 140,
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                } catch(e) {
+                    const encodedData = encodeURIComponent(qrData);
+                    qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodedData}&size=140x140" alt="QR Code" style="width:140px; height:140px;">`;
+                }
+            } else {
+                const encodedData = encodeURIComponent(qrData);
+                qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodedData}&size=140x140" alt="QR Code" style="width:140px; height:140px;">`;
+            }
+        } catch(err) {
+            console.error(err);
+        }
+    };
+
     window.kalkulirajZneske();
 
     // Preverjanje podvojene stevilke ob izhodu iz polja
@@ -2235,6 +2371,7 @@ window.kalkulirajZneske = function() {
     }
     
     document.getElementById('skupaj-znesek').innerText = text;
+    if (window.updateDQR) window.updateDQR();
 };
 
 async function shraniDokument(e, tip, naslov, id = null) {
@@ -2294,6 +2431,7 @@ async function shraniDokument(e, tip, naslov, id = null) {
         status: document.getElementById('d_status').value,
         datum_placila: parseDateISO(document.getElementById('d_datum_placila')?.value || ""),
         nacin_placila: document.getElementById('d_nacin_placila').value,
+        sklic: document.getElementById('d_sklic')?.value.trim() || "",
         zakljucno_besedilo: zakljucna_besedila.join('\n\n'),
         noga_dokumenta: document.getElementById('d_noga') ? document.getElementById('d_noga').value : "",
         vkljuci_placilo: document.getElementById('d_vkljuci_placilo') ? document.getElementById('d_vkljuci_placilo').checked : true,
@@ -2316,7 +2454,20 @@ async function shraniDokument(e, tip, naslov, id = null) {
     const res = await fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
     if (res.ok) {
         const saved = await res.json();
-        window.zapriGlavniPopup();
+        const savedId = saved.id;
+        // Osveži seznam v ozadju, nato pa znova odpri dokument v načinu urejanja
+        if (window.refreshCurrentModule) window.refreshCurrentModule();
+        try {
+            const detajlRes = await fetch(`/api/dokumenti/detajl/${savedId}`);
+            if (detajlRes.ok) {
+                const detajl = await detajlRes.json();
+                await showDodajDokument(tip, naslov, detajl);
+            } else {
+                window.zapriGlavniPopup();
+            }
+        } catch(e) {
+            window.zapriGlavniPopup();
+        }
     } else {
         const err = await res.json();
         alert("Napaka pri shranjevanju: " + (err.detail || res.statusText));
@@ -2437,6 +2588,17 @@ window.kalkulirajImportZneske = function() {
     if (skupajEl) skupajEl.innerText = formatMoneyJS(skupaj);
 };
 
+window.kalkulirajImportSkupajSamo = function() {
+    let skupaj = 0;
+    document.querySelectorAll('.import-p-row').forEach(tr => {
+        const val = tr.querySelector('.i-p-znesek').value;
+        const znesek = parseNumberJS(val) || 0;
+        skupaj += znesek;
+    });
+    const skupajEl = document.getElementById('import-skupaj-display');
+    if (skupajEl) skupajEl.innerText = formatMoneyJS(skupaj);
+};
+
 window.dodajImportPostavko = function() {
     const container = document.getElementById('import-postavke-body');
     const div = document.createElement('div');
@@ -2487,7 +2649,7 @@ window.dodajImportPostavko = function() {
             </div>
             <div style="flex: 1; min-width: 90px;">
                 <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Skupaj</label>
-                <input type="text" class="i-p-znesek" value="0,00" style="width:100%; height:32px; text-align:right; font-weight:bold; background:#e9ecef;" readonly>
+                <input type="text" class="i-p-znesek" value="0,00" style="width:100%; height:32px; text-align:right; font-weight:bold; border:1px solid #ced4da; border-radius:4px;" oninput="window.kalkulirajImportSkupajSamo()">
             </div>
         </div>
     `;
@@ -2496,30 +2658,97 @@ window.dodajImportPostavko = function() {
 
 
 async function showImportPreview(data) {
+    const original_data = JSON.parse(JSON.stringify(data));
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     
     let partnerStatusHtml = '';
+    const isSlovenian = (data.partner.drzava || 'Slovenija') === 'Slovenija';
+    
     if (!data.partner_obstaja) {
-        const bizi_badge = data.bizi_enriched 
-            ? `<span style="background:#28a745; color:white; font-size:0.75rem; padding:2px 8px; border-radius:10px; margin-left:8px;">✓ Bizi.si</span>`
-            : `<span style="background:#ffc107; color:#333; font-size:0.75rem; padding:2px 8px; border-radius:10px; margin-left:8px;">⚠ Iz XML</span>`;
         const p = data.partner;
-        partnerStatusHtml = `
-            <div class="warning-box" style="background:#fff8e1; border:1px solid #ffc107; border-radius:6px; padding:12px; margin-bottom:16px;">
-                <strong>Nov partner bo ustvarjen</strong>${bizi_badge}
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; margin-top:10px; font-size:0.9rem;">
-                    <div><span style="color:#888;">Naziv:</span> <strong>${p.naziv || '—'}</strong></div>
-                    <div><span style="color:#888;">Davčna:</span> ${p.davcna_stevilka || '—'}</div>
-                    <div><span style="color:#888;">Ulica:</span> ${p.ulica || '—'}</div>
-                    <div><span style="color:#888;">Pošta/Kraj:</span> ${p.postna_stevilka || ''} ${p.kraj || '—'}</div>
-                    <div><span style="color:#888;">Telefon:</span> ${p.telefon || '—'}</div>
-                    <div><span style="color:#888;">E-naslov:</span> ${p.email || '—'}</div>
-                    <div><span style="color:#888;">IBAN:</span> ${p.trr || '—'}</div>
-                    <div><span style="color:#888;">DDV zavezanec:</span> ${p.zavezanec_za_ddv ? 'Da' : 'Ne'}</div>
-                </div>
-            </div>
-        `;
+        if (isSlovenian) {
+            if (data.bizi_enriched) {
+                partnerStatusHtml = `
+                    <div class="warning-box" id="slov-bizi-warn-box" style="background:#fff8e1; border:1px solid #ffc107; border-radius:6px; padding:12px; margin-bottom:16px; color:#856404;">
+                        <strong style="display:block; margin-bottom:6px;">⚠️ Partner ni v bazi — pred uvozom ga morate dodati!</strong>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; margin-top:8px; font-size:0.9rem; color:#5a3e00;">
+                            <div><span style="color:#888;">Naziv (Bizi):</span> <strong>${p.naziv || '—'}</strong></div>
+                            <div><span style="color:#888;">Davčna:</span> ${p.davcna_stevilka || '—'}</div>
+                            <div><span style="color:#888;">Ulica:</span> ${p.ulica || '—'}</div>
+                            <div><span style="color:#888;">Pošta/Kraj:</span> ${p.postna_stevilka || ''} ${p.kraj || '—'}</div>
+                            <div><span style="color:#888;">IBAN:</span> ${p.trr || '—'}</div>
+                            <div><span style="color:#888;">Zavezanec:</span> ${p.zavezanec_za_ddv ? 'Da' : 'Ne'}</div>
+                        </div>
+                        <p style="margin-top:8px; font-size:0.85rem;">
+                            Kliknite <strong>+ Nov partner</strong> (zgoraj desno) in ga dodajte prek Bizi.si, ali pa poiščite obstoječega v iskalnem polju pod "Dobavitelj".
+                        </p>
+                    </div>
+                `;
+            } else {
+                partnerStatusHtml = `
+                    <div class="warning-box" id="slov-bizi-error-box" style="background:#fff5f5; border:1px solid #ffc9c9; border-radius:6px; padding:12px; margin-bottom:16px; color:#c92a2a;">
+                        <strong>⚠️ Partner ne obstaja v bazi in ni bil najden na Bizi.si!</strong>
+                        <p style="margin-top:6px; font-size:0.9rem; line-height:1.4;">
+                            Prosimo, poiščite in izberite obstoječega partnerja ali kliknite <strong>+ Nov partner</strong> (zgoraj desno), da ga dodate prek Bizi.si ali ročno.
+                        </p>
+                    </div>
+                `;
+            }
+        } else {
+            // Tuji partner
+            if (p.tuji_partner_neprebran || !p.naziv) {
+                partnerStatusHtml = `
+                    <div class="warning-box" id="foreign-manual-box" style="background:#f8f9fa; border:1px solid #4c6ef5; border-radius:6px; padding:15px; margin-bottom:16px;">
+                        <strong style="color:#364fc7; display:block; margin-bottom:8px;">🌍 Tuj partner — vnesite podatke ročno</strong>
+                        <p style="font-size:0.85rem; color:#495057; margin-bottom:12px;">Podatkov o tujem partnerju ni bilo mogoče prebrati iz računa. Prosimo, vnesite jih ročno:</p>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div>
+                                <label style="font-size:0.75rem; color:#495057; font-weight:bold; display:block; margin-bottom:3px;">Naziv partnerja *</label>
+                                <input type="text" id="manual_p_naziv" placeholder="npr. Artlist UK Ltd" style="width:100%; padding:5px 8px; border:1px solid #ced4da; border-radius:4px;" oninput="window.validateManualForeignPartner()">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:#495057; font-weight:bold; display:block; margin-bottom:3px;">Država *</label>
+                                <input type="text" id="manual_p_drzava" placeholder="npr. Velika Britanija" style="width:100%; padding:5px 8px; border:1px solid #ced4da; border-radius:4px;" oninput="window.validateManualForeignPartner()">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:#495057; display:block; margin-bottom:3px;">Ulica in hišna št.</label>
+                                <input type="text" id="manual_p_ulica" placeholder="Gordon House, Barrow Street" style="width:100%; padding:5px 8px; border:1px solid #ced4da; border-radius:4px;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:#495057; display:block; margin-bottom:3px;">Kraj / Mesto</label>
+                                <input type="text" id="manual_p_kraj" placeholder="Dublin" style="width:100%; padding:5px 8px; border:1px solid #ced4da; border-radius:4px;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:#495057; display:block; margin-bottom:3px;">Davčna / VAT ID</label>
+                                <input type="text" id="manual_p_davcna" placeholder="GB38819..." style="width:100%; padding:5px 8px; border:1px solid #ced4da; border-radius:4px;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:#495057; display:block; margin-bottom:3px;">IBAN / TRR</label>
+                                <input type="text" id="manual_p_trr" placeholder="IBAN..." style="width:100%; padding:5px 8px; border:1px solid #ced4da; border-radius:4px;">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Tuj partner, prebran iz računa — a ni v bazi, zahtevamo akcijo
+                partnerStatusHtml = `
+                    <div class="warning-box" style="background:#fff8e1; border:1px solid #ffc107; border-radius:6px; padding:12px; margin-bottom:16px; color:#856404;">
+                        <strong style="display:block; margin-bottom:4px;">🌍 Tuj partner ni v bazi — pred uvozom ga morate dodati!</strong>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 20px; margin-top:8px; font-size:0.9rem;">
+                            <div><span style="color:#888;">Naziv:</span> <strong>${p.naziv || '—'}</strong></div>
+                            <div><span style="color:#888;">Država:</span> <strong>${p.drzava || '—'}</strong></div>
+                            <div><span style="color:#888;">Ulica:</span> ${p.ulica || '—'}</div>
+                            <div><span style="color:#888;">Pošta/Kraj:</span> ${p.postna_stevilka || ''} ${p.kraj || '—'}</div>
+                            <div><span style="color:#888;">Davčna:</span> ${p.davcna_stevilka || '—'}</div>
+                        </div>
+                        <p style="margin-top:8px; font-size:0.85rem;">
+                            Kliknite <strong>+ Nov partner</strong> (zgoraj desno) in ga dodajte ročno, ali pa poiščite obstoječega v iskalnem polju pod "Dobavitelj".
+                        </p>
+                    </div>
+                `;
+            }
+        }
     }
 
     modal.innerHTML = `
@@ -2529,42 +2758,79 @@ async function showImportPreview(data) {
                 <button class="btn btn-close-import" style="background:none; color:var(--text-main); font-size:1.5rem;">&times;</button>
             </div>
             
+            ${window.llamaLearningMode ? `
+                <div class="llama-learning-banner" style="background: linear-gradient(135deg, #e7f5ff, #d0ebff); border: 1px solid #74c0fc; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 4px 12px rgba(28, 126, 214, 0.08);">
+                    <div style="display: flex; gap: 12px; align-items: center; text-align: left;">
+                        <span style="font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🤖</span>
+                        <div>
+                            <h4 style="margin: 0; color: #1971c2; font-size: 0.95rem; font-weight: bold;">Način učenja Llama je AKTIVEN</h4>
+                            <p style="margin: 3px 0 0 0; color: #343a40; font-size: 0.82rem; line-height: 1.4;">Preverite polja. Če so pravilna, kliknite gumb desno. Če niso, jih popravite in kliknite <strong>Potrdi uvoz</strong> spodaj.</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-blue" id="btn-llama-accurate" style="background: #228be6; color: white; border: none; padding: 8px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: all 0.2s; white-space: nowrap;" onclick="window._llamaMarkAccurateAndConfirm(this)">Da, podatki so natančni! ✓</button>
+                </div>
+            ` : ''}
+
             ${partnerStatusHtml}
             
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                <div>
-                    <label style="color:var(--text-muted); font-size:0.8rem;">ŠTEVILKA RAČUNA</label>
-                    <p style="font-weight:bold; font-size:1.1rem;">${data.stevilka}</p>
-                    <div id="import-dup-warn" style="display:none; background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:6px 10px;font-size:0.82rem;color:#856404;margin-top:4px;"></div>
-                </div>
-                <div>
-                    <label style="color:var(--text-muted); font-size:0.8rem;">DOBAVITELJ</label>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span id="import-partner-display" style="font-weight:bold;">${data.partner.naziv}</span>
-                        <button class="btn" style="padding:2px 8px; font-size:0.75rem; background:#e9ecef; color:#495057; border:1px solid #ced4da;" onclick="document.getElementById('import-partner-search-box').style.display='block'; this.style.display='none';">Spremeni</button>
-                        <button class="btn btn-blue" style="padding:2px 8px; font-size:0.75rem;" onclick="window._partnerPopupTargetSelect = 'IMPORT_MODAL'; window.odpriPartnerPopup(null);">+ Nov partner</button>
+            <div style="display:grid; grid-template-columns: 2.2fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <!-- Left: Form Fields -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label style="color:var(--text-muted); font-size:0.8rem;">ŠTEVILKA RAČUNA</label>
+                        <input type="text" id="import-stevilka" value="${data.stevilka || ''}" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; font-weight:bold;" oninput="if(window.__checkImportDup) window.__checkImportDup(this.value); if(window.updateImportQR) window.updateImportQR();">
+                        <div id="import-dup-warn" style="display:none; background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:6px 10px;font-size:0.82rem;color:#856404;margin-top:4px;"></div>
                     </div>
-                    <div id="import-partner-search-box" style="display:none; margin-top:5px;">
-                        <input type="text" id="import-partner-search-input" placeholder="Išči obstoječega partnerja..." style="width:100%; padding:5px; font-size:0.85rem; border:1px solid var(--primary-blue); border-radius:4px;">
-                        <p style="font-size:0.7rem; color:#666; margin-top:2px;">Če partnerja ne izberete, bo ustvarjen nov.</p>
+                    <div>
+                        <label style="color:var(--text-muted); font-size:0.8rem;">DOBAVITELJ</label>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span id="import-partner-display" style="font-weight:bold; flex:1;">${data.partner.naziv || 'Neznan partner'}</span>
+                            <div style="display:flex; flex-direction:column; gap:4px; align-items:stretch;">
+                                <button class="btn" style="padding:2px 8px; font-size:0.75rem; background:#e9ecef; color:#495057; border:1px solid #ced4da; width:100%; white-space:nowrap;" onclick="document.getElementById('import-partner-search-box').style.display='block'; this.style.display='none';">Spremeni</button>
+                                <button class="btn btn-blue" style="padding:2px 8px; font-size:0.75rem; width:100%; white-space:nowrap;" onclick="window._partnerPopupTargetSelect = 'IMPORT_MODAL'; window.odpriPartnerPopup(null);">+ Nov partner</button>
+                            </div>
+                        </div>
+                        <div id="import-partner-search-box" style="display:none; margin-top:5px;">
+                            <input type="text" id="import-partner-search-input" placeholder="Išči obstoječega partnerja..." style="width:100%; padding:5px; font-size:0.85rem; border:1px solid var(--primary-blue); border-radius:4px;">
+                            <p style="font-size:0.7rem; color:#888; margin-top:2px;">Izberite obstoječega partnerja ali dodajte novega prek gumba + Nov partner.</p>
+                        </div>
+                        <p id="import-partner-tax" style="font-size:0.9rem;">Davčna: ${data.partner.davcna_stevilka || '—'}</p>
                     </div>
-                    <p id="import-partner-tax" style="font-size:0.9rem;">Davčna: ${data.partner.davcna_stevilka || '—'}</p>
+                    <div>
+                        <label style="color:var(--text-muted); font-size:0.8rem;">DATUM IZDAJE</label>
+                        <input type="date" id="import-datum-izdaje" value="${data.datum_izdaje || ''}" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;" onchange="if(window.updateImportQR) window.updateImportQR();">
+                    </div>
+                    <div>
+                        <label style="color:var(--text-muted); font-size:0.8rem;">DATUM ZAPADLOSTI</label>
+                        <input type="date" id="import-datum-zapadlosti" value="${data.datum_zapadlosti || ''}" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
+                    </div>
+                    <div>
+                        <label style="color:var(--text-muted); font-size:0.8rem;">DATUM STORITVE (OD)</label>
+                        <input type="date" id="import-datum-storitve-od" value="${data.datum_storitve_od || data.datum_storitve || ''}" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
+                    </div>
+                    <div>
+                        <label style="color:var(--text-muted); font-size:0.8rem;">DATUM STORITVE (DO)</label>
+                        <input type="date" id="import-datum-storitve-do" value="${data.datum_storitve_do || data.datum_storitve_od || data.datum_storitve || ''}" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
+                    </div>
+                    <div>
+                        <label style="color:var(--text-muted); font-size:0.8rem;">SKLIC ZA PLAČILO</label>
+                        <input type="text" id="import-sklic" value="${data.sklic || ''}" placeholder="npr. SI12 12345-12345" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; font-weight:bold;" oninput="if(window.updateImportQR) window.updateImportQR();">
+                    </div>
+                    <div>
+                        <label style="color:var(--text-muted); font-size:0.8rem;">SKUPAJ ZA PLAČILO</label>
+                        <input type="text" id="import-skupaj-display" value="${formatNumberJS(data.znesek_skupaj)}" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; font-weight:bold; color:var(--primary-red); font-size:1.1rem; text-align:right;" oninput="if(window.updateImportQR) window.updateImportQR();">
+                    </div>
                 </div>
-                <div>
-                    <label style="color:var(--text-muted); font-size:0.8rem;">DATUM IZDAJE</label>
-                    <p>${formatDateJS(data.datum_izdaje)}</p>
-                </div>
-                <div>
-                    <label style="color:var(--text-muted); font-size:0.8rem;">DATUM ZAPADLOSTI</label>
-                    <p>${formatDateJS(data.datum_zapadlosti)}</p>
-                </div>
-                <div>
-                    <label style="color:var(--text-muted); font-size:0.8rem;">DATUM STORITVE</label>
-                    <p>${formatDateJS(data.datum_storitve || data.datum_storitve_od)}</p>
-                </div>
-                <div>
-                    <label style="color:var(--text-muted); font-size:0.8rem;">SKUPAJ ZA PLAČILO</label>
-                    <p id="import-skupaj-display" style="font-weight:bold; color:var(--primary-red); font-size:1.2rem;">${formatMoneyJS(data.znesek_skupaj)}</p>
+                <!-- Right: QR Code Visualizer -->
+                <div style="border:1px solid #dee2e6; border-radius:8px; padding:15px; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <span style="font-size:0.8rem; font-weight:bold; color:var(--primary-blue); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">UPN-QR plačilo</span>
+                    <div id="import-qr-code" style="width:160px; height:160px; background:#f8f9fa; border:1px dashed #ced4da; border-radius:4px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        <span style="font-size:0.75rem; color:#868e96; padding:10px;">Pripravljam QR...</span>
+                    </div>
+                    <div id="import-qr-info" style="font-size:0.7rem; color:#495057; margin-top:8px; width:100%;">
+                        <p id="import-qr-iban" style="margin:2px 0; font-weight:bold; word-break:break-all; font-family:monospace; color:#333;"></p>
+                        <p id="import-qr-sklic" style="margin:2px 0; font-family:monospace; font-size:0.8rem; font-weight:bold; color:var(--primary-red);"></p>
+                    </div>
                 </div>
             </div>
 
@@ -2629,7 +2895,7 @@ async function showImportPreview(data) {
                                 </div>
                                 <div style="flex: 1; min-width: 90px;">
                                     <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Skupaj</label>
-                                    <input type="text" class="i-p-znesek" value="${formatNumberJS(p.znesek_skupaj)}" style="width:100%; height:32px; text-align:right; font-weight:bold; background:#e9ecef;" readonly>
+                                    <input type="text" class="i-p-znesek" value="${formatNumberJS(p.znesek_skupaj)}" style="width:100%; height:32px; text-align:right; font-weight:bold; border:1px solid #ced4da; border-radius:4px;" oninput="window.kalkulirajImportSkupajSamo()">
                                 </div>
                             </div>
                         </div>
@@ -2646,19 +2912,57 @@ async function showImportPreview(data) {
 
     document.body.appendChild(modal);
 
-    // Avtomatsko preveri podvojeno stevilko ob odprtju
-    (async () => {
-        if (!data.stevilka || data.stevilka === 'Neznano') return;
+    // Funkcija za preverjanje podvojenih številk
+    window.__checkImportDup = async (stevilka) => {
+        if (!stevilka || stevilka === 'Neznano') return;
         try {
-            const res = await fetch(`/api/dokumenti/check_stevilka?stevilka=${encodeURIComponent(data.stevilka)}&tip=prejeti_racuni`);
+            const res = await fetch(`/api/dokumenti/check_stevilka?stevilka=${encodeURIComponent(stevilka)}&tip=prejeti_racuni`);
             const check = await res.json();
             const warnEl = document.getElementById('import-dup-warn');
-            if (check.obstaja && warnEl) {
-                warnEl.style.display = 'block';
-                warnEl.innerHTML = `⚠️ Dokument s to številko (<strong>${data.stevilka}</strong>) je bil že uvožen (ID #${check.id}). Preverite, da ne uvažate duplikata!`;
+            if (warnEl) {
+                if (check.obstaja) {
+                    warnEl.style.display = 'block';
+                    warnEl.innerHTML = `⚠️ Dokument s to številko (<strong>${stevilka}</strong>) je bil že uvožen (ID #${check.id}). Preverite, da ne uvažate duplikata!`;
+                } else {
+                    warnEl.style.display = 'none';
+                }
             }
         } catch(e) {}
+    };
+
+    // Avtomatsko preveri podvojeno stevilko ob odprtju
+    (async () => {
+        if (data.stevilka) await window.__checkImportDup(data.stevilka);
     })();
+
+    // Nastavi potrditveni gumb glede na uvoz Bizi
+    window.validateManualForeignPartner = () => {
+        const name = document.getElementById('manual_p_naziv')?.value.trim();
+        const country = document.getElementById('manual_p_drzava')?.value.trim();
+        const btn = document.getElementById('btn-confirm-import');
+        if (btn) {
+            if (name && country) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+    };
+
+    // Gumba ne bomo onemogočali ob odprtju (uporabnika bomo ob kliku vprašali za kreacijo partnerja, če ne obstaja)
+    setTimeout(() => {
+        const btn = document.getElementById('btn-confirm-import');
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        }
+        if (window.updateImportQR) window.updateImportQR();
+    }, 100);
 
     return new Promise((resolve) => {
         const closeImportModal = () => {
@@ -2670,6 +2974,81 @@ async function showImportPreview(data) {
         modal.querySelectorAll('.btn-close-import').forEach(btn => {
             btn.addEventListener('click', closeImportModal);
         });
+
+        // UPN-QR Code generator za import modal
+        window.updateImportQR = function() {
+            try {
+                const trr = (data.partner && data.partner.trr || "").replace(/\s+/g, "");
+                const sklic_input = document.getElementById('import-sklic')?.value.trim() || "";
+                const znesek_input = document.getElementById('import-skupaj-display')?.value || "0";
+                const znesek = parseNumberJS(znesek_input) || 0;
+                
+                const ibanEl = document.getElementById('import-qr-iban');
+                const sklicEl = document.getElementById('import-qr-sklic');
+                const qrDiv = document.getElementById('import-qr-code');
+                
+                if (!qrDiv) return;
+                
+                if (!trr) {
+                    if (ibanEl) ibanEl.textContent = "Brez TRR prejemnika";
+                    if (sklicEl) sklicEl.textContent = "";
+                    qrDiv.innerHTML = '<span style="font-size:0.75rem; color:#868e96; padding:10px;">Vnesite TRR partnerja za QR</span>';
+                    return;
+                }
+                
+                if (ibanEl) ibanEl.textContent = "TRR: " + data.partner.trr;
+                if (sklicEl) sklicEl.textContent = "Sklic: " + (sklic_input || "SI99");
+                
+                const cents = Math.round(znesek * 100);
+                const amountStr = cents.toString().padStart(11, '0');
+                
+                const fields = [
+                    "UPNQR",                  // 1. Identifikator
+                    "",                       // 2. IBAN plačnika
+                    "",                       // 3. Polog gotovine
+                    "",                       // 4. Koda valute
+                    "",                       // 5. Znesek
+                    "Plačnik",                // 6. Ime plačnika
+                    "Naslov plačnika",        // 7. Naslov plačnika
+                    "Kraj plačnika",          // 8. Kraj plačnika
+                    amountStr,                // 9. Znesek
+                    "",                       // 10. Datum plačila
+                    "",                       // 11. Nujno
+                    "OTHR",                   // 12. Koda namena
+                    `PLAČILO RAČUNA ${document.getElementById('import-stevilka')?.value || ''}`.substring(0, 42).trim(), // 13. Namen
+                    "",                       // 14. Rok plačila
+                    trr,                      // 15. IBAN prejemnika
+                    sklic_input || "SI99",    // 16. Sklic prejemnika
+                    (data.partner.naziv || "Prejemnik").substring(0, 40), // 17. Ime prejemnika
+                    (data.partner.ulica || "").substring(0, 40), // 18. Naslov prejemnika
+                    ((data.partner.postna_stevilka || "") + " " + (data.partner.kraj || "Slovenija")).substring(0, 40).trim() // 19. Kraj prejemnika
+                ];
+                
+                const rawBody = fields.join('\n') + '\n';
+                const totalLen = rawBody.length + 3;
+                const qrData = rawBody + totalLen.toString().padStart(3, '0');
+                
+                qrDiv.innerHTML = '';
+                if (window.QRCode) {
+                    try {
+                        new QRCode(qrDiv, {
+                            text: qrData,
+                            width: 160,
+                            height: 160,
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    } catch(e) {
+                        const encodedData = encodeURIComponent(qrData);
+                        qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodedData}&size=160x160" alt="QR Code" style="width:160px; height:160px;">`;
+                    }
+                } else {
+                    const encodedData = encodeURIComponent(qrData);
+                    qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodedData}&size=160x160" alt="QR Code" style="width:160px; height:160px;">`;
+                }
+            } catch(err) {
+                console.error("QR preview error:", err);
+            }
+        };
 
         // Funkcija za posodobitev UI po izbiri ali kreaciji partnerja
         window.__importUpdatePartner = (p) => {
@@ -2697,6 +3076,15 @@ async function showImportPreview(data) {
             
             const warnBox = modal.querySelector('.warning-box');
             if (warnBox) warnBox.style.display = 'none';
+            
+            // Omogoči gumb za potrditev, ker partner zdaj obstaja
+            const btn = document.getElementById('btn-confirm-import');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
+            if (window.updateImportQR) window.updateImportQR();
         };
 
         // Inicializacija iskanja partnerja
@@ -2707,6 +3095,75 @@ async function showImportPreview(data) {
 
         document.getElementById('btn-confirm-import').onclick = async () => {
             const btn = document.getElementById('btn-confirm-import');
+            
+            // Preverimo, da partner obstaja (razen ročni vnos tujega partnerja). Če ne obstaja, ponudimo samodejno kreacijo.
+            const isForeignManual = !isSlovenian && (data.partner.tuji_partner_neprebran || !data.partner.naziv);
+            if (!data.partner_obstaja && !isForeignManual) {
+                if (data.partner && data.partner.naziv) {
+                    if (confirm(`Partner "${data.partner.naziv}" ne obstaja v bazi. Ali ga želite samodejno dodati v šifrant in nadaljevati z uvozom?`)) {
+                        try {
+                            const res = await fetch('/api/partnerji', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    naziv: data.partner.naziv,
+                                    ulica: data.partner.ulica || '',
+                                    postna_stevilka: data.partner.postna_stevilka || '',
+                                    kraj: data.partner.kraj || '',
+                                    drzava: data.partner.drzava || 'Slovenija',
+                                    davcna_stevilka: data.partner.davcna_stevilka || '',
+                                    trr: data.partner.trr || '',
+                                    email: data.partner.email || '',
+                                    telefon: data.partner.telefon || '',
+                                    zavezanec_za_ddv: !!data.partner.zavezanec_za_ddv,
+                                    vrsta: 'oba'
+                                })
+                            });
+                            if (res.ok) {
+                                const savedPartner = await res.json();
+                                window.__importUpdatePartner(savedPartner);
+                            } else {
+                                alert('Napaka pri samodejnem ustvarjanju partnerja.');
+                                return;
+                            }
+                        } catch (e) {
+                            alert('Napaka pri povezavi s strežnikom za ustvarjanje partnerja.');
+                            return;
+                        }
+                    } else {
+                        return; // Uporabnik je preklical uvoz/kreacijo
+                    }
+                } else {
+                    alert('Najprej izberite partnerja ali dodajte novega.');
+                    return;
+                }
+            }
+
+            // Ročni vnos tujega partnerja
+            if (!data.partner_obstaja && isForeignManual) {
+                data.partner = {
+                    naziv: document.getElementById('manual_p_naziv').value.trim(),
+                    drzava: document.getElementById('manual_p_drzava').value.trim(),
+                    ulica: document.getElementById('manual_p_ulica').value.trim(),
+                    kraj: document.getElementById('manual_p_kraj').value.trim(),
+                    postna_stevilka: "",
+                    davcna_stevilka: document.getElementById('manual_p_davcna').value.trim(),
+                    trr: document.getElementById('manual_p_trr').value.trim(),
+                    telefon: "",
+                    email: "",
+                    zavezanec_za_ddv: false
+                };
+            }
+
+            // Preberemo spremenjene datume, številko računa in sklic
+            data.stevilka = document.getElementById('import-stevilka').value.trim();
+            data.datum_izdaje = document.getElementById('import-datum-izdaje').value;
+            data.datum_zapadlosti = document.getElementById('import-datum-zapadlosti').value;
+            data.datum_storitve_od = document.getElementById('import-datum-storitve-od').value;
+            data.datum_storitve_do = document.getElementById('import-datum-storitve-do').value;
+            data.datum_storitve = data.datum_storitve_od;
+            data.sklic = document.getElementById('import-sklic').value.trim();
+
             const globalKonto = document.getElementById('import-global-konto').value.trim();
             const isPaid = document.getElementById('import-is-paid').checked;
             
@@ -2714,9 +3171,6 @@ async function showImportPreview(data) {
             const novePostavke = [];
             let novSkupaj = 0;
             let novBrezDDV = 0;
-            // Stopnja DDV iz originalnih podatkov (privzeta 22 če ni podana)
-            const defaultDdvStopnja = (data.postavke && data.postavke.length > 0 && data.postavke[0].stopnja_ddv != null)
-                ? data.postavke[0].stopnja_ddv : 22;
             document.querySelectorAll('.import-p-row').forEach((tr, idx) => {
                 const opis = tr.querySelector('.i-p-opis').value;
                 const kol = parseNumberJS(tr.querySelector('.i-p-kol').value) || 1;
@@ -2725,8 +3179,8 @@ async function showImportPreview(data) {
                 const popust = parseNumberJS(tr.querySelector('.i-p-popust').value) || 0;
                 const stopnja = parseNumberJS(tr.querySelector('.i-p-ddv').value);
                 
-                const netoVrstica = (kol * cena) * (1 - popust / 100);
-                const brutoVrstica = netoVrstica * (1 + stopnja / 100);
+                const znesekSkupajVrstica = parseNumberJS(tr.querySelector('.i-p-znesek').value) || 0;
+                const netoVrstica = znesekSkupajVrstica / (1 + stopnja / 100);
                 
                 novePostavke.push({
                     opis: opis,
@@ -2735,22 +3189,37 @@ async function showImportPreview(data) {
                     cena_enote: cena,
                     popust: popust,
                     stopnja_ddv: stopnja,
-                    znesek_skupaj: Math.round(brutoVrstica * 100) / 100,
+                    znesek_skupaj: Math.round(znesekSkupajVrstica * 100) / 100,
                     konto: globalKonto || ""
                 });
-                novSkupaj += brutoVrstica;
+                novSkupaj += znesekSkupajVrstica;
                 novBrezDDV += netoVrstica;
             });
             data.postavke = novePostavke;
-            data.znesek_skupaj = Math.round(novSkupaj * 100) / 100;
-            data.znesek_brez_ddv = Math.round(novBrezDDV * 100) / 100;
-            data.znesek_ddv = Math.round((novSkupaj - novBrezDDV) * 100) / 100;
+            
+            const skupajOverridden = parseNumberJS(document.getElementById('import-skupaj-display').value) || 0;
+            data.znesek_skupaj = Math.round(skupajOverridden * 100) / 100;
+            
+            if (Math.abs(skupajOverridden - novSkupaj) > 0.01 && novSkupaj > 0) {
+                const ratio = skupajOverridden / novSkupaj;
+                data.znesek_brez_ddv = Math.round((novBrezDDV * ratio) * 100) / 100;
+                data.znesek_ddv = Math.round((data.znesek_skupaj - data.znesek_brez_ddv) * 100) / 100;
+            } else {
+                data.znesek_brez_ddv = Math.round(novBrezDDV * 100) / 100;
+                data.znesek_ddv = Math.round((novSkupaj - novBrezDDV) * 100) / 100;
+            }
             
             data.placan = isPaid;
 
             const originalText = btn.innerText;
             btn.disabled = true;
             btn.innerText = "Uvažam...";
+
+            // Če je način učenja aktiven, dodamo ocr_text in original_data
+            if (window.llamaLearningMode) {
+                data.ocr_text = original_data.ocr_text || "";
+                data.original_data = original_data;
+            }
 
             try {
                 const res = await fetch('/api/dokumenti/import_eslog_potrdi', {
@@ -2780,33 +3249,59 @@ async function showImportPreview(data) {
 
 window.uvoziEslog = async function(input) {
     if (!input.files || input.files.length === 0) return;
-    const file = input.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
     
     const btn = document.querySelector('button[onclick*="eslog-upload"]');
     const originalBtnText = btn.innerText;
-    btn.innerText = "Berem datoteko in pripravljam predogled...";
+    btn.innerText = "Berem datoteke in pripravljam predogled...";
     btn.disabled = true;
     
     try {
-        const res = await fetch('/api/dokumenti/import_eslog_pregled', {
-            method: 'POST',
-            body: formData
-        });
+        let combinedItems = [];
         
-        if (!res.ok) {
-            const err = await res.json();
-            alert("Napaka pri branju XML: " + (err.detail || "Neznana napaka"));
+        for (let i = 0; i < input.files.length; i++) {
+            const file = input.files[i];
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const res = await fetch('/api/dokumenti/import_eslog_pregled', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!res.ok) {
+                    const err = await res.json();
+                    console.error(`Napaka pri branju datoteke ${file.name}:`, err.detail || "Neznana napaka");
+                    continue;
+                }
+                
+                const result = await res.json();
+                if (result.items && result.items.length > 0) {
+                    combinedItems = combinedItems.concat(result.items);
+                }
+            } catch (fileErr) {
+                console.error(`Napaka pri pošiljanju datoteke ${file.name}:`, fileErr);
+            }
+        }
+        
+        if (combinedItems.length === 0) {
+            alert("Nobenega računa ni bilo mogoče uspešno prebrati.");
             return;
         }
-
-        const result = await res.json();
         
-        if (result.count > 1 || file.name.toLowerCase().endsWith('.zip')) {
-            await showBulkImportPreview(result.items, 'prejeti_racuni');
-        } else if (result.items && result.items.length === 1) {
-            const data = result.items[0];
+        if (combinedItems.length > 1) {
+            if (window.llamaLearningMode) {
+                alert(`Način učenja Llama je vklopljen. Zdaj boste ročno pregledali in potrdili vsakega od ${combinedItems.length} dokumentov posebej.`);
+                for (let j = 0; j < combinedItems.length; j++) {
+                    const data = combinedItems[j];
+                    const docId = await showImportPreview(data);
+                }
+                renderDokumenti('prejeti_racuni', 'Prejeti računi');
+            } else {
+                await showBulkImportPreview(combinedItems, 'prejeti_racuni');
+            }
+        } else {
+            const data = combinedItems[0];
             const docId = await showImportPreview(data);
             if (docId) {
                 const editRes = await fetch(`/api/dokumenti/detajl/${docId}`);
@@ -2909,6 +3404,7 @@ window._pendingIzpisekFile = null;
 async function preLoadPartners() {
     const pRes = await fetch('/api/partnerji');
     const partnerji = await pRes.json();
+    window._vsiPartnerji = partnerji;
     loadedPartners = partnerji.map(p => `<option value="${p.id}">${p.naziv}</option>`).join('');
 }
 
@@ -3410,6 +3906,19 @@ async function renderNastavitve(tab = 'podjetje', isNew = false) {
                         <div class="form-group">
                             <label>Spletna stran</label>
                             <input type="text" id="n_spletna_stran" value="${data.spletna_stran || ''}">
+                        </div>
+
+                        <div class="form-group" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                            <label style="font-weight: bold; margin-bottom: 10px;">Logotip podjetja</label>
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div id="settings-logo-preview" style="width: 120px; height: 60px; border: 1px dashed var(--border-color); border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #f8f9fa; overflow: hidden;">
+                                    ${data.logo_url ? `<img src="${data.logo_url}?t=${new Date().getTime()}" style="max-width:100%; max-height:100%; object-fit:contain;">` : '<span style="font-size: 0.8rem; color: var(--text-muted);">Ni logotipa</span>'}
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <button type="button" class="btn btn-blue" onclick="document.getElementById('logo-input').click()" style="padding: 6px 12px; font-size: 0.85em;">Naloži logotip</button>
+                                    <button type="button" id="btn-remove-logo" class="btn" onclick="window.odstraniLogotip()" style="padding: 6px 12px; font-size: 0.85em; background: #e9ecef; color: #495057; display: ${data.logo_url ? 'block' : 'none'};">Odstrani</button>
+                                </div>
+                            </div>
                         </div>
 
                         <div style="background: #fff5f5; padding: 15px; border-radius: 6px; border: 1px solid #ffc9c9; margin-top: 20px;">
@@ -5206,9 +5715,92 @@ window.izbrisiPredlogo = async function(id) {
 
 // --- PARTNER POPUP (za bancne izpiske) ---
 window._partnerPopupTargetSelect = null;
+window._vsiPartnerji = null;
+
+window.checkPartnerSimilarity = function() {
+    const warnEl = document.getElementById('pp_similarity_warn');
+    if (!warnEl) return;
+    
+    const v_naziv = document.getElementById('pp_naziv').value.trim().toLowerCase();
+    const v_davcna = document.getElementById('pp_davcna').value.trim().replace(/\s+/g, '');
+    
+    if (!v_naziv && !v_davcna) {
+        warnEl.style.display = 'none';
+        warnEl.innerHTML = '';
+        return;
+    }
+    
+    const partnerji = window._vsiPartnerji || [];
+    const matches = [];
+    
+    for (const p of partnerji) {
+        const p_naziv = (p.naziv || '').toLowerCase();
+        const p_davcna = (p.davcna_stevilka || '').replace(/\s+/g, '');
+        
+        // 1. Check exact or very close tax ID
+        if (v_davcna && p_davcna && (v_davcna === p_davcna || p_davcna.includes(v_davcna) || v_davcna.includes(p_davcna))) {
+            matches.push(`Partner z isto/podobno davčno št. že obstaja: <strong>${p.naziv}</strong> (${p.davcna_stevilka || 'nima davčne'})`);
+            continue;
+        }
+        
+        // 2. Check name similarity
+        if (v_naziv.length > 3) {
+            const clean = s => s.replace(/\b(d\.?\s*o\.?\s*o\.?|s\.?\s*p\.?|d\.?\s*d\.?)\b/gi, '').trim();
+            const clean_v = clean(v_naziv);
+            const clean_p = clean(p_naziv);
+            
+            if (clean_v.length > 3 && clean_p.length > 3) {
+                if (clean_p.includes(clean_v) || clean_v.includes(clean_p)) {
+                    matches.push(`Obstaja partner s podobnim imenom: <strong>${p.naziv}</strong>`);
+                    continue;
+                }
+                
+                // Trigram similarity (Jaccard)
+                const getTrigrams = str => {
+                    const s = '  ' + str + '  ';
+                    const arr = [];
+                    for(let i=0; i < s.length - 2; i++) {
+                        arr.push(s.substring(i, i+3));
+                    }
+                    return new Set(arr);
+                };
+                const setV = getTrigrams(clean_v);
+                const setP = getTrigrams(clean_p);
+                const intersection = new Set([...setV].filter(x => setP.has(x)));
+                const union = new Set([...setV, ...setP]);
+                const score = intersection.size / union.size;
+                if (score > 0.4) {
+                    matches.push(`Obstaja partner z zelo podobnim imenom (ujemanje ${(score*100).toFixed(0)}%): <strong>${p.naziv}</strong>`);
+                }
+            }
+        }
+    }
+    
+    if (matches.length > 0) {
+        warnEl.style.display = 'block';
+        const uniqueMatches = [...new Set(matches)];
+        warnEl.innerHTML = `⚠️ <strong>Pozor:</strong><br>` + uniqueMatches.join('<br>');
+    } else {
+        warnEl.style.display = 'none';
+        warnEl.innerHTML = '';
+    }
+};
 
 window.odpriPartnerPopup = function(selectEl) {
     window._partnerPopupTargetSelect = selectEl;
+    
+    // Clear similarity warn
+    const warnEl = document.getElementById('pp_similarity_warn');
+    if (warnEl) {
+        warnEl.style.display = 'none';
+        warnEl.innerHTML = '';
+    }
+    
+    // Prednaloži partnerje za preverjanje podobnosti, če še niso nalagani
+    if (!window._vsiPartnerji) {
+        fetch('/api/partnerji').then(r => r.json()).then(data => { window._vsiPartnerji = data; });
+    }
+
     // Pocisti polja
     ['pp_naziv','pp_ulica','pp_posta','pp_kraj','pp_davcna','pp_trr','pp_email','pp_telefon','pp_drzava','pp_bizi_q'].forEach(id => {
         const el = document.getElementById(id);
@@ -5949,6 +6541,84 @@ window.preracunajLikvidacijo = function(skupniZnesek) {
     else el.style.color = 'orange';
 };
 
+window.osveziLogotip = async function() {
+    try {
+        const res = await fetch('/api/nastavitve');
+        if (res.ok) {
+            const data = await res.json();
+            const logoContainer = document.getElementById('brand-logo-container');
+            if (logoContainer) {
+                if (data.logo_url) {
+                    logoContainer.innerHTML = `<img src="${data.logo_url}" alt="${data.kratko_ime || data.naziv || 'Logotip'}" style="max-width:100%; max-height:45px; object-fit:contain;">`;
+                } else {
+                    logoContainer.innerHTML = `<h1 id="brand-text">Invoice83</h1>`;
+                }
+            }
+        }
+    } catch(e) {
+        console.error("Napaka pri osveževanju logotipa", e);
+    }
+};
+
+window.handleLogoUpload = async function(input) {
+    if (!input.files || !input.files.length) return;
+    const file = input.files[0];
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const res = await fetch('/api/nastavitve/logo', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (res.ok) {
+            alert("Logotip je bil uspešno naložen.");
+            window.osveziLogotip();
+            
+            // Posodobi predogled v nastavitvah, če obstaja
+            const prev = document.getElementById('settings-logo-preview');
+            const btnRemove = document.getElementById('btn-remove-logo');
+            const data = await res.json();
+            if (prev && data.path) {
+                prev.innerHTML = `<img src="${data.path}?t=${new Date().getTime()}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+                if (btnRemove) btnRemove.style.display = 'block';
+            }
+        } else {
+            const err = await res.json();
+            alert("Napaka pri nalaganju logotipa: " + (err.detail || "Neznana napaka"));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Napaka pri komunikaciji s strežnikom.");
+    } finally {
+        input.value = '';
+    }
+};
+
+window.odstraniLogotip = async function() {
+    if (!confirm("Ali ste prepričani, da želite odstraniti logotip podjetja?")) return;
+    try {
+        const res = await fetch('/api/nastavitve/logo', {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            alert("Logotip je bil odstranjen.");
+            window.osveziLogotip();
+            const prev = document.getElementById('settings-logo-preview');
+            const btnRemove = document.getElementById('btn-remove-logo');
+            if (prev) prev.innerHTML = '<span style="font-size: 0.8rem; color: var(--text-muted);">Ni logotipa</span>';
+            if (btnRemove) btnRemove.style.display = 'none';
+        } else {
+            alert("Napaka pri brisanju logotipa.");
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Napaka pri komunikaciji s strežnikom.");
+    }
+};
+
 // --- PODJETJA (MULTI-COMPANY) ---
 window.osveziPodjetja = async function() {
     try {
@@ -5990,7 +6660,44 @@ document.addEventListener('click', function(e) {
 
 // --- ZAGON: Naloži zadnji aktivni modul ob odprtju (samo za trenutno sejo/osvežitev) ---
 try {
+    window.llamaLearningMode = true; // Privzeto true
+    fetch('/api/settings/llama')
+        .then(res => res.json())
+        .then(data => {
+            window.llamaLearningMode = !!data.learning_mode;
+            const activeModule = sessionStorage.getItem('activeModule') || 'dashboard';
+            if (activeModule === 'prejeti_racuni') {
+                renderDokumenti('prejeti_racuni', 'Prejeti računi');
+            }
+        })
+        .catch(err => console.error("Napaka pri branju Llama nastavitev", err));
+
+    window.toggleLlamaLearningMode = async function(checked) {
+        window.llamaLearningMode = checked;
+        try {
+            await fetch('/api/settings/llama', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ learning_mode: checked })
+            });
+            renderDokumenti('prejeti_racuni', 'Prejeti računi');
+        } catch (err) {
+            console.error("Napaka pri shranjevanju Llama nastavitve", err);
+        }
+    };
+
+    window._llamaMarkAccurateAndConfirm = function(btn) {
+        const modal = btn.closest('.modal-overlay');
+        if (modal) {
+            const confirmBtn = modal.querySelector('#btn-confirm-import');
+            if (confirmBtn) {
+                confirmBtn.click();
+            }
+        }
+    };
+
     osveziPodjetja();
+    window.osveziLogotip();
     const lastModule = sessionStorage.getItem('activeModule') || 'dashboard';
     showModule(lastModule);
     window._appLoaded = true;
@@ -6013,21 +6720,51 @@ async function showBulkImportPreview(items, tip) {
         
         const isDoc = tip === 'prejeti_racuni';
         const title = isDoc ? "Množičen uvoz računov" : "Množičen uvoz bančnih izpiskov";
+
+        // Preverimo, koliko partnerjev manjka
+        const missingPartners = isDoc ? items.filter(item => !item.partner_obstaja) : [];
         
-        let tableRows = items.map((item, idx) => `
-            <tr>
-                <td style="padding:10px;">${isDoc ? item.stevilka : (item.stevilka_izpiska || 'Neznano')}</td>
-                <td style="padding:10px;">${formatDateJS(isDoc ? item.datum_izdaje : item.datum)}</td>
-                <td style="padding:10px;">${isDoc ? (item.partner.naziv || 'Novi partner') : 'Bančni izpisek'}</td>
-                <td style="padding:10px; text-align:right; font-weight:bold;">${formatNumberJS(isDoc ? item.znesek_skupaj : item.koncno_stanje)} €</td>
-            </tr>
-        `).join('');
+        let tableRows = items.map((item, idx) => {
+            if (!isDoc) {
+                return `<tr>
+                    <td style="padding:10px;">${item.stevilka_izpiska || 'Neznano'}</td>
+                    <td style="padding:10px;">${formatDateJS(item.datum)}</td>
+                    <td style="padding:10px;">Bančni izpisek</td>
+                    <td style="padding:10px; text-align:right; font-weight:bold;">${formatNumberJS(item.koncno_stanje)} €</td>
+                </tr>`;
+            }
+            const partnerMissing = !item.partner_obstaja;
+            const partnerLabel = partnerMissing
+                ? `<span style="color:#c92a2a; font-weight:bold;">⚠️ ${item.partner.naziv || 'Neznan'} — NI V BAZI!</span>`
+                : `<span style="color:#2b8a3e;">✓ ${item.partner.naziv || 'Neznan'}</span>`;
+            return `<tr style="${partnerMissing ? 'background:#fff5f5;' : ''}">
+                <td style="padding:10px;">${item.stevilka}</td>
+                <td style="padding:10px;">${formatDateJS(item.datum_izdaje)}</td>
+                <td style="padding:10px;">${partnerLabel}</td>
+                <td style="padding:10px; text-align:right; font-weight:bold;">${formatNumberJS(item.znesek_skupaj)} €</td>
+            </tr>`;
+        }).join('');
+
+        const missingWarn = (isDoc && missingPartners.length > 0) ? `
+            <div style="background:#fff5f5; border:1px solid #ffc9c9; border-radius:6px; padding:12px; margin-bottom:16px; color:#c92a2a;">
+                <strong>⚠️ ${missingPartners.length} partner(jev) ni v bazi!</strong>
+                <p style="margin-top:6px; font-size:0.9rem; line-height:1.4;">
+                    Pred množičnim uvozom morate urediti vse označene partnerje. Prekličite uvoz, pojdite v modul 
+                    <strong>Partnerji</strong> in dodajte manjkajoče partnerje, nato uvozite ponovno.
+                </p>
+                <ul style="margin-top:6px; font-size:0.85rem; padding-left:18px;">
+                    ${missingPartners.map(m => `<li>${m.partner.naziv || 'Neznan'} (${m.partner.davcna_stevilka || '—'})</li>`).join('')}
+                </ul>
+            </div>
+        ` : '';
 
         modal.innerHTML = `
             <div style="background:white; padding:30px; border-radius:12px; max-width:800px; width:90%; max-height:80vh; overflow:auto; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
                 <h3 style="margin-top:0; color:var(--primary-blue);">${title}</h3>
                 <p style="color:#666; margin-bottom:20px;">V ZIP arhivu je bilo najdenih <strong>${items.length}</strong> dokumentov. Ali jih želite uvoziti vse hkrati?</p>
                 
+                ${missingWarn}
+
                 <table style="width:100%; border-collapse:collapse; margin-bottom:25px;">
                     <thead style="background:#f8f9fa;">
                         <tr>
@@ -6042,7 +6779,10 @@ async function showBulkImportPreview(items, tip) {
 
                 <div style="display:flex; justify-content:flex-end; gap:12px;">
                     <button class="btn" style="background:#eee; color:#333;" id="bulk-cancel">Prekliči</button>
-                    <button class="btn btn-blue" id="bulk-confirm" style="padding:10px 25px; font-weight:bold;">Vnesi vse (${items.length})</button>
+                    <button class="btn btn-blue" id="bulk-confirm" style="padding:10px 25px; font-weight:bold;"
+                        ${(isDoc && missingPartners.length > 0) ? 'disabled style="opacity:0.5; cursor:not-allowed; padding:10px 25px; font-weight:bold;"' : ''}>
+                        Vnesi vse (${items.length})
+                    </button>
                 </div>
             </div>
         `;
@@ -6055,6 +6795,12 @@ async function showBulkImportPreview(items, tip) {
         };
         
         modal.querySelector('#bulk-confirm').onclick = async () => {
+            // Dvojna zaščita — ne dovolimo, če kateri partner manjka
+            if (isDoc && items.some(item => !item.partner_obstaja)) {
+                alert('Nekateri partnerji niso v bazi. Dodajte jih najprej in uvozite ponovno.');
+                return;
+            }
+
             const btn = modal.querySelector('#bulk-confirm');
             const originalText = btn.innerText;
             btn.innerText = "Shranjujem...";
@@ -6089,6 +6835,7 @@ async function showBulkImportPreview(items, tip) {
         };
     });
 }
+
 
 // --- NAVODILA IN POMOČ ---
 async function renderHelp() {

@@ -9,62 +9,26 @@
   "znesek_brez_ddv": 55.42,
   "partner": {
     "naziv": "JKP Ravne na Koroškem, d.o.o.",
-    "davcna_stevilka": "SI20356846"
+    "davcna_stevilka": "SI56 6100 0002 8825 934",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "uporabnik": "",
+    "tuji_partner_neprebran": false
   },
-  "postavke": [
+  "poslovne_storitve": [
     {
-      "opis": "CENA JAVNE INFRASTRUKTURE",
-      "kolicina": 143.83,
-      "enota_mere": "KG",
-      "cena_enote": 0.0378,
-      "popust": 0.0,
-      "stopnja_ddv": 9.5,
-      "znesek_skupaj": 5.96
+      "ime": "CENA JAVNE INFRASTRUKTURE",
+      "cena_brez_ddv": 143.83,
+      "cena_z_ddv": 5.44,
+      "stopnja_ddv": 9.5
     },
     {
-      "opis": "CENA STORITEV",
-      "kolicina": 143.83,
-      "enota_mere": "KG",
-      "cena_enote": 0.1775,
-      "popust": 0.0,
-      "stopnja_ddv": 9.5,
-      "znesek_skupaj": 27.96
-    },
-    {
-      "opis": "CENA JAVNE INFRASTRUKTURE",
-      "kolicina": 117.0,
-      "enota_mere": "KG",
-      "cena_enote": 0.0262,
-      "popust": 0.0,
-      "stopnja_ddv": 9.5,
-      "znesek_skupaj": 3.36
-    },
-    {
-      "opis": "CENA STORITEV",
-      "kolicina": 117.0,
-      "enota_mere": "KG",
-      "cena_enote": 0.1326,
-      "popust": 0.0,
-      "stopnja_ddv": 9.5,
-      "znesek_skupaj": 16.98
-    },
-    {
-      "opis": "CENA JAVNE INFRASTRUKTURE",
-      "kolicina": 35.15,
-      "enota_mere": "KG",
-      "cena_enote": 0.0944,
-      "popust": 0.0,
-      "stopnja_ddv": 9.5,
-      "znesek_skupaj": 3.64
-    },
-    {
-      "opis": "CENA STORITEV",
-      "kolicina": 35.15,
-      "enota_mere": "KG",
-      "cena_enote": 0.0725,
-      "popust": 0.0,
-      "stopnja_ddv": 9.5,
-      "znesek_skupaj": 2.79
+      "ime": "CENA STORITEV",
+      "cena_brez_ddv": 117.0,
+      "cena_z_ddv": 15.51,
+      "stopnja_ddv": 9.5
     }
   ]
 }

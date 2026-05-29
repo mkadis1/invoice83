@@ -44,7 +44,7 @@
         /* Partner popup modal */
         #partner-popup-overlay {
             display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.4); z-index: 9999;
+            background: rgba(0,0,0,0.4); z-index: 30000;
             align-items: center; justify-content: center;
         }
         #partner-popup-overlay.active { display: flex; }
@@ -106,8 +106,8 @@
     </div>
 
     <div class="sidebar">
-        <div class="brand">
-            <h1>Invoice83</h1>
+        <div class="brand" id="brand-logo-container" onclick="document.getElementById('logo-input').click()" title="Kliknite za nalaganje ali spremembo logotipa">
+            <h1 id="brand-text">Invoice83</h1>
         </div>
         <nav>
             <div style="padding: 10px 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px;">
@@ -225,7 +225,8 @@
             </div>
 
             <!-- Partner polja -->
-            <div class="form-group"><label>Polni naziv *</label><input type="text" id="pp_naziv" required></div>
+            <div class="form-group"><label>Polni naziv *</label><input type="text" id="pp_naziv" oninput="window.checkPartnerSimilarity()" required></div>
+            <div id="pp_similarity_warn" style="display:none; background:#fff3cd; border:1px solid #ffc107; border-radius:4px; padding:8px 12px; margin-bottom:12px; font-size:0.85rem; color:#856404;"></div>
             <div style="display:flex; gap:10px;">
                 <div class="form-group" style="flex:2"><label>Ulica in hišna št.</label><input type="text" id="pp_ulica"></div>
                 <div class="form-group" style="flex:1"><label>Poštna številka</label><input type="text" id="pp_posta"></div>
@@ -235,7 +236,7 @@
                 <div class="form-group" style="flex:1"><label>Država</label><input type="text" id="pp_drzava" value="Slovenija"></div>
             </div>
             <div style="display:flex; gap:10px;">
-                <div class="form-group" style="flex:1"><label>Davčna številka</label><input type="text" id="pp_davcna"></div>
+                <div class="form-group" style="flex:1"><label>Davčna številka</label><input type="text" id="pp_davcna" oninput="window.checkPartnerSimilarity()"></div>
                 <div class="form-group" style="flex:1; display:flex; align-items:center; gap:8px; padding-top:18px;">
                     <input type="checkbox" id="pp_zavezanec" style="width:auto; margin:0;">
                     <label for="pp_zavezanec" style="margin:0;">Zavezanec za DDV</label>

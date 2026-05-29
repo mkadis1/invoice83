@@ -235,6 +235,22 @@ def find_partner(text):
 
     return name or "Neznan Partner", tax_id
 
+def find_sklic(text):
+    """Extract payment reference (sklic pri plačilu) using regex."""
+    m = re.search(r'(?:sklic(?:\s+(?:pri\s+plačilu|na\s+(?:št(?:evilko)?\.?)))?|referenca)[:\s]*(SI\s*\d{2}\s*[-\d\s]+|RF\s*\d{2}\s*[-\d\s]+|\d{2}\s*[-\d\s]{5,})', text, re.IGNORECASE)
+    if m:
+        val = m.group(1).strip()
+        val = re.sub(r'\s+', ' ', val)
+        return val
+    
+    m2 = re.search(r'\b(SI\s*\d{2}\s*[-\d]+(?:[-\d\s]+)?)\b', text, re.IGNORECASE)
+    if m2:
+        val = m2.group(1).strip()
+        val = re.sub(r'\s+', ' ', val)
+        return val
+        
+    return ""
+
 def find_dates(text):
     """Extract datum_izdaje, datum_zapadlosti, datum_storitve."""
     result = {'datum_izdaje': '', 'datum_zapadlosti': '', 'datum_storitve_od': ''}
@@ -432,8 +448,11 @@ def parse_invoice_data(text):
         "znesek_ddv": 0.0,
         "znesek_brez_ddv": 0.0,
         "partner": {"naziv": "Neznan Partner", "davcna_stevilka": ""},
-        "postavke": []
+        "postavke": [],
+        "sklic": ""
     }
+
+    data['sklic'] = find_sklic(text)
 
     naziv, tax_id = find_partner(text)
     data['partner']['naziv'] = naziv
@@ -798,6 +817,240 @@ def fix_inpos_data(data, text, filename=""):
         
     return data
 
+def check_corrections(original, final):
+    if not original:
+        return True
+        
+    # Primerjamo ključna polja
+    if original.get("stevilka") != final.get("stevilka"):
+        return True
+    if original.get("datum_izdaje") != final.get("datum_izdaje"):
+        return True
+    if original.get("datum_zapadlosti") != final.get("datum_zapadlosti"):
+        return True
+    if original.get("datum_storitve_od") != final.get("datum_storitve_od"):
+        return True
+    if original.get("datum_storitve_do") != final.get("datum_storitve_do"):
+        return True
+    if original.get("sklic") != final.get("sklic"):
+        return True
+        
+    try:
+        if abs(float(original.get("znesek_skupaj") or 0) - float(final.get("znesek_skupaj") or 0)) > 0.01:
+            return True
+    except:
+        return True
+        
+    orig_partner = original.get("partner", {}) if isinstance(original.get("partner"), dict) else {}
+    final_partner = final.get("partner", {}) if isinstance(final.get("partner"), dict) else {}
+    
+    op_naziv = original.get("partner_naziv") or orig_partner.get("naziv") or ""
+    fp_naziv = final.get("partner_naziv") or final_partner.get("naziv") or ""
+    op_davcna = original.get("partner_davcna") or orig_partner.get("davcna_stevilka") or ""
+    fp_davcna = final.get("partner_davcna") or final_partner.get("davcna_stevilka") or ""
+    
+    # Normaliziramo primerjavo davčne
+    op_davcna_cisto = re.sub(r'[^\d]', '', op_davcna)
+    fp_davcna_cisto = re.sub(r'[^\d]', '', fp_davcna)
+    
+    if op_naziv.strip().lower() != fp_naziv.strip().lower() or op_davcna_cisto != fp_davcna_cisto:
+        return True
+    
+    # Primerjava postavk
+    orig_items = original.get("postavke", []) or []
+    final_items = final.get("postavke", []) or []
+    if len(orig_items) != len(final_items):
+        return True
+        
+    for i in range(len(orig_items)):
+        if i >= len(final_items):
+            return True
+        oi = orig_items[i]
+        fi = final_items[i]
+        
+        if oi.get("opis", "").strip().lower() != fi.get("opis", "").strip().lower():
+            return True
+        try:
+            if abs(float(oi.get("kolicina") or 0) - float(fi.get("kolicina") or 0)) > 0.001:
+                return True
+            if abs(float(oi.get("cena_enote") or 0) - float(fi.get("cena_enote") or 0)) > 0.001:
+                return True
+            if abs(float(oi.get("popust") or 0) - float(fi.get("popust") or 0)) > 0.01:
+                return True
+            if abs(float(oi.get("znesek_skupaj") or 0) - float(fi.get("znesek_skupaj") or 0)) > 0.01:
+                return True
+        except:
+            return True
+            
+    return False
+
+def get_similar_llama_examples(text, filename="", limit=2):
+    try:
+        import database
+        import json
+    except ImportError:
+        return []
+        
+    try:
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='llama_learning_examples'")
+        if not cursor.fetchone():
+            conn.close()
+            return []
+            
+        cursor.execute("SELECT id, filename, ocr_text, corrected_json FROM llama_learning_examples")
+        rows = cursor.fetchall()
+        conn.close()
+        
+        if not rows:
+            return []
+            
+        text_words = set(re.findall(r'\b[a-zA-Z\d\-\u0161\u0111\u010d\u0107\u017e]{3,}\b', text.lower()))
+        
+        # Seznam ključnih besed za strukturo / postavke (layout indicators)
+        layout_vocab = {
+            'postavka', 'postavke', 'količina', 'cena', 'popust', 'rabat', 'stopnja', 'ddv', 'skupaj', 'znesek',
+            'opis', 'enota', 'mere', 'kos', 'eur', 'valuta', 'stevilka', 'račun', 'datum', 'izdaje', 'zapadlosti',
+            'storitve', 'plačilo', 'sklic', 'trr', 'iban', 'banka', 'naročilo', 'dobavnica', 'kupec', 'prejemnik',
+            'prodajalec', 'dobavitelj', 'naslov', 'telefon', 'email', 'spletna', 'stran', 'identifikacijska',
+            'zavezanka', 'zavezanec', 'obdavčitev', 'izvoz', 'prenos', 'davčna'
+        }
+        text_layout_words = text_words.intersection(layout_vocab)
+        
+        scored_examples = []
+        
+        for row in rows:
+            ex_id = row['id']
+            ex_filename = row['filename'] or ""
+            ex_ocr = row['ocr_text'] or ""
+            ex_json = row['corrected_json'] or ""
+            
+            score = 0
+            
+            # 1. Primerjava po imenu datoteke
+            if filename and ex_filename:
+                fn1 = os.path.splitext(filename.lower())[0]
+                fn2 = os.path.splitext(ex_filename.lower())[0]
+                if fn1 == fn2:
+                    score += 250
+                elif fn1 in fn2 or fn2 in fn1:
+                    score += 150
+            
+            # 2. Poskus uvoza davčne številke in naziva iz JSON primere
+            try:
+                ex_parsed = json.loads(ex_json)
+                partner = ex_parsed.get("partner", {})
+                tax_id = partner.get("davcna_stevilka", "")
+                partner_name = partner.get("naziv", "")
+                
+                tax_digits = re.sub(r'[^\d]', '', tax_id) if tax_id else ""
+                if tax_digits and len(tax_digits) == 8:
+                    if tax_digits in text:
+                        score += 350
+                elif tax_id and tax_id in text:
+                    score += 350
+                    
+                if partner_name and len(partner_name) > 3:
+                    koren = re.split(r'[,.\s]+(?:d\.?\s*o\.?\s*o\.?|s\.?\s*p\.?|d\.?\s*d\.?)\b', partner_name, flags=re.IGNORECASE)[0].strip()
+                    if len(koren) > 3 and koren.lower() in text.lower():
+                        score += 200
+            except:
+                pass
+                
+            # 3. Prekrivanje ključnih besed za strukturni vzorec (Layout Similarity)
+            ex_words = set(re.findall(r'\b[a-zA-Z\d\-\u0161\u0111\u010d\u0107\u017e]{3,}\b', ex_ocr.lower()))
+            ex_layout_words = ex_words.intersection(layout_vocab)
+            
+            # Računanje Jaccardove podobnosti za strukturo
+            union_len = len(text_layout_words.union(ex_layout_words))
+            if union_len > 0:
+                jaccard_similarity = len(text_layout_words.intersection(ex_layout_words)) / union_len
+                # To jaccard podobnost spremenimo v točke (npr. max 150 točk za popolno strukturno prekrivanje)
+                score += int(jaccard_similarity * 150)
+            
+            # 4. Splošno prekrivanje besed (tekstovna podobnost)
+            overlap = len(text_words.intersection(ex_words))
+            score += min(overlap, 50)  # omejimo prispevek čistega šuma besed
+            
+            scored_examples.append((score, row))
+            
+        scored_examples.sort(key=lambda x: x[0], reverse=True)
+        
+        results = []
+        for score, row in scored_examples[:limit]:
+            if score > 5:  # Prag za smiselno ujemanje
+                results.append({
+                    'filename': row['filename'],
+                    'ocr_text': row['ocr_text'],
+                    'corrected_json': row['corrected_json']
+                })
+        return results
+    except Exception as e:
+        print(f"Napaka pri pridobivanju llama učenja: {e}")
+        return []
+
+def save_llama_learning_example(ocr_text, final_confirmed_data, original_data, filename=""):
+    # Preverimo, če je prišlo do kakšnih dejanskih popravkov
+    if original_data and not check_corrections(original_data, final_confirmed_data):
+        # Ni bilo popravkov, ni potrebe po shranjevanju
+        return
+        
+    import json
+    import database
+    
+    partner = final_confirmed_data.get("partner", {}) if isinstance(final_confirmed_data.get("partner"), dict) else {}
+    partner_naziv = final_confirmed_data.get("partner_naziv") or partner.get("naziv") or ""
+    partner_davcna = final_confirmed_data.get("partner_davcna") or partner.get("davcna_stevilka") or ""
+    partner_trr = partner.get("trr") or final_confirmed_data.get("partner_trr") or ""
+    
+    # Posodobimo oz. rekonstruiramo JSON v formatu, ki ga pričakuje Llama
+    example_json = {
+        "stevilka": final_confirmed_data.get("stevilka", "NEZNANA"),
+        "sklic": final_confirmed_data.get("sklic", ""),
+        "datum_izdaje": final_confirmed_data.get("datum_izdaje", ""),
+        "datum_zapadlosti": final_confirmed_data.get("datum_zapadlosti", ""),
+        "datum_storitve_od": final_confirmed_data.get("datum_storitve_od") or final_confirmed_data.get("datum_storitve", final_confirmed_data.get("datum_izdaje", "")),
+        "datum_storitve_do": final_confirmed_data.get("datum_storitve_do") or final_confirmed_data.get("datum_storitve", final_confirmed_data.get("datum_izdaje", "")),
+        "znesek_skupaj": float(final_confirmed_data.get("znesek_skupaj") or 0.0),
+        "znesek_ddv": float(final_confirmed_data.get("znesek_ddv") or 0.0),
+        "znesek_brez_ddv": float(final_confirmed_data.get("znesek_brez_ddv") or 0.0),
+        "partner": {
+            "naziv": partner_naziv,
+            "davcna_stevilka": partner_davcna,
+            "trr": partner_trr,
+            "drzava": partner.get("drzava", "Slovenija"),
+            "ulica": partner.get("ulica", ""),
+            "kraj": partner.get("kraj", ""),
+            "postna_stevilka": partner.get("postna_stevilka", ""),
+            "tuji_partner_neprebran": partner.get("tuji_partner_neprebran", False)
+        },
+        "postavke": []
+    }
+    
+    for item in final_confirmed_data.get("postavke", []):
+        example_json["postavke"].append({
+            "opis": item.get("opis", ""),
+            "kolicina": float(item.get("kolicina") or 1.0),
+            "enota_mere": item.get("enota_mere", "kos"),
+            "cena_enote": float(item.get("cena_enote") or 0.0),
+            "popust": float(item.get("popust") or 0.0),
+            "stopnja_ddv": float(item.get("stopnja_ddv") or 22.0),
+            "znesek_skupaj": float(item.get("znesek_skupaj") or 0.0)
+        })
+        
+    try:
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO llama_learning_examples (filename, ocr_text, corrected_json)
+            VALUES (?, ?, ?)
+        """, (filename, ocr_text, json.dumps(example_json, ensure_ascii=False)))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Napaka pri shranjevanju učenja v bazo: {e}")
+
 def parse_with_llama(text, filename, model="llama3"):
     import requests
     import json
@@ -812,14 +1065,14 @@ CONTEXT:
 
 IMPORTANT RULES FOR THE SUPPLIER/PARTNER:
 1. Your job is to extract the SUPPLIER (the company who sent the invoice and is charging money) and NOT the BUYER (the company receiving the invoice and paying money).
-2. The BUYER is ALWAYS 'Miha Kadiš', 'SIM 83', 'Simulatorji vožnje' or 'SI11648236'. Under NO circumstances should you extract the buyer as the partner/supplier! If you extract 'Miha Kadiš s.p.' or 'SIM 83' as the supplier, you have failed.
+2. The BUYER is ALWAYS 'Miha Kadiš', 'SIM 83', 'Simulatorji vožnje' or 'SI11648236'. Under NO circumstances should you extract the buyer as the supplier! If you extract 'Miha Kadiš s.p.' or 'SIM 83' as the supplier, you have failed.
 3. The PDF text extractor may horizontally merge the buyer name and the supplier name into a single line (e.g. 'Sim 83 - Simulatorji vožnje M ACME CORP' or similar). You MUST split them and extract ONLY the supplier part (e.g., 'ACME CORP'). Clean up any buyer traces from the supplier name!
 4. The supplier must be the OTHER company in the invoice, not the buyer. Look at the company names in the text and the filename context.
 
 IMPORTANT RULES FOR DATES AND PRICES:
 1. "datum_storitve_od" and "datum_storitve_do" MUST be extracted if a service period is mentioned (e.g., 'Obr. storitev za obd.: 01.03.2026 - 31.03.2026' or 'Obračunsko obdobje' or 'Plačilo komunalnih storitev 03/2026'). If a month is mentioned (e.g. '03/2026' or 'marec 2026'), 'datum_storitve_od' should be the first day of that month ('2026-03-01') and 'datum_storitve_do' the last day of that month ('2026-03-31').
 2. "cena_enote" MUST ALWAYS be the unit price WITHOUT tax/VAT (cena brez DDV). If the table has a column 'MPC' (MaloProdajna Cena) or 'Cena z DDV', this is the unit price WITH tax/VAT. You MUST convert it to the price WITHOUT tax/VAT by dividing it by (1 + VAT_rate/100) and set that converted value as 'cena_enote'. Never use the retail/gross price with VAT for 'cena_enote'.
-3. "popust" is the discount percentage. If there is a column labeled 'R %' or 'Rabat %', this is the discount percentage (e.g. '11,61' means a 11.61% discount). Extract it as a positive float (e.g. 11.61) for 'popust'. Do not confuse discount percentage with a discount amount in EUR (like '-4,99' which is the total discount amount).
+3. "popust" is the discount percentage. If there is a column labeled 'R %' or 'Rabat %', this is the discount percentage (e.g. '11,61' means a 11.61% discount). Extract it as a positive float (e.g. 11.61) for 'popust'. Do not confuse discount percentage with a discount amount in EUR (like '-4,99' which is the total discount amount). CRITICAL: If only a single percentage value (such as '22 %', '22', '9.5 %', '9.5') is found on a line item, that value is ALWAYS the VAT rate ("stopnja_ddv") and NOT the discount percentage ("popust"). In such cases, "popust" MUST be 0.0. Never set "popust" to the VAT rate (e.g., do not set popust to 22.0 or 9.5 unless there are explicitly TWO different percentages on that line, one of which is clearly labeled as a discount).
 4. "znesek_skupaj" for each item MUST be the final total value WITH tax/VAT for that row (e.g. 'Vred. z DDV' or 'Vrednost z DDV'). If a column with VAT is present, use it directly as the item total with tax.
 
 SPECIFIC RULES FOR "INPOS" INVOICES:
@@ -834,6 +1087,7 @@ If the filename contains "inpos" or the supplier is "INPOS":
 Return ONLY a valid JSON object matching this schema:
 {{
   "stevilka": "Invoice number (string, e.g. '26-0B42-0000110'). DO NOT use '2602011739412' unless it is actually in the text.",
+  "sklic": "Payment reference / 'sklic pri plačilu' / 'referenca' (string, e.g. 'SI00 1234-5678' or 'SI12 9934201' or 'RF8329384920'. Extract it exactly as written on the invoice under sklic/reference).",
   "datum_izdaje": "Issue date (YYYY-MM-DD)",
   "datum_zapadlosti": "Due date (YYYY-MM-DD)",
   "datum_storitve_od": "Service start date (YYYY-MM-DD, or empty)",
@@ -842,8 +1096,14 @@ Return ONLY a valid JSON object matching this schema:
   "znesek_ddv": Total VAT amount (float),
   "znesek_brez_ddv": Total amount without tax (float),
   "partner": {{
-    "naziv": "Supplier/Issuer company name (string, e.g. 'A1 Slovenija d.d.'). DO NOT confuse with buyer (Miha Kadiš or SIM 83)",
-    "davcna_stevilka": "Supplier tax ID (string, e.g. 'SI60595256'). ONLY the supplier's, not the buyer's (buyer is SI11648236)"
+    "naziv": "Supplier/Issuer company name (string, e.g. 'A1 Slovenija d.d.'). DO NOT confuse with buyer (Miha Kadiš or SIM 83). If it is a foreign company (e.g. Google, Hostinger, Artlist, eBay, simpush, StickerApp, Conrad, etc.), extract their name carefully.",
+    "davcna_stevilka": "Supplier tax ID / VAT number (string, e.g. 'SI60595256' or 'IE6388047V'). ONLY the supplier's, not the buyer's (buyer is SI11648236). Do NOT put IBAN or bank account number here!",
+    "trr": "Supplier bank account / IBAN (string, typically starts with SI56... or similar bank format. Do NOT put the tax ID here!).",
+    "drzava": "Country of the supplier (string, e.g. 'Slovenija', 'Nemčija', 'Avstrija', 'ZDA', 'Irska'). Default to 'Slovenija' if the company is Slovenian, else extract their actual country.",
+    "ulica": "Supplier street and house number (string, only if foreign supplier, e.g. 'Gordon House, Barrow Street', else empty)",
+    "kraj": "Supplier city (string, only if foreign supplier, e.g. 'Dublin', else empty)",
+    "postna_stevilka": "Supplier postal code (string, only if foreign supplier, e.g. '4', else empty)",
+    "tuji_partner_neprebran": true/false (boolean: set to true ONLY if this is a foreign supplier (not Slovenian) and you cannot reliably read/extract their company name or tax ID from the invoice text. Else set to false.)
   }},
   "postavke": [
     {{
@@ -864,18 +1124,37 @@ Here is the invoice text:
 ---
 """
 
+    # Pridobi podobne primere učenja iz baze
+    examples = get_similar_llama_examples(text, filename, limit=2)
+    
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a precise accounting extraction assistant. Your job is to extract the SUPPLIER and NOT the BUYER. Under NO circumstances should you extract 'Miha Kadiš s.p.' or 'SIM 83' as the supplier! Extract 'cena_enote' strictly as the unit price WITHOUT tax/VAT (cena brez DDV). Extract service start/end dates from mentioned service periods. Output ONLY a valid JSON object matching the requested schema. No conversational text."
+        }
+    ]
+    
+    # Dodamo primere učenja v zgodovino pogovora (few-shot prompting)
+    if examples:
+        for ex in examples:
+            messages.append({
+                "role": "user",
+                "content": f"Here is an example invoice text from filename '{ex['filename']}':\n---\n{ex['ocr_text']}\n---"
+            })
+            messages.append({
+                "role": "assistant",
+                "content": ex['corrected_json']
+            })
+            
+    # Na koncu dodamo trenutno sporočilo z navodili in tekstom
+    messages.append({
+        "role": "user",
+        "content": prompt
+    })
+    
     payload = {
         "model": model,
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are a precise accounting extraction assistant. Your job is to extract the SUPPLIER and NOT the BUYER. Under NO circumstances should you extract 'Miha Kadiš s.p.' or 'SIM 83' as the supplier! Extract 'cena_enote' strictly as the unit price WITHOUT tax/VAT (cena brez DDV). Extract service start/end dates from mentioned service periods. Output ONLY a valid JSON object matching the requested schema. No conversational text."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
+        "messages": messages,
         "stream": False,
         "format": "json",
         "options": {
@@ -889,9 +1168,18 @@ Here is the invoice text:
     content = res_json['message']['content']
     parsed = json.loads(content)
     
-    if "inpos" in filename.lower() or "inpos" in str(parsed.get("partner", {}).get("naziv", "")).lower():
+    if "partner" not in parsed:
+        parsed["partner"] = {}
+    p = parsed["partner"]
+    p["drzava"] = p.get("drzava") or "Slovenija"
+    p["ulica"] = p.get("ulica") or ""
+    p["kraj"] = p.get("kraj") or ""
+    p["postna_stevilka"] = p.get("postna_stevilka") or ""
+    p["tuji_partner_neprebran"] = p.get("tuji_partner_neprebran") or False
+    
+    if "inpos" in filename.lower() or "inpos" in str(p.get("naziv", "")).lower():
         parsed = fix_inpos_data(parsed, text, filename)
-    elif "soncek" in filename.lower() or "sonček" in filename.lower() or "soncek" in str(parsed.get("partner", {}).get("naziv", "")).lower() or "sonček" in str(parsed.get("partner", {}).get("naziv", "")).lower():
+    elif "soncek" in filename.lower() or "sonček" in filename.lower() or "soncek" in str(p.get("naziv", "")).lower() or "sonček" in str(p.get("naziv", "")).lower():
         parsed = fix_soncek_data(parsed, text, filename)
         
     return parsed
@@ -910,31 +1198,69 @@ def process_invoice_data(source, filename):
         try:
             parsed = parse_with_llama(text, filename, "llama3")
             if parsed:
-                partner_naziv = parsed.get("partner", {}).get("naziv", "Neznan Partner")
-                partner_davcna = parsed.get("partner", {}).get("davcna_stevilka", "")
+                partner_info = parsed.get("partner", {}) if isinstance(parsed.get("partner"), dict) else {}
+                partner_naziv = partner_info.get("naziv", "Neznan Partner")
+                partner_davcna = partner_info.get("davcna_stevilka", "")
+                partner_trr = partner_info.get("trr", "")
                 
-                if len(partner_davcna) == 8 and partner_davcna.isdigit():
+                if partner_davcna and len(partner_davcna) == 8 and partner_davcna.isdigit():
                     partner_davcna = "SI" + partner_davcna
                 
-                datum_storitve = parsed.get("datum_storitve_od", "") or parsed.get("datum_izdaje", "")
+                datum_storitve_od = parsed.get("datum_storitve_od", "") or parsed.get("datum_izdaje", "")
+                datum_storitve_do = parsed.get("datum_storitve_do", "") or datum_storitve_od
                 
                 return {
                     'stevilka': parsed.get("stevilka", "NEZNANA"),
+                    'sklic': parsed.get("sklic", ""),
                     'datum_izdaje': parsed.get("datum_izdaje", ""),
                     'datum_zapadlosti': parsed.get("datum_zapadlosti", ""),
-                    'datum_storitve': datum_storitve,
+                    'datum_storitve': datum_storitve_od,
+                    'datum_storitve_od': datum_storitve_od,
+                    'datum_storitve_do': datum_storitve_do,
+                    # Gnezden partner dict — zahtevan za _enrich_eslog_data in _save_imported_eslog
+                    'partner': {
+                        'naziv': partner_naziv,
+                        'davcna_stevilka': partner_davcna,
+                        'trr': partner_trr,
+                        'drzava': partner_info.get("drzava", "Slovenija"),
+                        'ulica': partner_info.get("ulica", ""),
+                        'kraj': partner_info.get("kraj", ""),
+                        'postna_stevilka': partner_info.get("postna_stevilka", ""),
+                        'tuji_partner_neprebran': partner_info.get("tuji_partner_neprebran", False),
+                    },
+                    # Ohranimo tudi ploščate ključe za način učenja in prikaz
                     'partner_naziv': partner_naziv,
                     'partner_davcna': partner_davcna,
+                    'partner_trr': partner_trr,
                     'znesek_skupaj': float(parsed.get("znesek_skupaj", 0.0)),
                     'znesek_brez_ddv': float(parsed.get("znesek_brez_ddv", 0.0)),
                     'znesek_ddv': float(parsed.get("znesek_ddv", 0.0)),
-                    'postavke': parsed.get("postavke", [])
+                    'postavke': parsed.get("postavke", []),
+                    'ocr_text': text
                 }
         except Exception as e:
             print(f"Llama AI extraction failed, falling back to regex: {e}")
             
     # Regex fallback
-    return parse_invoice_data(text)
+    res = parse_invoice_data(text)
+    if isinstance(res, dict):
+        res['ocr_text'] = text
+        # Regex extraction for sklic
+        if 'sklic' not in res or not res['sklic']:
+            res['sklic'] = find_sklic(text)
+        # Zagotovimo, da ima regex fallback tudi datum_storitve_od/do
+        if 'datum_storitve_od' not in res:
+            res['datum_storitve_od'] = res.get('datum_storitve', res.get('datum_izdaje', ''))
+        if 'datum_storitve_do' not in res:
+            res['datum_storitve_do'] = res.get('datum_storitve', res.get('datum_izdaje', ''))
+        if 'datum_storitve' not in res:
+            res['datum_storitve'] = res.get('datum_storitve_od', '')
+        # Zagotovimo ploščate partner ključe za način učenja
+        if 'partner' in res and isinstance(res['partner'], dict):
+            res.setdefault('partner_naziv', res['partner'].get('naziv', ''))
+            res.setdefault('partner_davcna', res['partner'].get('davcna_stevilka', ''))
+            res.setdefault('partner_trr', res['partner'].get('trr', ''))
+    return res
 
 def process_sample_file(file_path):
     return process_invoice_data(file_path, file_path)

@@ -1,7 +1,7 @@
 {
   "stevilka": "HCY-20866449",
   "datum_izdaje": "2026-01-13",
-  "datum_zapadlosti": "",
+  "datum_zapadlosti": null,
   "datum_storitve_od": "2026-01-13",
   "datum_storitve_do": "2030-04-13",
   "znesek_skupaj": 116.53,
@@ -9,14 +9,19 @@
   "znesek_brez_ddv": 95.52,
   "partner": {
     "naziv": "Hostinger International Ltd.",
-    "davcna_stevilka": "CY10301365E"
+    "davcna_stevilka": null,
+    "drzava": "Cyprus",
+    "ulica": "61 Lordou Vironos Street",
+    "kraj": "Larnaca",
+    "postna_stevilka": "6023",
+    "tuji_partner_neprebran": true
   },
   "postavke": [
     {
       "opis": "Premium Web Hosting (billed every 4 years)",
       "kolicina": 1.0,
       "enota_mere": "kos",
-      "cena_enote": 527.52,
+      "cena_enote": 432.0,
       "popust": 0.0,
       "stopnja_ddv": 22.0,
       "znesek_skupaj": 116.53

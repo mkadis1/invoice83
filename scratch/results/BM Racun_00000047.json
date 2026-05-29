@@ -1,15 +1,20 @@
 {
-  "stevilka": "2602011739412",
+  "stevilka": "43-9038-2054",
   "datum_izdaje": "2026-01-26",
-  "datum_zapadlosti": "",
-  "datum_storitve_od": "",
-  "datum_storitve_do": "",
+  "datum_zapadlosti": null,
+  "datum_storitve_od": "2026-03-01",
+  "datum_storitve_do": "2026-03-31",
   "znesek_skupaj": 52.7,
   "znesek_ddv": 9.5,
   "znesek_brez_ddv": 43.2,
   "partner": {
-    "naziv": "ELOKSIRANJE B&M d.o.o.",
-    "davcna_stevilka": "SI76037304"
+    "naziv": "ELOKSIRANJE B&M d.o.o., Kidričeva 13, 3000 Celje.",
+    "davcna_stevilka": "SI76037304",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {

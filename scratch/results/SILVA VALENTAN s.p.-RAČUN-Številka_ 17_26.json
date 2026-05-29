@@ -9,7 +9,12 @@
   "znesek_brez_ddv": 80.0,
   "partner": {
     "naziv": "SILVA VALENTAN s.p.",
-    "davcna_stevilka": "54219060"
+    "davcna_stevilka": "54219060",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {

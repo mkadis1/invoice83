@@ -9,7 +9,12 @@
   "znesek_brez_ddv": 14.55,
   "partner": {
     "naziv": "INPOS, d.o.o., Celje",
-    "davcna_stevilka": "SI70868565"
+    "davcna_stevilka": "SI70868565",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
   },
   "postavke": [
     {
