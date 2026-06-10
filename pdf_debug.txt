@@ -1,58 +1,136 @@
-Račun
-Prejemnik
-SIM 83 - SIMULATORJI VOŽNJE, MIHA KADIŠ MIHA KADIŠ S.P., DOBJA
-VAS 253, 2390 RAVNE NA KOROŠKEM Št. računa/Referenca: 2602011739412
-Obračunsko obdobje: 1. 1. - 31. 1. 2026
-Naročnik IBAN: SI56 2900 0015 9800 373
-SIM 83 - SIMULATORJI VOŽNJE, MIHA KADIŠ MIHA KADIŠ S.P., BIC/SWIFT: BACXSI22
-DOBJA VAS 253, 2390 RAVNE NA KOROŠKEM Kraj in datum izdaje: Ljubljana, 3. 2. 2026
-Rok plačila: 18. 2. 2026
-Šifra: 753537423 00001 Način plačila: Univerzalni plačilni nalog
-Storitev Število Količina Cena na enoto Vrednost Popust Končna
-dogodkov brez DDV brez DDV brez DDV vrednost
-brez DDV
-Naročnine
-Paket A1 Net 30 GB 1 0,26 12,287 3,17 3,17
-Paket A1 Net 30 GB 1 0,74 14,74 10,94 10,94
-Paket Ultra Xplore TV maxi 1 0,77 46,71 36,16 -18,08 18,08
-Dodatni Xplore Smart TV 1 0,77 1,64 1,27 1,27
-Voyo vključen v paket 1 0,77
-Časovni zamik 1 0,77 2,46 1,90 1,90
-Ostale storitve
-Vračilo ugodnosti/Nadomestilo za terminal. opremo* 1 107,59 107,59
-Stroški prekinitve pogodbe oz. zapiranja računa 1 8,19 8,19
-* Nadomestilo za obdelavo Pogodbe o zagotovitvi posebne ugodnosti znaša 12,29 € (ni vključen 22% DDV) in je vštet Skupaj vrednost brez DDV 151,14 EUR
-v Vračilo prejete ugodnosti, razen v primerih, ko je to v nasprotju s prisilnimi določili veljavnih predpisov (npr. 192. Osnova DDV (22%) 151,14
-člen) ali ko to določa ponudba A1.
-Znesek DDV (22%) 33,25
-ZNESEK ZA PLAČILO 184,39 EUR
-Vse cene so v EUR.
-Zbirna tabela uporabnikov
-Uporabnik Ime in priimek Stroškovno Paket Naročnine Storitve v Storitve Plačila in Storitve Ostale Vrednost Znesek Vrednost
-mesto Sloveniji v tujini nakupi z dodano storitve brez DDV DDV z DDV
-vrednostjo
-040231473 MIHA KADIŠ S.P. Ultra Xplore TV maxi 18,08 18,08 3,98 22,06
-070492607 MIHA KADIŠ S.P. A1 Net 30 GB 14,11 8,19 22,30 4,91 27,21
-T 1 V 47 _ 3 3864023 MIHA KADIŠ S.P. Televizija 3,17 3,17 0,70 3,87
-A1 Slovenija, telekomunikacijske storitve, d. d. - Ameriška ulica 4 - 1000 Ljubljana
-Identifikacijska oznaka prejemnika plačila: SI11ZZZ60595256, identifikacijska številka za DDV: SI 60595256, matična številka: 1196332000,
-SRG/29430/00 Okrožno sodišče v Ljubljani, kapital: 38.781.000 EUR, predsednik nadzornega sveta: Alejandro Douglass Plater.
-SIM 83 - SIMULATORJI VOŽNJE, MIHA KAD
-IŠ MIHA KADIŠ S.P., DOBJA VAS 253
-2390 RAVNE NA KOROŠKEM
-Storitve 1.1. do 31.1.2026, Rok: 18. SIM 83 - SIMULATORJI VOŽNJE, MIHA KADIŠ MIHA K
-2.2026 DOBJA VAS 253
-2390 RAVNE NA KOROŠKEM
-***184,39
-***184,39
-SI56 2900 0015 9800 373
-SI12 2602011739412
-OTLC Storitve 1.1. do 31.1.2026 18.02.2026
-A1 Slovenija, d. d. SI56 2900 0015 9800 373
-Ameriška ulica 4
-SI12 2602011739412
-1000 Ljubljana
-A1 Slovenija, d. d.
-Ameriška ulica 4
-1000 Ljubljana
-1
+=== STANDARD ===
+PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 23.04.2026
+IBAN: SI56 0245 3026 4377 270
+SIM 83 - SIMULATORJI VO®NJE, MIHA KADI© S.P.
+DOBJA VAS 253
+2390 RAVNE NA KORO©KEM
+Davèna ¹tevilka: 11648236
+Stran: osnovna
+V legendi so prikazane razlage najpogostej¹ih okraj¹av, ki se pri nekaterih transakcijah pojavljajo v polju "Opis spremembe":
+KNP - koda namena plaèila NAM - namen plaèila RPPL - raèun prejemnika/plaènika
+NAZP - naziv prejemnika REFPL - referenca plaènika NAZPL - naziv plaènika
+IDPL - identifikacija plaènika DPKP - datum poravnave kreditnega plaèila IDP - identifikacija prejemnika
+REFP - referenca prejemnika ZPN - znesek plaèanega nadomestila MENT - menjalni teèaj
+SDB - vrsta sheme SEPA direktne obremenitve SDBS - soglasje za SEPA direktno obremenitev SDBV - vraèilo za SEPA direktno obremenitev
+©TN - ¹tevilka naloga
+Veè informacij o vseh okraj¹avah vam je na voljo na www.nlb.si/sepa in v NLB Poslovalnicah.
+Opro¹èeno DDV po 4. c toèki 44. èlena ZDDV-1 in 'Obrnjena davèna obveznost' DDV ni obraèunan po 1. odstavku 25. èlena ZDDV-1. DDV ni obraèunan po 13. èlenu
+pravilnika o izvajanju ZDDV-1. 'Samofakturiranje' po 81/3 ZDDV-1. Nova Ljubljanska banka d.d., Ljubljana, Trg republike 2, 1520 Ljubljana, vpisana v sodni
+register pri Okro¾nem sodi¹èu v Ljubljani. ©t. reg. vpisa 1/25578/00. Znesek osnovnega kapitala 200.000.000,00 EUR. ID za DDV: SI91132550, BIC koda: LJBASI2X.
+Jamstvo za vloge: 'Sredstva na raèunu se ¹tejejo v okvir za¹èitene vloge, ki zna¹a za posameznega vlagatelja v banki praviloma 100.000 EUR, razen, èe sodi
+vlagatelj med subjekte, katerih vloge niso upravièene do jamstva skladno z Zakonom o sistemu jamstva za vloge (Uradni list RS, ¹t. 27/2016; v nadaljevanju:
+ZSJV). V primeru NLB Poslovnega raèuna za stranke notarja/odvetnika/izvr¹itelja in NLB Fiduciarnega raèuna nepremièninske dru¾be, se sredstva na raèunu
+upo¹tevajo kot zajamèena vloga dejanskega lastnika, èe imetnik raèuna banki sporoèi podatke o dejanskem lastniku. Veè informacij o za¹èiti vlog je na voljo
+na naslovu https://www.bsi.si/.'
+1/1
+PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 23.04.2026
+DATUM Opis spremembe Promet v breme / dobro
+IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 61 Datum predhodnega izpiska: 21.04.2026
+PROMET V BREME RAÈUNA
+21.04.2026 NAM: FINANCNA UPRAVA REPUBL Ljubljana SVN 4466173510263639 * ©TN: FT26113557693260 491,15
+23.04.2026 KNP: GDSV-Nakup/prodaja blaga ali storitve * NAM: PLACILO RACUNA ST. 319002103013 * NAZP: PETROL D.D., LJUBLJANA * RPPL: 290000101824249 * REFP: 12 13,37
+3190021030131 * DPKP: 2026-04-24 * ZPN: EUR 1,05 * ©TN: FT26113639120902
+PROMET V DOBRO RAÈUNA
+23.04.2026 KNP: GDSV-Nakup/prodaja blaga ali storitve * NAM: PRENOS * REFPL: NOTPROVIDED * NAZPL: BENDE SASO * RPPL: 041070247943188 * ©TN: FT26113506054570 90,00
+ZAÈETNO STANJE...................................: 2.418,42
+NADOMESTILO ZA MNO®IÈNA PLAÈILA SEPA.............: 0,00
+NADOMESTILO ZA ZBIRNI NALOG MNO®IÈNA PLAÈILA SEPA: 0,00
+OSTALA NADOMESTILA ZA PLAÈILNE TRANSAKCIJE.......: 1,05
+SKUPAJ PROMET V BREME............................: 505,57
+SKUPAJ PROMET V DOBRO............................: 90,00
+KONÈNO STANJE....................................: 2.002,85
+ZNESEK LIMITA....................................: 0,00
+
+=== LAYOUT ===
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+          PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 23.04.2026                                                    
+          IBAN: SI56 0245 3026 4377 270                                                                             
+          SIM 83 - SIMULATORJI VO®NJE, MIHA KADI© S.P.                                                              
+          DOBJA VAS 253                                                                                             
+          2390 RAVNE NA KORO©KEM                                                                                    
+          Davèna ¹tevilka: 11648236                                                                                 
+          Stran: osnovna                                                                                            
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+          V legendi so prikazane razlage najpogostej¹ih okraj¹av, ki se pri nekaterih transakcijah pojavljajo v polju "Opis spremembe":
+          KNP - koda namena plaèila           NAM - namen plaèila         RPPL - raèun prejemnika/plaènika          
+          NAZP - naziv prejemnika             REFPL - referenca plaènika  NAZPL - naziv plaènika                    
+          IDPL - identifikacija plaènika      DPKP - datum poravnave kreditnega plaèila IDP - identifikacija prejemnika
+          REFP - referenca prejemnika         ZPN - znesek plaèanega nadomestila MENT - menjalni teèaj              
+          SDB - vrsta sheme SEPA direktne obremenitve SDBS - soglasje za SEPA direktno obremenitev SDBV - vraèilo za SEPA direktno obremenitev
+          ©TN - ¹tevilka naloga                                                                                     
+          Veè informacij o vseh okraj¹avah vam je na voljo na www.nlb.si/sepa in v NLB Poslovalnicah.               
+          Opro¹èeno DDV po 4. c toèki 44. èlena ZDDV-1 in 'Obrnjena davèna obveznost' DDV ni obraèunan po 1. odstavku 25. èlena ZDDV-1. DDV ni obraèunan po 13. èlenu
+          pravilnika o izvajanju ZDDV-1. 'Samofakturiranje' po 81/3 ZDDV-1. Nova Ljubljanska banka d.d., Ljubljana, Trg republike 2, 1520 Ljubljana, vpisana v sodni
+          register pri Okro¾nem sodi¹èu v Ljubljani. ©t. reg. vpisa 1/25578/00. Znesek osnovnega kapitala 200.000.000,00 EUR. ID za DDV: SI91132550, BIC koda: LJBASI2X.
+          Jamstvo za vloge: 'Sredstva na raèunu se ¹tejejo v okvir za¹èitene vloge, ki zna¹a za posameznega vlagatelja v banki praviloma 100.000 EUR, razen, èe sodi
+          vlagatelj med subjekte, katerih vloge niso upravièene do jamstva skladno z Zakonom o sistemu jamstva za vloge (Uradni list RS, ¹t. 27/2016; v nadaljevanju:
+          ZSJV). V primeru NLB Poslovnega raèuna za stranke notarja/odvetnika/izvr¹itelja in NLB Fiduciarnega raèuna nepremièninske dru¾be, se sredstva na raèunu
+          upo¹tevajo kot zajamèena vloga dejanskega lastnika, èe imetnik raèuna banki sporoèi podatke o dejanskem lastniku. Veè informacij o za¹èiti vlog je na voljo
+          na naslovu https://www.bsi.si/.'                                                                          
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                              1/1   
+                            PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 23.04.2026                                  
+                                                                                                                    
+          DATUM  Opis spremembe                                                                    Promet v breme / dobro
+                                                                                                                    
+          IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 61 Datum predhodnega izpiska: 21.04.2026
+          PROMET V BREME RAÈUNA                                                                                     
+          21.04.2026 NAM: FINANCNA UPRAVA REPUBL Ljubljana SVN 4466173510263639 * ©TN: FT26113557693260      491,15 
+          23.04.2026 KNP: GDSV-Nakup/prodaja blaga ali storitve * NAM: PLACILO RACUNA ST. 319002103013 * NAZP: PETROL D.D., LJUBLJANA * RPPL: 290000101824249 * REFP: 12 13,37
+                 3190021030131 * DPKP: 2026-04-24 * ZPN: EUR 1,05 * ©TN: FT26113639120902                           
+          PROMET V DOBRO RAÈUNA                                                                                     
+          23.04.2026 KNP: GDSV-Nakup/prodaja blaga ali storitve * NAM: PRENOS * REFPL: NOTPROVIDED * NAZPL: BENDE SASO * RPPL: 041070247943188 * ©TN: FT26113506054570 90,00
+          ZAÈETNO STANJE...................................: 2.418,42                                               
+          NADOMESTILO ZA MNO®IÈNA PLAÈILA SEPA.............: 0,00                                                   
+          NADOMESTILO ZA ZBIRNI NALOG MNO®IÈNA PLAÈILA SEPA: 0,00                                                   
+          OSTALA NADOMESTILA ZA PLAÈILNE TRANSAKCIJE.......: 1,05                                                   
+          SKUPAJ PROMET V BREME............................: 505,57                                                 
+          SKUPAJ PROMET V DOBRO............................: 90,00                                                  
+          KONÈNO STANJE....................................: 2.002,85                                               
+          ZNESEK LIMITA....................................: 0,00                                                   
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    

@@ -196,6 +196,38 @@ class Partner(BaseModel):
     telefon: Optional[str] = None
     email: Optional[str] = None
     vrsta: Optional[str] = "oba"
+    # CRM polja
+    status: Optional[str] = "Stranka"
+    kategorija: Optional[str] = None
+    vir_stranke: Optional[str] = None
+    opombe: Optional[str] = None
+
+class PartnerKontakt(BaseModel):
+    id: Optional[int] = None
+    partner_id: int
+    ime_priimek: str
+    oddelek: Optional[str] = None
+    funkcija: Optional[str] = None
+    email: Optional[str] = None
+    telefon: Optional[str] = None
+    primarni: Optional[bool] = False
+
+class PartnerInterakcija(BaseModel):
+    id: Optional[int] = None
+    partner_id: int
+    datum: Optional[str] = None
+    tip: str # 'Klic', 'Sestanek', 'Email', 'Opomba'
+    vsebina: Optional[str] = None
+    naslednji_korak: Optional[str] = None
+
+class PartnerOpravilo(BaseModel):
+    id: Optional[int] = None
+    partner_id: int
+    naslov: str
+    opis: Optional[str] = None
+    rok: Optional[str] = None
+    status: Optional[str] = "Čaka"
+    prioriteta: Optional[str] = "Srednja"
 
 class Nastavitve(BaseModel):
     naziv: Optional[str] = ""
@@ -476,12 +508,13 @@ def create_partner(partner: Partner):
     conn = database.get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO partnerji (naziv, ulica, postna_stevilka, kraj, drzava, davcna_stevilka, zavezanec_za_ddv, trr, telefon, email, vrsta)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (partner.naziv, partner.ulica, partner.postna_stevilka, partner.kraj, partner.drzava, partner.davcna_stevilka, partner.zavezanec_za_ddv, partner.trr, partner.telefon, partner.email, partner.vrsta))
+        INSERT INTO partnerji (naziv, ulica, postna_stevilka, kraj, drzava, davcna_stevilka, zavezanec_za_ddv, trr, telefon, email, vrsta, status, kategorija, vir_stranke, opombe)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (partner.naziv, partner.ulica, partner.postna_stevilka, partner.kraj, partner.drzava, partner.davcna_stevilka, partner.zavezanec_za_ddv, partner.trr, partner.telefon, partner.email, partner.vrsta, partner.status, partner.kategorija, partner.vir_stranke, partner.opombe))
     conn.commit()
+    new_id = cursor.lastrowid
     conn.close()
-    return {"status": "success", "id": cursor.lastrowid}
+    return {"status": "success", "id": new_id}
 
 @app.get("/api/partnerji/detajl/{id}")
 def get_partner_detajl(id: int):
@@ -489,10 +522,24 @@ def get_partner_detajl(id: int):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM partnerji WHERE id = ?", (id,))
     row = cursor.fetchone()
-    conn.close()
     if not row:
+        conn.close()
         raise HTTPException(status_code=404, detail="Partner ni najden")
-    return dict(row)
+    
+    res = dict(row)
+    
+    # Pridobi še kontakte, interakcije in opravila
+    cursor.execute("SELECT * FROM partner_kontakti WHERE partner_id = ? ORDER BY primarni DESC, ime_priimek", (id,))
+    res['kontakti'] = [dict(r) for r in cursor.fetchall()]
+    
+    cursor.execute("SELECT * FROM partner_interakcije WHERE partner_id = ? ORDER BY datum DESC", (id,))
+    res['interakcije'] = [dict(r) for r in cursor.fetchall()]
+    
+    cursor.execute("SELECT * FROM partner_opravila WHERE partner_id = ? ORDER BY rok ASC, prioriteta DESC", (id,))
+    res['opravila'] = [dict(r) for r in cursor.fetchall()]
+    
+    conn.close()
+    return res
 
 @app.put("/api/partnerji/{id}")
 def update_partner(id: int, partner: Partner):
@@ -500,12 +547,135 @@ def update_partner(id: int, partner: Partner):
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE partnerji 
-        SET naziv=?, ulica=?, postna_stevilka=?, kraj=?, drzava=?, davcna_stevilka=?, zavezanec_za_ddv=?, trr=?, telefon=?, email=?, vrsta=?
+        SET naziv=?, ulica=?, postna_stevilka=?, kraj=?, drzava=?, davcna_stevilka=?, zavezanec_za_ddv=?, trr=?, telefon=?, email=?, vrsta=?, status=?, kategorija=?, vir_stranke=?, opombe=?
         WHERE id = ?
-    """, (partner.naziv, partner.ulica, partner.postna_stevilka, partner.kraj, partner.drzava, partner.davcna_stevilka, partner.zavezanec_za_ddv, partner.trr, partner.telefon, partner.email, partner.vrsta, id))
+    """, (partner.naziv, partner.ulica, partner.postna_stevilka, partner.kraj, partner.drzava, partner.davcna_stevilka, partner.zavezanec_za_ddv, partner.trr, partner.telefon, partner.email, partner.vrsta, partner.status, partner.kategorija, partner.vir_stranke, partner.opombe, id))
     conn.commit()
     conn.close()
     return {"status": "success"}
+
+# --- CRM: KONTAKTI ---
+@app.post("/api/partnerji/{id}/kontakti")
+def add_kontakt(id: int, k: PartnerKontakt):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO partner_kontakti (partner_id, ime_priimek, oddelek, funkcija, email, telefon, primarni)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (id, k.ime_priimek, k.oddelek, k.funkcija, k.email, k.telefon, k.primarni))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return {"status": "success", "id": new_id}
+
+@app.put("/api/partnerji/kontakti/{kontakt_id}")
+def update_kontakt(kontakt_id: int, k: PartnerKontakt):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE partner_kontakti SET ime_priimek=?, oddelek=?, funkcija=?, email=?, telefon=?, primarni=?
+        WHERE id = ?
+    """, (k.ime_priimek, k.oddelek, k.funkcija, k.email, k.telefon, k.primarni, kontakt_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+@app.delete("/api/partnerji/kontakti/{kontakt_id}")
+def delete_kontakt(kontakt_id: int):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM partner_kontakti WHERE id = ?", (kontakt_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+# --- CRM: INTERAKCIJE ---
+@app.post("/api/partnerji/{id}/interakcije")
+def add_interakcija(id: int, i: PartnerInterakcija):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    datum = i.datum if i.datum else get_now_slo()
+    cursor.execute("""
+        INSERT INTO partner_interakcije (partner_id, datum, tip, vsebina, naslednji_korak)
+        VALUES (?, ?, ?, ?, ?)
+    """, (id, datum, i.tip, i.vsebina, i.naslednji_korak))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return {"status": "success", "id": new_id}
+
+@app.delete("/api/partnerji/interakcije/{int_id}")
+def delete_interakcija(int_id: int):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM partner_interakcije WHERE id = ?", (int_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+# --- CRM: OPRAVILA ---
+@app.post("/api/partnerji/{id}/opravila")
+def add_opravilo(id: int, o: PartnerOpravilo):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO partner_opravila (partner_id, naslov, opis, rok, status, prioriteta)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (id, o.naslov, o.opis, o.rok, o.status, o.prioriteta))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return {"status": "success", "id": new_id}
+
+@app.put("/api/partnerji/opravila/{opr_id}")
+def update_opravilo(opr_id: int, o: PartnerOpravilo):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE partner_opravila SET naslov=?, opis=?, rok=?, status=?, prioriteta=?
+        WHERE id = ?
+    """, (o.naslov, o.opis, o.rok, o.status, o.prioriteta, opr_id))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+@app.delete("/api/partnerji/opravila/{opr_id}")
+def delete_opravilo(opr_id: int):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM partner_opravila WHERE id = ?", (opr_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+@app.get("/api/crm/tasks")
+def get_all_tasks():
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT o.*, p.naziv as partner_naziv 
+        FROM partner_opravila o 
+        JOIN partnerji p ON o.partner_id = p.id 
+        WHERE o.status != 'Opravljeno'
+        ORDER BY o.rok ASC, o.prioriteta DESC LIMIT 20
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.get("/api/crm/interactions")
+def get_all_interactions():
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT i.*, p.naziv as partner_naziv 
+        FROM partner_interakcije i 
+        JOIN partnerji p ON i.partner_id = p.id 
+        ORDER BY i.datum DESC LIMIT 20
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 @app.get("/api/partnerji/search")
 def search_partnerji(q: str):
@@ -1818,8 +1988,13 @@ def _enrich_eslog_data(data):
     row = None
     
     if davcna:
-        # 1. Poskusi ujemanje po davčni številki (samo če ni prazna)
-        cursor.execute("SELECT id, naziv, davcna_stevilka, ulica, postna_stevilka, kraj, drzava, trr, telefon, email FROM partnerji WHERE davcna_stevilka = ?", (davcna,))
+        # 1. Poskusi ujemanje po davčni številki (samo če ni prazna, z ali brez SI predpone)
+        d_clean = re.sub(r'[^0-9]', '', davcna)
+        cursor.execute("""
+            SELECT id, naziv, davcna_stevilka, ulica, postna_stevilka, kraj, drzava, trr, telefon, email 
+            FROM partnerji 
+            WHERE davcna_stevilka = ? OR davcna_stevilka = ? OR davcna_stevilka = ? OR davcna_stevilka = ?
+        """, (davcna, d_clean, f"SI{d_clean}", f"SI {d_clean}"))
         row = cursor.fetchone()
     
     if not row and naziv:
@@ -1938,7 +2113,11 @@ async def _save_imported_eslog(data):
             davcna = (p.get('davcna_stevilka') or '').strip()
             naziv = (p.get('naziv') or '').strip()
             if davcna:
-                cursor.execute("SELECT id FROM partnerji WHERE davcna_stevilka = ?", (davcna,))
+                d_clean = re.sub(r'[^0-9]', '', davcna)
+                cursor.execute("""
+                    SELECT id FROM partnerji 
+                    WHERE davcna_stevilka = ? OR davcna_stevilka = ? OR davcna_stevilka = ? OR davcna_stevilka = ?
+                """, (davcna, d_clean, f"SI{d_clean}", f"SI {d_clean}"))
                 row = cursor.fetchone()
                 if row:
                     partner_id = row['id']
@@ -1952,17 +2131,19 @@ async def _save_imported_eslog(data):
         
         # 2. Dokument
         poslovno_leto = int(data['datum_izdaje'].split('-')[0]) if '-' in data['datum_izdaje'] else 2026
-        status = 'neplacano'
+        status = 'neplačano'
         datum_placila = None
         nacin_placila = None
         
         if data.get('placan'):
-            status = 'placano'
+            status = 'plačano'
             datum_placila = data['datum_izdaje']
             nacin_placila = 'Poslovna kartica'
 
+        doc_tip = data.get('tip', 'prejeti_racuni')
+
         # Generiranje interne stevilke
-        cursor.execute("SELECT interna_stevilka FROM dokumenti WHERE tip = 'prejeti_racuni' AND poslovno_leto = ? AND interna_stevilka LIKE '%-%'", (poslovno_leto,))
+        cursor.execute("SELECT interna_stevilka FROM dokumenti WHERE tip = ? AND poslovno_leto = ? AND interna_stevilka LIKE '%-%'", (doc_tip, poslovno_leto))
         rows = cursor.fetchall()
         max_int = 0
         for r in rows:
@@ -1981,8 +2162,8 @@ async def _save_imported_eslog(data):
             INSERT INTO dokumenti (poslovno_leto, tip, stevilka, interna_stevilka, partner_id, datum_izdaje, datum_zapadlosti, 
                                    datum_storitve_od, datum_storitve_do, znesek_brez_ddv, znesek_ddv, 
                                    znesek_skupaj, valuta, tecaj, znesek_v_valuti, status, datum_placila, nacin_placila, sklic)
-            VALUES (?, 'prejeti_racuni', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (poslovno_leto, data['stevilka'], interna_st, partner_id, data['datum_izdaje'], data['datum_zapadlosti'], 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (poslovno_leto, doc_tip, data['stevilka'], interna_st, partner_id, data['datum_izdaje'], data['datum_zapadlosti'], 
               data['datum_storitve_od'], data['datum_storitve_do'], data['znesek_brez_ddv'], 
               data['znesek_ddv'], data['znesek_skupaj'], data.get('valuta', 'EUR'), 
               data.get('tecaj', 1.0), data.get('znesek_v_valuti', data['znesek_skupaj']),
@@ -2727,6 +2908,7 @@ class Dokument(BaseModel):
     vkljuci_placilo: Optional[bool] = True
     odstotek_placila: Optional[float] = 100.0
     sklic: Optional[str] = ""
+    kompenzacija_doc_id: Optional[int] = None
     postavke: List[DokumentPostavka]
 
 @app.delete("/api/dokumenti/{id}")
@@ -3169,9 +3351,9 @@ def create_dokument(doc: Dokument):
         interna_st = stevilka
     
     cursor.execute("""
-        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila, interna_stevilka, sklic)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, interna_st, doc.sklic))
+        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila, interna_stevilka, sklic, kompenzacija_doc_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, interna_st, doc.sklic, doc.kompenzacija_doc_id))
     
     doc_id = cursor.lastrowid
     for p in doc.postavke:
@@ -3213,12 +3395,14 @@ def update_dokument(id: int, doc: Dokument):
             poslovno_leto=?, tip=?, stevilka=?, partner_id=?, datum_izdaje=?, datum_zapadlosti=?, 
             znesek_brez_ddv=?, znesek_ddv=?, znesek_skupaj=?, datum_storitve_od=?, datum_storitve_do=?, 
             status=?, datum_placila=?, nacin_placila=?, zakljucno_besedilo=?, noga_dokumenta=?, opombe=?,
-            valuta=?, tecaj=?, znesek_v_valuti=?, vkljuci_placilo=?, odstotek_placila=?, interna_stevilka=?, sklic=?
+            valuta=?, tecaj=?, znesek_v_valuti=?, vkljuci_placilo=?, odstotek_placila=?, interna_stevilka=?, sklic=?,
+            kompenzacija_doc_id=?
         WHERE id = ?
     """, (doc.poslovno_leto, doc.tip, doc.stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, 
           doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, 
           doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe,
-          doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, doc.interna_stevilka, doc.sklic, id))
+          doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, doc.interna_stevilka, doc.sklic,
+          doc.kompenzacija_doc_id, id))
     
     # Vstavljanje novih postavk
     for p in doc.postavke:
@@ -3653,6 +3837,13 @@ class Placa(BaseModel):
     znesek_ozp: float = 35.0
     znesek_do: float = 0.0
     znesek_akontacija_doh: float = 0.0
+    potni_stroski: float = 0.0
+    malica: float = 0.0
+    st_malic: Optional[int] = None
+    cena_malice: Optional[float] = 7.96
+    st_dni_pot: Optional[int] = None
+    km_enosmerno: Optional[float] = None
+    cena_km: Optional[float] = 0.21
     znesek_skupaj: float = 0.0
     sklic: Optional[str] = ""
     zapadlost: Optional[str] = ""
@@ -3686,10 +3877,12 @@ def create_placa(p: Placa):
     c.execute("""
         INSERT INTO place (zaposleni_id, mesec, leto, vrsta_zaposlitve, bruto_placa, neto_izplacilo, 
         znesek_piz, znesek_zz, znesek_zap, znesek_starsevsko, znesek_ozp, znesek_do, znesek_akontacija_doh, 
+        potni_stroski, malica, st_malic, cena_malice, st_dni_pot, km_enosmerno, cena_km,
         znesek_skupaj, sklic, zapadlost, placan, konto_prispevkov)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (p.zaposleni_id, p.mesec, p.leto, p.vrsta_zaposlitve, p.bruto_placa, p.neto_izplacilo, 
           p.znesek_piz, p.znesek_zz, p.znesek_zap, p.znesek_starsevsko, p.znesek_ozp, p.znesek_do, p.znesek_akontacija_doh, 
+          p.potni_stroski, p.malica, p.st_malic, p.cena_malice, p.st_dni_pot, p.km_enosmerno, p.cena_km,
           p.znesek_skupaj, p.sklic, p.zapadlost, 1 if p.placan else 0, p.konto_prispevkov))
     conn.commit()
     conn.close()
@@ -3702,10 +3895,12 @@ def update_placa(id: int, p: Placa):
     c.execute("""
         UPDATE place SET zaposleni_id=?, mesec=?, leto=?, vrsta_zaposlitve=?, bruto_placa=?, neto_izplacilo=?, 
         znesek_piz=?, znesek_zz=?, znesek_zap=?, znesek_starsevsko=?, znesek_ozp=?, znesek_do=?, znesek_akontacija_doh=?, 
+        potni_stroski=?, malica=?, st_malic=?, cena_malice=?, st_dni_pot=?, km_enosmerno=?, cena_km=?,
         znesek_skupaj=?, sklic=?, zapadlost=?, placan=?, konto_prispevkov=?
         WHERE id=?
     """, (p.zaposleni_id, p.mesec, p.leto, p.vrsta_zaposlitve, p.bruto_placa, p.neto_izplacilo, 
           p.znesek_piz, p.znesek_zz, p.znesek_zap, p.znesek_starsevsko, p.znesek_ozp, p.znesek_do, p.znesek_akontacija_doh, 
+          p.potni_stroski, p.malica, p.st_malic, p.cena_malice, p.st_dni_pot, p.km_enosmerno, p.cena_km,
           p.znesek_skupaj, p.sklic, p.zapadlost, 1 if p.placan else 0, p.konto_prispevkov, id))
     conn.commit()
     conn.close()
@@ -3719,6 +3914,94 @@ def delete_placa(id: int):
     conn.commit()
     conn.close()
     return {"status": "success"}
+
+@app.get("/api/place/predlagaj_vrednosti")
+def predlagaj_vrednosti(zaposleni_id: int, leto: int, mesec: str):
+    # 1. Count working days in the month/year
+    month_map = {
+        'Januar': 1, 'Februar': 2, 'Marec': 3, 'April': 4, 'Maj': 5, 'Junij': 6,
+        'Julij': 7, 'Avgust': 8, 'September': 9, 'Oktober': 10, 'November': 11, 'December': 12
+    }
+    month = month_map.get(mesec)
+    if not month:
+        raise HTTPException(status_code=400, detail="Neveljaven mesec.")
+    
+    import calendar
+    from datetime import date
+    
+    try:
+        num_days = calendar.monthrange(leto, month)[1]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Neveljavno leto ali mesec: {str(e)}")
+        
+    workdays = 0
+    # Fixed Slovenian holidays
+    fixed_holidays = [
+        (1, 1), (1, 2), # Novo leto
+        (2, 8), # Prešernov dan
+        (4, 27), # Dan upora proti okupatorju
+        (5, 1), (5, 2), # Praznik dela
+        (6, 25), # Dan državnosti
+        (8, 15), # Marijino vnebovzetje
+        (10, 31), # Dan reformacije
+        (11, 1), # Dan spomina na mrtve
+        (12, 25), # Božič
+        (12, 26) # Dan samostojnosti in enotnosti
+    ]
+    
+    # Easter Mondays
+    easter_mondays = {
+        2024: (4, 1),
+        2025: (4, 21),
+        2026: (4, 6),
+        2027: (3, 29),
+        2028: (4, 17),
+        2029: (4, 2),
+        2030: (4, 22)
+    }
+    
+    easter_mon = easter_mondays.get(leto)
+    
+    for day in range(1, num_days + 1):
+        d = date(leto, month, day)
+        if d.weekday() < 5: # Monday to Friday
+            is_holiday = (month, day) in fixed_holidays
+            if not is_holiday and easter_mon and month == easter_mon[0] and day == easter_mon[1]:
+                is_holiday = True
+            if not is_holiday:
+                workdays += 1
+                
+    # Proposed lunch allowance: 7.96 EUR per day
+    predlagana_malica = round(workdays * 7.96, 2)
+    
+    # 2. Get proposed travel expenses from potni nalogi
+    conn = database.get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT SUM(skupni_znesek) as skupaj_pn
+        FROM potni_nalogi
+        WHERE zaposleni_id = ?
+          AND datum_izdaje LIKE ?
+    """, (zaposleni_id, f"{leto}-{month:02d}-%"))
+    row = c.fetchone()
+
+    # 3. Get employee saved distance
+    c.execute("SELECT razdalja_do_podjetja FROM zaposleni WHERE id = ?", (zaposleni_id,))
+    z_row = c.fetchone()
+    razdalja = z_row['razdalja_do_podjetja'] if z_row else 0.0
+    
+    conn.close()
+    
+    potni_stroski = 0.0
+    if row and row['skupaj_pn'] is not None:
+        potni_stroski = round(row['skupaj_pn'], 2)
+        
+    return {
+        "delovni_dni": workdays,
+        "malica": predlagana_malica,
+        "potni_stroski": potni_stroski,
+        "razdalja": razdalja
+    }
 
 @app.post("/api/place/{id}/knjizi")
 def api_knjizi_placa(id: int, req: Optional[KnjiziRequest] = None):
@@ -3817,6 +4100,8 @@ class Zaposleni(BaseModel):
     delovna_doba_leta: Optional[int] = 0
     dopust_odmerjen: Optional[int] = 20
     dopust_rocni_popravek: Optional[int] = 0
+    posta_kraj: Optional[str] = None
+    razdalja_do_podjetja: Optional[float] = 0.0
 
 @app.get("/api/zaposleni")
 def get_zaposleni():
@@ -3836,12 +4121,12 @@ def create_zaposleni(z: Zaposleni):
         INSERT INTO zaposleni (
             ime_priimek, naslov, davcna_stevilka, iban, delovno_mesto, 
             datum_rojstva, stevilo_otrok, invalid_ali_nega, delovna_doba_leta, 
-            dopust_odmerjen, dopust_rocni_popravek
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            dopust_odmerjen, dopust_rocni_popravek, posta_kraj, razdalja_do_podjetja
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         z.ime_priimek, z.naslov, z.davcna_stevilka, z.iban, z.delovno_mesto,
         z.datum_rojstva, z.stevilo_otrok, z.invalid_ali_nega, z.delovna_doba_leta,
-        z.dopust_odmerjen, z.dopust_rocni_popravek
+        z.dopust_odmerjen, z.dopust_rocni_popravek, z.posta_kraj, z.razdalja_do_podjetja
     ))
     conn.commit()
     conn.close()
@@ -3856,12 +4141,12 @@ def update_zaposleni(id: int, z: Zaposleni):
         UPDATE zaposleni SET 
             ime_priimek=?, naslov=?, davcna_stevilka=?, iban=?, delovno_mesto=?, 
             datum_rojstva=?, stevilo_otrok=?, invalid_ali_nega=?, delovna_doba_leta=?, 
-            dopust_odmerjen=?, dopust_rocni_popravek=? 
+            dopust_odmerjen=?, dopust_rocni_popravek=?, posta_kraj=?, razdalja_do_podjetja=? 
         WHERE id=?
     """, (
         z.ime_priimek, z.naslov, z.davcna_stevilka, z.iban, z.delovno_mesto,
         z.datum_rojstva, z.stevilo_otrok, z.invalid_ali_nega, z.delovna_doba_leta,
-        z.dopust_odmerjen, z.dopust_rocni_popravek, id
+        z.dopust_odmerjen, z.dopust_rocni_popravek, z.posta_kraj, z.razdalja_do_podjetja, id
     ))
     conn.commit()
     conn.close()

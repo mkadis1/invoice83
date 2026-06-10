@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice83</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=2026060312">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         .gear-btn {
@@ -95,15 +95,7 @@
         </div>
     </div>
 
-    <!-- Zobnik za nastavitve (zgoraj desno) -->
-    <div class="header-tools">
-        <div id="company-switcher-container">
-            <select id="company-switcher" onchange="window.switchCompany(this.value)">
-                <option value="">Nalagam podjetja...</option>
-            </select>
-        </div>
-        <button class="gear-btn" title="Nastavitve" onclick="showModule('nastavitve')">⚙️</button>
-    </div>
+    <!-- Header tools moved inside main content header -->
 
     <div class="sidebar">
         <div class="brand" id="brand-logo-container" onclick="document.getElementById('logo-input').click()" title="Kliknite za nalaganje ali spremembo logotipa">
@@ -129,6 +121,20 @@
                 <div class="nav-group-items">
                     <a href="#" onclick="showModule('partnerji')">Partnerji</a>
                     <a href="#" onclick="showModule('artikli_storitve')">Artikli in storitve</a>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
+                    <span>🤝 CRM</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="nav-group-items">
+                    <a href="#" onclick="showModule('crm_dashboard')">CRM Nadzorna plošča</a>
+                    <a href="#" onclick="showModule('partnerji')">Partnerji</a>
+                    <a href="#" onclick="showModule('crm_kanal')">Prodajni kanal</a>
+                    <a href="#" onclick="showModule('crm_aktivnosti')">Aktivnosti</a>
+                    <a href="#" onclick="showModule('crm_interakcije')">Interakcije</a>
                 </div>
             </div>
             
@@ -196,7 +202,23 @@
     </div>
     <div class="main-content">
         <header>
-            <h2 id="module-title">Nadzorna plošča</h2>
+            <div class="tabs-outer-container">
+                <button id="tabs-scroll-left" class="tabs-scroll-btn" onclick="window.scrollTabs(-1)">◀</button>
+                <div id="app-tabs-bar" class="app-tabs-bar">
+                    <!-- Zavihki se bodo naložili dinamično -->
+                </div>
+                <button id="tabs-scroll-right" class="tabs-scroll-btn" onclick="window.scrollTabs(1)">▶</button>
+            </div>
+            
+            <div class="header-tools-inline">
+                <h2 id="module-title" style="display: none;"></h2>
+                <div id="company-switcher-container">
+                    <select id="company-switcher" onchange="window.switchCompany(this.value)">
+                        <option value="">Nalagam podjetja...</option>
+                    </select>
+                </div>
+                <button class="gear-btn" title="Nastavitve" onclick="showModule('nastavitve')">⚙️</button>
+            </div>
         </header>
         <main id="app-content">
             <!-- Vsebina se bo naložila tukaj -->
@@ -325,6 +347,6 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/sl.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=2026060312"></script>
 </body>
 </html>

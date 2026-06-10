@@ -88,17 +88,17 @@ def extract_text_from_image(img_source):
 def find_total(text):
     """Extract the final payable total from various patterns."""
     patterns = [
-        r'(?:ZNESEK ZA PLA[ČC]ILO|SKUPAJ ZA PLA[ČC]ILO|ZA PLA[ČC]ILO EUR|ZA PLACILO\s*(?:EUR)?)\s*[:\*\'\s\~-]*\s*(?:EUR|\$|USD|CHF)?\s*([\d\s]+[,.]\d{2})',
+        r'(?:ZNESEK ZA PLA[ČCT]ILO|SKUPAJ ZA PLA[ČCT]ILO|ZA PLA[ČCT]ILO EUR|ZA PLA[CČT]ILO\s*(?:EUR)?)\s*[:\*\'\s\~-]*\s*(?:EUR|\$|USD|CHF)?\s*([\d\s]+[,.]\d{2})',
         r'(?:TOTAL AMOUNT|AMOUNT DUE|Total amount due|Total incl\.? tax)\s*[:\*]?\s*(?:EUR|USD|\$|CHF)?\s*([\d\s]+[,.]\d{2})',
-        r'(?:N ZA PLA ILO|ZA PLACILO)\s*EUR\s*([\d\s]+[,.]\d{2})',
+        r'(?:N ZA PLA ILO|ZA PLACILO|ZA PLATILO)\s*EUR\s*([\d\s]+[,.]\d{2})',
         r'(?:SKUPAJ RA[CČ]UN EUR|SKUPAJ RACUN EUR|Skupaj EUR z DDV|Skupaj z DDV)\s*[:\s\~-]*([\d\s]+[,.]\d{2})',
-        r'(?:Skupaj za pla[čc]ilo|Skupaj za placilo)\s*(?:EUR)?\s*[:\*]?\s*(?:EUR)?\s*([\d\s]+[,.]\d{2})',
+        r'(?:Skupaj za pla[čct]ilo|Skupaj za placilo)\s*(?:EUR)?\s*[:\*]?\s*(?:EUR)?\s*([\d\s]+[,.]\d{2})',
         r'(?:Skupni znesek|Invoice Amount)\s*[:\s]*(?:v\s*valuti\s*)?(?:EUR|€|\$|USD)?\s*([\d\s]+[,.]\d{2})\s*(?:EUR|€|\$)?',
         r'Total\s*[\$€]([\d,. ]+)',
-        r'(?:Za placilo EUR|ZA PLACILO:? EUR)\s*[:\'\s\~-]*([\d\s]+[,.]\d{2})',
+        r'(?:Za pla[cčt]ilo EUR|ZA PLA[CČT]ILO:? EUR)\s*[:\'\s\~-]*([\d\s]+[,.]\d{2})',
         r'(?:Vmesna vsota|Gesamtbetrag)\s*[:\s]*(?:US\s*\$|EUR|€)?\s*([\d\s]+[,.]\d{2})',
-        r'(?:SKUPAJ ZA PLACILO|SKUPAJ ZA PLA[ČC]ILO)\s*[?\€]?\s*[:\s\~-]*([\d,. ]+)',
-        r'(?:Znesek za pla[cč] ilo|Znesek za placilo)\s*([\d\s]+[,.]\d{2})',
+        r'(?:SKUPAJ ZA PLA[CČT]ILO|SKUPAJ ZA PLA[ČC]ILO)\s*[?\€]?\s*[:\s\~-]*([\d,. ]+)',
+        r'(?:Znesek za pla[cčt] ilo|Znesek za placilo)\s*([\d\s]+[,.]\d{2})',
         r'znesek\s*([\d,.]+)\s*[€\w]*\s*poravnate',
         r'(?:Total|TOTAL)\s*(?:EUR|€)?\s*\n?\s*([\d]+[,.]\d{2})\s*(?:EUR|€)',
         r'(?:SKUPAJ|Skupaj)\s*(?:EUR)?\s*[:\*]?\s*([\d\s]+[,.]\d{2})\s*(?:EUR|€)',
@@ -180,13 +180,13 @@ def find_partner(text):
             return partner_name, "SI" + tax_id_key
 
     # 1. Try to find "ID za DDV: SIxxxxxxxx" that is NOT buyer
-    ddv_matches = re.finditer(r'(?:ID\s*(?:za\s*)?DDV|VAT\s*(?:Reg\s*#|no\.?|Registration)|Identifikacijska\s*(?:oznaka|številka|stevilka)(?:\s+za\s+DDV)?)\s*[:\s\$]*(?:SI|S1|\$1)?\s*([A-Z]{0,2}\d{6,12})', text, re.IGNORECASE)
+    ddv_matches = re.finditer(r'(?:ID\s*(?:za\s*)?DDV|VAT\s*(?:Reg\s*#|no\.?|Registration)|Identifikacijska\s*(?:oznaka|številka|stevilka)(?:\s+za\s+DDV)?)\s*[:\s]*(?:SI|S1|\$1|\$)?\s*([A-Z]{0,2}\d{6,12})', text, re.IGNORECASE)
     for m in ddv_matches:
         raw = m.group(1).strip()
         digits = re.sub(r'[^\d]', '', raw)
         
         # Preveri, da to ni kupčeva davčna (Miha Kadiš)
-        if digits not in BUYER_TAX_IDS:
+        if digits not in BUYER_IDS:
             tax_id = "SI" + digits if not raw.upper().startswith('SI') and len(digits) == 8 else raw
             break
 
@@ -210,9 +210,9 @@ def find_partner(text):
 
     if not name:
         # Look for d.o.o., d.d., s.p. etc in first 20 lines but not buyer
-        company_pat = re.compile(r'^(.{5,60}(?:d\.o\.o|d\.d\.|s\.p\.|LLC|Ltd|GmbH|Limited|Inc\.?)[,.]?[^\n]{0,20})$', re.IGNORECASE | re.MULTILINE)
+        company_pat = re.compile(r'^(.{5,60}(?:d\.o\.[o0]|d\.d\.|s\.p\.|LLC|Ltd|GmbH|Limited|Inc\.?)[,.]?[^\n]{0,20})$', re.IGNORECASE | re.MULTILINE)
         for m in company_pat.finditer(top_text):
-            cand = m.group(1).strip().rstrip('.,') 
+            cand = m.group(1).strip().rstrip('.,| ') 
             if not any(b in cand.lower() for b in BUYER_NAMES) and len(cand) > 5:
                 name = cand
                 break
@@ -224,6 +224,9 @@ def find_partner(text):
             low = line.lower()
             if len(line) > 4 and not any(b in low for b in BUYER_NAMES) and low.strip() not in skip:
                 if not re.match(r'^[\d\s\.,]+$', line) and 'kupec' not in low and not low.startswith('stran '):
+                    # Skip lines with too many special chars or OCR junk
+                    if len(re.findall(r'[\~\|\*#]', line)) > 1:
+                        continue
                     name = line
                     break
 
@@ -326,10 +329,19 @@ def find_line_items(text):
         re.UNICODE
     )
 
-    # Format 2: Simple SLO format "Poz Opis Kol EM Cena R% DDV% Vrednost"
+    # Format 2: Simple SLO format "Poz Opis Kol EM Cena R% DDV% Vrednost" or with separate DDV amount
     # e-racuni, Vanc, eBull style
+    # Supports "1. 004897 ZVOČNIKI-PIONEER 1 kos 42,99 11,61 22 6,85 38,00" (9 columns)
+    # or "1. 004897 ZVOČNIKI-PIONEER 1 kos 31,15 11,61 22 38,00" (8 columns)
     slo_simple = re.compile(
-        r'^(\d+)\s+(.+?)\s+([\d,.]+)\s+(kos|mes\.|uro|kpl|h|kg|m|EN)\s+([\d,.]+)\s+([\d,.]*)\s+(\d+(?:[,.]\d+)?)\s+([\d,.]+)',
+        r'^(?:\d+\.?\s+)?(.+?)\s+([\d,.]+)\s+(kos|mes\.|uro|kpl|h|kg|m|M2|TM|OBR|EN|com|p\.)\s+([\d,.]+)\s+([\d,.]*)\s+(\d+(?:[,.]\d+)?)\s+([\d,.]+)(?:\s+([\d,.]+))?$',
+        re.IGNORECASE
+    )
+
+    # Format 2b: Simple SLO format WITHOUT popust (3 columns: cena, ddv%, skupaj)
+    # Gombac style: "Opis  3,00  M  1,113  22,00  3,34"
+    slo_no_popust = re.compile(
+        r'^(?:\d+\.?\s+)?(.+?)\s+([\d,.]+)\s+(kos|mes\.|uro|kpl|h|kg|m|M2|TM|OBR|EN|com|p\.)\s+([\d,.]+)\s+(\d+(?:[,.]\d+)?)\s+([\d,.]+)$',
         re.IGNORECASE
     )
 
@@ -368,20 +380,51 @@ def find_line_items(text):
         m = slo_simple.match(line)
         if m:
             g = m.groups()
-            kol = clean_number(g[2])
-            cena = clean_number(g[4])
-            ddv = clean_number(g[6])
-            total = clean_number(g[7])
+            opis = g[0].strip()
+            kol = clean_number(g[1])
+            em = g[2].lower()
+            cena = clean_number(g[3])
+            popust = clean_number(g[4])
+            ddv = clean_number(g[5])
+            
+            # If 8th group is matched, then g[6] is ddv_znesek and g[7] is total_gross
+            if len(g) > 7 and g[7] is not None:
+                total = clean_number(g[7])
+            else:
+                total = clean_number(g[6])
+                
             if total == 0:
                 total = round(kol * cena * (1 + ddv/100), 2)
             items.append({
-                'opis': g[1].strip(), 'kolicina': kol, 'enota_mere': g[3].lower(),
-                'cena_enote': cena, 'popust': clean_number(g[5]),
+                'opis': opis, 'kolicina': kol, 'enota_mere': em,
+                'cena_enote': cena, 'popust': popust,
                 'stopnja_ddv': ddv, 'znesek_skupaj': total
             })
 
     if items:
         return items
+
+    # Try simple SLO NO POPUST
+    for line in lines:
+        m = slo_no_popust.match(line)
+        if m:
+            g = m.groups()
+            kol = clean_number(g[1])
+            cena = clean_number(g[3])
+            ddv = clean_number(g[4])
+            total = clean_number(g[5])
+            
+            # If total is net (kol * cena), convert to gross
+            if total > 0 and abs(total - (kol * cena)) < 0.05:
+                total = round(total * (1 + ddv/100), 2)
+            elif total == 0:
+                total = round(kol * cena * (1 + ddv/100), 2)
+                
+            items.append({
+                'opis': g[0].strip(), 'kolicina': kol, 'enota_mere': g[2].lower(),
+                'cena_enote': cena, 'popust': 0.0,
+                'stopnja_ddv': ddv, 'znesek_skupaj': total
+            })
 
     # Try Bauhaus
     for line in lines:
@@ -688,6 +731,251 @@ def fix_soncek_data(data, text, filename=""):
         data["znesek_brez_ddv"] = total_net
         
     return data
+
+def _is_sp_document(filename, text):
+    """Preveri ali je dokument Razdelilnik stroškov Stanovanjskega podjetja."""
+    fn_lower = filename.lower()
+    if fn_lower.startswith('sp ') or fn_lower.startswith('sp_'):
+        return True
+    if 'stanovanjsko podjetje' in text.lower():
+        return True
+    if 'razdelilnik stroškov' in text.lower() or 'razdelilnik stroskov' in text.lower():
+        return True
+    return False
+
+
+def _is_credit_note(filename, text):
+    """Preveri ali je dokument dobropis (credit note)."""
+    fn_lower = filename.lower()
+    if 'dobropis' in fn_lower or 'credit_note' in fn_lower or 'creditnote' in fn_lower:
+        return True
+    if re.search(r'Dobropis\s+(?:[\u0160S]t|No)\.?\s+[A-Z0-9]', text, re.IGNORECASE):
+        return True
+    if re.search(r'credit\s+note', text, re.IGNORECASE):
+        return True
+    return False
+
+
+def fix_credit_note_data(data, text, filename=""):
+    """Post-procesor za dobropise: popravi stevilko, vezni racun in zneske."""
+    # 1. Stevilka dobropisa (npr. 'Dobropis St. C10000982776')
+    m_st = re.search(r'Dobropis\s+[S\u0160]t\.?\s+([A-Z0-9][\w\-]{2,20})', text, re.IGNORECASE)
+    if m_st:
+        data['stevilka'] = m_st.group(1).strip()
+
+    # 2. Vezni racun (originalni racun, na katerega se dobropis nanasa)
+    m_vezni = re.search(r'VEZNI\s+RA[C\u010c]UN\s*[:\s]+([\d\w\-]{5,25})', text, re.IGNORECASE)
+    if m_vezni:
+        data['vezni_racun'] = m_vezni.group(1).strip()
+    elif not data.get('vezni_racun'):
+        data['vezni_racun'] = ''
+
+    # 3. Skupaj (Skupaj XXX,XX)
+    m_skupaj = re.search(r'Skupaj\s+([\d.]+[,][\d]{2}|[\d]+[.][\d]{2})', text, re.IGNORECASE)
+    if m_skupaj:
+        val = clean_number(m_skupaj.group(1))
+        if val > 0:
+            data['znesek_skupaj'] = val
+
+    # 4. Brez DDV (Vrednost brez DDV XXX,XX)
+    m_neto = re.search(r'Vrednost\s+brez\s+DDV\s+([\d.,]+)', text, re.IGNORECASE)
+    if m_neto:
+        data['znesek_brez_ddv'] = clean_number(m_neto.group(1))
+
+    # 5. Znesek DDV
+    m_ddv_zn = re.search(r'DDV\s+([\d.,]+)\s*\n\s*([\d.,]+)', text, re.IGNORECASE)
+    if m_ddv_zn:
+        v = clean_number(m_ddv_zn.group(2))
+        if v > 0:
+            data['znesek_ddv'] = v
+    if not data.get('znesek_ddv') and data.get('znesek_skupaj') and data.get('znesek_brez_ddv'):
+        data['znesek_ddv'] = round(data['znesek_skupaj'] - data['znesek_brez_ddv'], 2)
+
+    # 6. Postavke: 'Naziv  Neto  DDV_zn  Skupaj' format
+    if not data.get('postavke') or all(float(p.get('znesek_skupaj') or 0) == 0 for p in data.get('postavke', [])):
+        item_pat = re.compile(
+            r'^([A-Za-z\u010d\u0161\u017e\u010c\u0160\u017d][A-Za-z\u010d\u0161\u017e\u010c\u0160\u017d\s]+?)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s*$',
+            re.MULTILINE
+        )
+        items = []
+        for mat in item_pat.finditer(text):
+            opis, neto_s, ddv_s, skupaj_s = mat.groups()
+            opis = opis.strip()
+            if any(k in opis.lower() for k in ['ddv', 'vrednost', 'skupaj', 'neto']):
+                continue
+            neto_v = clean_number(neto_s)
+            ddv_v = clean_number(ddv_s)
+            sk_v = clean_number(skupaj_s)
+            if sk_v > 0 and neto_v > 0 and len(opis) > 2:
+                ddv_rate = round(ddv_v / neto_v * 100) if neto_v > 0 else 22.0
+                items.append({
+                    'opis': opis,
+                    'kolicina': 1.0,
+                    'enota_mere': 'kos',
+                    'cena_enote': neto_v,
+                    'popust': 0.0,
+                    'stopnja_ddv': float(ddv_rate),
+                    'znesek_skupaj': sk_v
+                })
+        if items:
+            data['postavke'] = items
+
+    return data
+
+
+def fix_sp_data(data, text, filename=""):
+    """
+    Deterministična funkcija za branje Razdelilnikov stroškov Stanovanjskega podjetja d.o.o.
+    Dokument vsebuje 'Razdelilnik stroškov št. XXXXXXXXXX' in skupni znesek '***X.XXX,XX'.
+    """
+    import re
+
+    # 1. Partner - vedno Stanovanjsko podjetje d.o.o.
+    if "partner" not in data:
+        data["partner"] = {}
+    data["partner"]["naziv"] = "STANOVANJSKO PODJETJE D.O.O."
+    data["partner"]["davcna_stevilka"] = "SI42865409"
+    data["partner"]["trr"] = "SI56 6100 0000 5443 696"
+    data["partner"]["drzava"] = "Slovenija"
+
+    # 2. Stevilka - iz 'Razdelilnik št. : XXXXXXXXXX' ali iz 'Razdelilnik stroškov št. XXXXXXXXXX'
+    m_st = re.search(r'Razdelilnik\s+(?:stroškov\s+)?št\.?\s*[:\s]+([\d]+)', text, re.IGNORECASE)
+    if m_st:
+        data["stevilka"] = m_st.group(1).strip()
+
+    # 3. Sklic - iz 'Referenca za plačilo : SI12 XXXXXXXXXX'
+    m_sklic = re.search(r'Referenca\s+za\s+pla[cč]ilo\s*[:\s]+(SI\d{2}\s*[\d\s]+)', text, re.IGNORECASE)
+    if m_sklic:
+        data["sklic"] = re.sub(r'\s+', ' ', m_sklic.group(1).strip())
+    else:
+        # Fallback: SI12 + stevilka
+        m_sklic2 = re.search(r'\b(SI12\s+[\d]+)\b', text)
+        if m_sklic2:
+            data["sklic"] = m_sklic2.group(1).strip()
+
+    # 4. Datum izdaje - labela je 'Kraj izdaje : Datum dokumenta:' in vrednost je NA NASLEDNJI VRSTICI
+    # Vrstica: 'RAVNE NA KOROŠKEM 9.1.2026'
+    m_datum = re.search(r'Datum\s+dokumenta[:\s]*\n.*?(\b\d{1,2}\.\d{1,2}\.\d{4}\b)', text, re.IGNORECASE)
+    if m_datum:
+        data["datum_izdaje"] = parse_date(m_datum.group(1))
+    else:
+        # Fallback: direktno v isti vrstici
+        m_datum2 = re.search(r'Datum\s+dokumenta[:\s]+(\b\d{1,2}\.\d{1,2}\.\d{4}\b)', text, re.IGNORECASE)
+        if m_datum2:
+            data["datum_izdaje"] = parse_date(m_datum2.group(1))
+
+    # 5. Datum valute (zapadlosti) - labela 'Datum valute : IBAN :' in vrednost NA NASLEDNJI VRSTICI
+    # Vrstica: '2390 RAVNE NA KOROŠKEM 30.1.2026 SI56 6100 0000 5443 696'
+    m_valuta = re.search(r'Datum\s+valute[^\n]*\n.*?(\b\d{1,2}\.\d{1,2}\.\d{4}\b)', text, re.IGNORECASE)
+    if m_valuta:
+        data["datum_zapadlosti"] = parse_date(m_valuta.group(1))
+    else:
+        m_valuta2 = re.search(r'Datum\s+valute\s*[:\s]+(\b\d{1,2}\.\d{1,2}\.\d{4}\b)', text, re.IGNORECASE)
+        if m_valuta2:
+            data["datum_zapadlosti"] = parse_date(m_valuta2.group(1))
+
+    # 6. Obracunsko obdobje - labela 'Šifra plačnika : Obračun :' in vrednost NA NASLEDNJI VRSTICI
+    # Vrstica: '222540 1 01/2026'
+    m_obr = re.search(r'Obra[cč]un\s*[:\s]*\n[^\n]*?\b(\d{1,2})/(\d{4})\b', text, re.IGNORECASE)
+    if m_obr:
+        month_str = m_obr.group(1).zfill(2)
+        year_str = m_obr.group(2)
+        import calendar
+        last_day = calendar.monthrange(int(year_str), int(month_str))[1]
+        data["datum_storitve_od"] = f"{year_str}-{month_str}-01"
+        data["datum_storitve_do"] = f"{year_str}-{month_str}-{last_day:02d}"
+    else:
+        # Fallback: ista vrstica ali splošni vzorec
+        m_obr2 = re.search(r'\b(\d{2})/(\d{4})\b', text)
+        if m_obr2:
+            month_str = m_obr2.group(1).zfill(2)
+            year_str = m_obr2.group(2)
+            import calendar
+            last_day = calendar.monthrange(int(year_str), int(month_str))[1]
+            data["datum_storitve_od"] = f"{year_str}-{month_str}-01"
+            data["datum_storitve_do"] = f"{year_str}-{month_str}-{last_day:02d}"
+        else:
+            data["datum_storitve_od"] = data.get("datum_izdaje", "")
+            data["datum_storitve_do"] = data.get("datum_zapadlosti", data.get("datum_izdaje", ""))
+
+    # 7. Skupni znesek - iz '***X.XXX,XX' ali 'Skupni znesek za plačilo : X.XXX,XX €'
+    m_total = re.search(r'Skupni\s+znesek\s+za\s+pla[cč]ilo\s*[:\s]*([\d.,]+)\s*[€]?', text, re.IGNORECASE)
+    if m_total:
+        data["znesek_skupaj"] = clean_number(m_total.group(1))
+    else:
+        # Fallback: ***X.XXX,XX
+        m_total2 = re.search(r'\*{2,3}([\d.]+,[\d]{2})', text)
+        if m_total2:
+            data["znesek_skupaj"] = clean_number(m_total2.group(1))
+
+    # 8. DDV rekapitulacija - 'Stroški DDV skupaj : XX,XX €'
+    m_ddv = re.search(r'Stro[sš]ki\s+DDV\s+skupaj\s*[:\s]*([\d.,]+)\s*[€]?', text, re.IGNORECASE)
+    if m_ddv:
+        data["znesek_ddv"] = clean_number(m_ddv.group(1))
+    else:
+        # Fallback iz zadnje vrstice 'Vse skupaj: OSNOVA DDV SKUPAJ'
+        m_ddv2 = re.search(r'Vse\s+skupaj\s*[:\s]*[\d.,]+\s+([\d.,]+)\s+[\d.,]+', text, re.IGNORECASE)
+        if m_ddv2:
+            data["znesek_ddv"] = clean_number(m_ddv2.group(1))
+
+    # 9. Osnova brez DDV
+    m_osnova = re.search(r'Osnova\s+za\s+DDV\s*[:\s]*([\d.,]+)\s*[€]?', text, re.IGNORECASE)
+    if m_osnova:
+        data["znesek_brez_ddv"] = clean_number(m_osnova.group(1))
+    elif data["znesek_skupaj"] > 0 and data.get("znesek_ddv", 0) > 0:
+        data["znesek_brez_ddv"] = round(data["znesek_skupaj"] - data["znesek_ddv"], 2)
+
+    # 10. Postavke - preberi posamezne vrste stroškov (podpostavke)
+    postavke = []
+    lines = text.split('\n')
+    current_vrsta = None
+    # Regex za številčno vrstico: npr. '1.777,81 znesek/porab.števcev 6,8552 100,0000 17,7781 99,8957 22,00 % 21,9771 121,8728'
+    num_pat = re.compile(
+        r'^([\d.,]+)\s+([a-zA-ZčžšČŽŠ*./\s-]+?)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s*%\s+([\d.,]+)\s+([\d.,]+)$'
+    )
+    for line in lines:
+        line_s = line.strip()
+        if not line_s:
+            continue
+        m_vrsta = re.search(r'Vrsta\s+stro[sš]ka\s*:\s*\d+\s+(.+)', line_s, re.IGNORECASE)
+        if m_vrsta:
+            current_vrsta = m_vrsta.group(1).strip()
+            continue
+        
+        m_nums = num_pat.match(line_s)
+        if m_nums:
+            _, _, _, _, _, osnova_str, ddv_pct_str, _, skupaj_str = m_nums.groups()
+            osnova = clean_number(osnova_str)
+            ddv_stopnja = clean_number(ddv_pct_str)
+            skupaj = clean_number(skupaj_str)
+            
+            opis = current_vrsta if current_vrsta else "Stroški"
+            postavke.append({
+                "opis": opis,
+                "kolicina": 1.0,
+                "enota_mere": "kos",
+                "cena_enote": osnova,
+                "popust": 0.0,
+                "stopnja_ddv": ddv_stopnja,
+                "znesek_skupaj": skupaj
+            })
+
+    if postavke:
+        data["postavke"] = postavke
+    elif data["znesek_skupaj"] > 0 and not data.get("postavke"):
+        # Fallback: ena postavka z upravljanjem
+        data["postavke"] = [{
+            "opis": "Stroški upravljanja in skupnih storitev",
+            "kolicina": 1.0,
+            "enota_mere": "kos",
+            "cena_enote": data.get("znesek_brez_ddv", data["znesek_skupaj"]),
+            "popust": 0.0,
+            "stopnja_ddv": 22.0,
+            "znesek_skupaj": data["znesek_skupaj"]
+        }]
+
+    return data
+
 
 def fix_inpos_data(data, text, filename=""):
     """
@@ -1084,6 +1372,28 @@ If the filename contains "inpos" or the supplier is "INPOS":
    - "popust" is the discount percentage. Note that OCR might read it as "800" (meaning 8.0%) or "20,00" (meaning 20.0%). If it is a multiple of 100 like "800" or "2000" and has no decimal points, divide it by 100 to get the correct percentage (e.g. 8.0 or 20.0). If it is "20,00" or "20", it is 20.0%.
    - "znesek_skupaj" MUST be the concluding value in the row which represents the value WITH tax/VAT (e.g. "17.75" or "9.75"). Do NOT use the value without VAT (like "14.55" or "7.99") for "znesek_skupaj"!
 
+SPECIFIC RULES FOR "STANOVANJSKO PODJETJE" / "SP" RAZDELILNIK DOCUMENTS:
+If the text contains "Razdelilnik stroškov" or "STANOVANJSKO PODJETJE" or the filename starts with "SP ":
+1. The supplier is ALWAYS "STANOVANJSKO PODJETJE D.O.O." with tax ID "SI42865409" and IBAN "SI56 6100 0000 5443 696".
+2. The invoice/document number ("stevilka") is the number after "Razdelilnik št. :" (e.g. "2097826011015"). Do NOT use the filename number.
+3. The payment reference ("sklic") is found after "Referenca za plačilo :" (e.g. "SI12 2097826011015").
+4. "datum_izdaje" is after "Datum dokumenta:" (e.g. "9.1.2026" → "2026-01-09").
+5. "datum_zapadlosti" is after "Datum valute :" (e.g. "30.1.2026" → "2026-01-30").
+6. The service period comes from "Obračun : 1 MM/YYYY" (e.g. "01/2026" → datum_storitve_od="2026-01-01", datum_storitve_do="2026-01-31").
+7. The total amount ("znesek_skupaj") is shown as "Skupni znesek za plačilo : X.XXX,XX €" or as "***X.XXX,XX" in the payment slip.
+8. "znesek_ddv" comes from "Stroški DDV skupaj : XX,XX €".
+9. "znesek_brez_ddv" comes from "Osnova za DDV : X.XXX,XX €".
+10. For line items, extract the individual sub-items (podpostavke) associated with each "Vrsta stroška". For each sub-item row (which starts with a decimal number, contains unit text, and ends with: osnova, ddv_percent %, ddv_znesek, skupaj), create a line item with "opis" set to the "Vrsta stroška" name, "kolicina" set to 1.0, "cena_enote" set to the net base amount (osnova), "stopnja_ddv" set to the VAT rate, and "znesek_skupaj" set to the gross amount (skupaj).
+
+SPECIFIC RULES FOR CREDIT NOTES (DOBROPISI):
+If the text contains "Dobropis" or "credit note":
+1. The document number ("stevilka") is the number/code after "Dobropis Št." or "Dobropis St." (e.g. "C10000982776"). Do NOT use the "Vezni račun" number as the document number!
+2. Extract the "vezni_racun" field from "VEZNI RACUN:" (the original invoice this credit note refers to, e.g. "2602011739412").
+3. "znesek_skupaj" comes from "Skupaj" (e.g. "131,26" → 131.26).
+4. "znesek_brez_ddv" comes from "Vrednost brez DDV" (e.g. "107,59" → 107.59).
+5. Line items have format: "Description  NotoAmount  DDVAmount  TotalAmount" (e.g. "Storno računa  107,59  23,67  131,26").
+6. Include "vezni_racun" as an extra field in the returned JSON.
+
 Return ONLY a valid JSON object matching this schema:
 {{
   "stevilka": "Invoice number (string, e.g. '26-0B42-0000110'). DO NOT use '2602011739412' unless it is actually in the text.",
@@ -1181,8 +1491,75 @@ Here is the invoice text:
         parsed = fix_inpos_data(parsed, text, filename)
     elif "soncek" in filename.lower() or "sonček" in filename.lower() or "soncek" in str(p.get("naziv", "")).lower() or "sonček" in str(p.get("naziv", "")).lower():
         parsed = fix_soncek_data(parsed, text, filename)
+    elif (_is_sp_document(filename, text)):
+        parsed = fix_sp_data(parsed, text, filename)
+    if _is_credit_note(filename, text):
+        parsed = fix_credit_note_data(parsed, text, filename)
         
     return parsed
+
+
+def post_process_invoice_data(data):
+    if not data:
+        return data
+        
+    postavke = data.get("postavke", [])
+    if postavke:
+        for p in postavke:
+            try:
+                kol = float(p.get("kolicina") or 1.0)
+                cena = float(p.get("cena_enote") or 0.0)
+                ddv_p = float(p.get("stopnja_ddv") or 22.0)
+                sk = float(p.get("znesek_skupaj") or 0.0)
+                pop = float(p.get("popust") or 0.0)
+                
+                if sk <= 0 or cena <= 0 or kol <= 0:
+                    continue
+                
+                # Preveri če je popust podan kot znesek popusta (negativen ali enak razliki)
+                gross_before = cena * kol
+                gross_diff = gross_before - sk
+                
+                # Če je popust v EUR (npr. -4.99 ali 4.99)
+                if pop < 0 or abs(pop - gross_diff) < 0.1:
+                    pop_val = abs(pop) if pop < 0 else gross_diff
+                    if gross_before > 0:
+                        pop = round((pop_val / gross_before) * 100, 2)
+                        p["popust"] = pop
+                
+                # Zdaj preveri če je cena bruto (MPC) ali neto
+                calc_net = cena * kol * (1 - pop / 100)
+                calc_gross = calc_net * (1 + ddv_p / 100)
+                
+                # Če se ujema bruto izračun (skupaj = cena * kol * (1-pop/100))
+                if abs(calc_net - sk) < 0.05:
+                    # Cena je bila bruto (MPC)!
+                    # Cena brez DDV = cena / (1 + DDV/100)
+                    cena_neto = round(cena / (1 + ddv_p / 100), 4)
+                    p["cena_enote"] = cena_neto
+            except Exception as e:
+                print(f"Error post-processing item: {e}")
+                
+    # Recalculate invoice-level totals if they are missing or zero
+    try:
+        z_skupaj = float(data.get("znesek_skupaj") or 0.0)
+        if z_skupaj <= 0.01 and postavke:
+            z_skupaj = round(sum(float(p.get("znesek_skupaj") or 0.0) for p in postavke), 2)
+            data["znesek_skupaj"] = z_skupaj
+            
+        z_ddv = float(data.get("znesek_ddv") or 0.0)
+        if z_ddv <= 0.01 and postavke:
+            z_ddv = round(sum(float(p.get("znesek_skupaj") or 0.0) * (float(p.get("stopnja_ddv") or 22.0) / (100 + float(p.get("stopnja_ddv") or 22.0))) for p in postavke), 2)
+            data["znesek_ddv"] = z_ddv
+            
+        z_brez = float(data.get("znesek_brez_ddv") or 0.0)
+        if z_brez <= 0.01 and z_skupaj > 0:
+            data["znesek_brez_ddv"] = round(z_skupaj - z_ddv, 2)
+    except Exception as e:
+        print(f"Error recalculating totals: {e}")
+        
+    return data
+
 
 def process_invoice_data(source, filename):
     ext = os.path.splitext(filename)[1].lower()
@@ -1193,11 +1570,48 @@ def process_invoice_data(source, filename):
     else:
         return None
         
+    # Za SP (Stanovanjsko podjetje) dokumente - preskoci Llamo, uporabi deterministicni parser
+    if _is_sp_document(filename, text):
+        data = {
+            "stevilka": "NEZNANA", "sklic": "",
+            "datum_izdaje": "", "datum_zapadlosti": "",
+            "datum_storitve_od": "", "datum_storitve_do": "",
+            "znesek_skupaj": 0.0, "znesek_ddv": 0.0, "znesek_brez_ddv": 0.0,
+            "partner": {"naziv": "Neznan Partner", "davcna_stevilka": "", "trr": "",
+                        "drzava": "Slovenija", "ulica": "", "kraj": "",
+                        "postna_stevilka": "", "tuji_partner_neprebran": False},
+            "postavke": []
+        }
+        data = fix_sp_data(data, text, filename)
+        p_info = data["partner"]
+        datum_od = data.get("datum_storitve_od", "") or data.get("datum_izdaje", "")
+        datum_do = data.get("datum_storitve_do", "") or datum_od
+        return {
+            'stevilka': data.get("stevilka", "NEZNANA"),
+            'sklic': data.get("sklic", ""),
+            'vezni_racun': data.get("vezni_racun", ""),
+            'datum_izdaje': data.get("datum_izdaje", ""),
+            'datum_zapadlosti': data.get("datum_zapadlosti", ""),
+            'datum_storitve': datum_od,
+            'datum_storitve_od': datum_od,
+            'datum_storitve_do': datum_do,
+            'partner': p_info,
+            'partner_naziv': p_info.get("naziv", ""),
+            'partner_davcna': p_info.get("davcna_stevilka", ""),
+            'partner_trr': p_info.get("trr", ""),
+            'znesek_skupaj': float(data.get("znesek_skupaj", 0.0)),
+            'znesek_brez_ddv': float(data.get("znesek_brez_ddv", 0.0)),
+            'znesek_ddv': float(data.get("znesek_ddv", 0.0)),
+            'postavke': data.get("postavke", []),
+            'ocr_text': text
+        }
+
     # Poskusi z Llama AI
     if ensure_ollama_running("llama3"):
         try:
             parsed = parse_with_llama(text, filename, "llama3")
             if parsed:
+                parsed = post_process_invoice_data(parsed)
                 partner_info = parsed.get("partner", {}) if isinstance(parsed.get("partner"), dict) else {}
                 partner_naziv = partner_info.get("naziv", "Neznan Partner")
                 partner_davcna = partner_info.get("davcna_stevilka", "")
@@ -1212,6 +1626,7 @@ def process_invoice_data(source, filename):
                 return {
                     'stevilka': parsed.get("stevilka", "NEZNANA"),
                     'sklic': parsed.get("sklic", ""),
+                    'vezni_racun': parsed.get("vezni_racun", ""),
                     'datum_izdaje': parsed.get("datum_izdaje", ""),
                     'datum_zapadlosti': parsed.get("datum_zapadlosti", ""),
                     'datum_storitve': datum_storitve_od,
@@ -1245,6 +1660,13 @@ def process_invoice_data(source, filename):
     res = parse_invoice_data(text)
     if isinstance(res, dict):
         res['ocr_text'] = text
+        # Za SP dokumente apliciraj deterministicni popravek
+        if _is_sp_document(filename, text):
+            res = fix_sp_data(res, text, filename)
+        if _is_credit_note(filename, text):
+            res = fix_credit_note_data(res, text, filename)
+        res = post_process_invoice_data(res)
+        
         # Regex extraction for sklic
         if 'sklic' not in res or not res['sklic']:
             res['sklic'] = find_sklic(text)

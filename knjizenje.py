@@ -281,8 +281,10 @@ def knjizi_placa(placa_id: int, temeljnica_id: int = None, novi_naziv: str = Non
             temeljnica_id = _ustvari_temeljnico_header(cursor, leto, 'PLA', stevilka, novi_naziv, "Obračun plač")
             
         if vrsta in ['sp_100', 'sp_50']:
-            # S.P. - Samo prispevki
+            # S.P. - Prispevki + morebitna malica in potni stroški
             znesek = p['znesek_skupaj']
+            potni = _get_znesek(p, 'potni_stroski')
+            malica = _get_znesek(p, 'malica')
             konto_pris = p['konto_prispevkov'] if p['konto_prispevkov'] else '265000'
             # V breme: izbrani konto ali 265000 (Prispevki nosilca s.p.)
             cursor.execute("""
@@ -294,15 +296,37 @@ def knjizi_placa(placa_id: int, temeljnica_id: int = None, novi_naziv: str = Non
                 INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
                 VALUES (?, '254', ?, 0, ?, ?, 'place')
             """, (temeljnica_id, f"Obveznost za prispevke {stevilka}", znesek, placa_id))
+            # V breme: 478 (Stroški povračil prevoza na delo)
+            if potni > 0:
+                cursor.execute("""
+                    INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                    VALUES (?, '478', ?, ?, 0, ?, 'place')
+                """, (temeljnica_id, f"Prevoz na delo s.p. {stevilka}", potni, placa_id))
+            # V breme: 477 (Stroški povračil prehrane)
+            if malica > 0:
+                cursor.execute("""
+                    INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                    VALUES (?, '477', ?, ?, 0, ?, 'place')
+                """, (temeljnica_id, f"Prehrana med delom s.p. {stevilka}", malica, placa_id))
+            # V dobro: 250 (Obveznosti za izplačilo malice in potnih stroškov)
+            if potni + malica > 0:
+                cursor.execute("""
+                    INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                    VALUES (?, '250', ?, 0, ?, ?, 'place')
+                """, (temeljnica_id, f"Izplačilo povračil s.p. {stevilka}", potni + malica, placa_id))
         else:
             # Klasična zaposlitev
             bruto = p['bruto_placa']
             dohodnina = p['znesek_akontacija_doh']
+            potni = _get_znesek(p, 'potni_stroski')
+            malica = _get_znesek(p, 'malica')
             # Prispevki (vsi prispevki skupaj)
             prispevki_skupaj = (p['znesek_piz'] or 0) + (p['znesek_zz'] or 0) + (p['znesek_zap'] or 0) + (p['znesek_starsevsko'] or 0) + (p['znesek_ozp'] or 0) + (p['znesek_do'] or 0)
             
             # Neto = Bruto - (vsi prispevki) - dohodnina
             neto = bruto - prispevki_skupaj - dohodnina
+            # Skupno izplačilo zaposlenemu vključuje neto plačo, malico in potne stroške
+            neto_izplacilo_skupaj = neto + potni + malica
             
             # V breme: 470 (Stroški plač)
             cursor.execute("""
@@ -310,11 +334,25 @@ def knjizi_placa(placa_id: int, temeljnica_id: int = None, novi_naziv: str = Non
                 VALUES (?, '470', ?, ?, 0, ?, 'place')
             """, (temeljnica_id, f"Bruto plača {stevilka}", bruto, placa_id))
             
-            # V dobro: 250 (Obveznosti za neto plače)
+            # V breme: 478 (Stroški povračil prevoza na delo)
+            if potni > 0:
+                cursor.execute("""
+                    INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                    VALUES (?, '478', ?, ?, 0, ?, 'place')
+                """, (temeljnica_id, f"Prevoz na delo {stevilka}", potni, placa_id))
+                
+            # V breme: 477 (Stroški povračil prehrane podjetjem)
+            if malica > 0:
+                cursor.execute("""
+                    INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                    VALUES (?, '477', ?, ?, 0, ?, 'place')
+                """, (temeljnica_id, f"Prehrana med delom {stevilka}", malica, placa_id))
+            
+            # V dobro: 250 (Obveznosti za neto plače - vključno s potnimi stroški in malico)
             cursor.execute("""
                 INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
                 VALUES (?, '250', ?, 0, ?, ?, 'place')
-            """, (temeljnica_id, f"Neto plača {stevilka}", neto, placa_id))
+            """, (temeljnica_id, f"Neto izplačilo {stevilka}", neto_izplacilo_skupaj, placa_id))
             
             # V dobro: 251 (Obveznosti za prispevke iz plač)
             if prispevki_skupaj > 0:

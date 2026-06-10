@@ -174,6 +174,8 @@ def init_db():
         znesek_ozp REAL,
         znesek_do REAL DEFAULT 0,
         znesek_akontacija_doh REAL,
+        potni_stroski REAL DEFAULT 0,
+        malica REAL DEFAULT 0,
         znesek_skupaj REAL,
         sklic TEXT,
         zapadlost DATE,
@@ -364,6 +366,10 @@ def init_db():
     # Migracija: Dodaj znesek_do (dolgotrajna oskrba) v place
     try: cursor.execute("ALTER TABLE place ADD COLUMN znesek_do REAL DEFAULT 0")
     except: pass
+    try: cursor.execute("ALTER TABLE place ADD COLUMN potni_stroski REAL DEFAULT 0")
+    except: pass
+    try: cursor.execute("ALTER TABLE place ADD COLUMN malica REAL DEFAULT 0")
+    except: pass
 
     # Migracije: Dodaj knjizeno status
     try: cursor.execute("ALTER TABLE dokumenti ADD COLUMN knjizeno BOOLEAN DEFAULT 0")
@@ -417,6 +423,59 @@ def init_db():
         cursor.execute("ALTER TABLE dokumenti ADD COLUMN sklic TEXT")
     except:
         pass
+
+    # Migracija: Kompenzacija - povezava na drug dokument
+    try:
+        cursor.execute("ALTER TABLE dokumenti ADD COLUMN kompenzacija_doc_id INTEGER")
+    except:
+        pass
+
+    # --- CRM NADGRADNJA ---
+    # 1. Razširitev tabele partnerji
+    try: cursor.execute("ALTER TABLE partnerji ADD COLUMN status TEXT DEFAULT 'Stranka'")
+    except: pass
+    try: cursor.execute("ALTER TABLE partnerji ADD COLUMN kategorija TEXT")
+    except: pass
+    try: cursor.execute("ALTER TABLE partnerji ADD COLUMN vir_stranke TEXT")
+    except: pass
+    try: cursor.execute("ALTER TABLE partnerji ADD COLUMN opombe TEXT")
+    except: pass
+
+    # 2. Nove CRM tabele
+    cursor.executescript("""
+    CREATE TABLE IF NOT EXISTS partner_kontakti (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        partner_id INTEGER NOT NULL,
+        ime_priimek TEXT NOT NULL,
+        oddelek TEXT,
+        funkcija TEXT,
+        email TEXT,
+        telefon TEXT,
+        primarni BOOLEAN DEFAULT 0,
+        FOREIGN KEY (partner_id) REFERENCES partnerji(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS partner_interakcije (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        partner_id INTEGER NOT NULL,
+        datum DATETIME DEFAULT CURRENT_TIMESTAMP,
+        tip TEXT NOT NULL, -- 'Klic', 'Sestanek', 'Email', 'Opomba'
+        vsebina TEXT,
+        naslednji_korak TEXT,
+        FOREIGN KEY (partner_id) REFERENCES partnerji(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS partner_opravila (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        partner_id INTEGER NOT NULL,
+        naslov TEXT NOT NULL,
+        opis TEXT,
+        rok DATE,
+        status TEXT DEFAULT 'Čaka', -- 'Čaka', 'V teku', 'Opravljeno', 'Preklicano'
+        prioriteta TEXT DEFAULT 'Srednja', -- 'Nizka', 'Srednja', 'Visoka'
+        FOREIGN KEY (partner_id) REFERENCES partnerji(id) ON DELETE CASCADE
+    );
+    """)
 
     try:
         cursor.execute("SELECT 1 FROM llama_settings WHERE kljuc = 'learning_mode'")

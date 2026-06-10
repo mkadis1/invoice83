@@ -1,5 +1,9 @@
-const contentDiv = document.getElementById('app-content');
+let contentDiv = document.getElementById('app-content');
 const titleEl = document.getElementById('module-title');
+
+// --- TAB SYSTEM STATE ---
+window.appTabs = [];
+window.activeTabId = null;
 
 // Startup Error Boundary
 window.onerror = function(msg, url, line, col, error) {
@@ -58,6 +62,197 @@ uiStyles.innerHTML = `
     @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 `;
 document.head.appendChild(uiStyles);
+
+// --- TAB SYSTEM FUNCTIONS ---
+window.createTab = function(moduleName, title, data = null) {
+    const tabId = moduleName + (data && data.id ? `_${data.id}` : '');
+    const existingTab = window.appTabs.find(t => t.id === tabId);
+    
+    if (existingTab) {
+        window.switchTab(tabId);
+        return;
+    }
+    
+    // Create new tab
+    const newTab = { id: tabId, module: moduleName, title: title, data: data };
+    window.appTabs.push(newTab);
+    
+    // Create container for tab content
+    const container = document.createElement('div');
+    container.id = `tab-content-${tabId}`;
+    container.className = 'tab-content-container';
+    document.getElementById('app-content').appendChild(container);
+    
+    window.renderTabsUI();
+    window.switchTab(tabId);
+    
+    // Render module content into container
+    window.renderModuleToContainer(moduleName, container, title, data);
+    window.saveTabsState();
+};
+
+window.switchTab = function(tabId) {
+    window.activeTabId = tabId;
+    
+    // UI update tabs
+    document.querySelectorAll('.app-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.id === tabId);
+    });
+    
+    // UI update content
+    document.querySelectorAll('.tab-content-container').forEach(c => {
+        c.classList.toggle('active', c.id === `tab-content-${tabId}`);
+    });
+    
+    window.renderTabsUI(); // To update active state in UI
+    window.saveTabsState();
+    
+    // Render if empty (restored from session)
+    const tab = window.appTabs.find(t => t.id === tabId);
+    const container = document.getElementById(`tab-content-${tabId}`);
+    if (tab && container && container.innerHTML === '') {
+        window.renderModuleToContainer(tab.module, container, tab.title, tab.data);
+    }
+    
+    // Scroll active tab into view
+    const activeTab = document.querySelector(`.app-tab[data-id="${tabId}"]`);
+    if (activeTab) activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+};
+
+window.closeTab = function(tabId, event) {
+    if (event) event.stopPropagation();
+    
+    const index = window.appTabs.findIndex(t => t.id === tabId);
+    if (index === -1) return;
+    
+    const closedTab = window.appTabs.splice(index, 1)[0];
+    const container = document.getElementById(`tab-content-${tabId}`);
+    if (container) container.remove();
+    
+    if (window.activeTabId === tabId) {
+        if (window.appTabs.length > 0) {
+            const nextTab = window.appTabs[Math.max(0, index - 1)];
+            window.switchTab(nextTab.id);
+        } else {
+            window.activeTabId = null;
+        }
+    }
+    
+    window.renderTabsUI();
+    window.saveTabsState();
+};
+
+window.saveTabsState = function() {
+    sessionStorage.setItem('appTabs', JSON.stringify(window.appTabs));
+    sessionStorage.setItem('activeTabId', window.activeTabId);
+};
+
+window.loadTabsState = function() {
+    const savedTabs = sessionStorage.getItem('appTabs');
+    const savedActiveId = sessionStorage.getItem('activeTabId');
+    
+    if (savedTabs && savedTabs !== '[]') {
+        try {
+            window.appTabs = JSON.parse(savedTabs);
+            window.activeTabId = savedActiveId;
+            
+            console.log("Obnavljam zavihke:", window.appTabs.length);
+            
+            const content = document.getElementById('app-content');
+            window.appTabs.forEach(tab => {
+                const container = document.createElement('div');
+                container.id = `tab-content-${tab.id}`;
+                container.className = 'tab-content-container';
+                if (tab.id === window.activeTabId) container.classList.add('active');
+                content.appendChild(container);
+            });
+            
+            window.renderTabsUI();
+            
+            if (window.activeTabId) {
+                const activeTab = window.appTabs.find(t => t.id === window.activeTabId);
+                if (activeTab) {
+                    const container = document.getElementById(`tab-content-${activeTab.id}`);
+                    window.renderModuleToContainer(activeTab.module, container, activeTab.title, activeTab.data);
+                }
+            }
+            return true;
+        } catch (e) {
+            console.error("Napaka pri branju stanja zavihkov:", e);
+            return false;
+        }
+    }
+    return false;
+};
+
+window.renderTabsUI = function() {
+    const bar = document.getElementById('app-tabs-bar');
+    if (!bar) return;
+    
+    bar.innerHTML = window.appTabs.map(tab => `
+        <div class="app-tab ${tab.id === window.activeTabId ? 'active' : ''}" 
+             data-id="${tab.id}" 
+             onclick="window.switchTab('${tab.id}')">
+            <span class="tab-title">${tab.title}</span>
+            <span class="close-tab" onclick="window.closeTab('${tab.id}', event)">×</span>
+        </div>
+    `).join('');
+
+    // Preveri overflow in prikaži/skrij puščice
+    setTimeout(() => {
+        const leftBtn = document.getElementById('tabs-scroll-left');
+        const rightBtn = document.getElementById('tabs-scroll-right');
+        if (leftBtn && rightBtn) {
+            const hasOverflow = bar.scrollWidth > bar.clientWidth;
+            leftBtn.style.display = hasOverflow ? 'block' : 'none';
+            rightBtn.style.display = hasOverflow ? 'block' : 'none';
+        }
+    }, 50);
+};
+
+window.scrollTabs = function(direction) {
+    const bar = document.getElementById('app-tabs-bar');
+    if (!bar) return;
+    bar.scrollBy({ left: direction * 200, behavior: 'smooth' });
+};
+
+window.renderModuleToContainer = async function(moduleName, container, title, data) {
+    const oldDiv = contentDiv;
+    contentDiv = container;
+    
+    try {
+        if (moduleName === 'dashboard') await renderDashboard();
+        else if (moduleName === 'partnerji') await renderPartnerji();
+        else if (moduleName === 'partner_edit' || moduleName === 'partner_new') await renderPartnerForm(data);
+        else if (moduleName === 'artikli_storitve') await renderArtikliStoritve();
+        else if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'prejeti_dobropisi', 'delovni_nalogi'].includes(moduleName)) {
+            await renderDokumenti(moduleName, title);
+        }
+        else if (moduleName === 'izpiski') await renderIzpiski();
+        else if (moduleName === 'glavna_knjiga') await renderGlavnaKnjiga();
+        else if (moduleName === 'osnovna_sredstva') await renderOsnovnaSredstva();
+        else if (moduleName === 'potni_nalogi') await renderPotniNalogi();
+        else if (moduleName === 'zaposleni') await window.renderZaposleni();
+        else if (moduleName === 'prispevki') await renderPlace();
+        else if (moduleName === 'konto_kartica') await renderKontoKartica();
+        else if (moduleName === 'nastavitve') await renderNastavitve();
+        else if (moduleName === 'help') await renderHelp();
+        else if (moduleName === 'zgodovina') { await renderHelp(); await window.renderHelpDetail('zgodovina'); }
+        else if (moduleName === 'financna_porocila') await renderFinancnaPorocila();
+        else if (moduleName === 'crm_dashboard') await renderCRM_Dashboard();
+        else if (moduleName === 'crm_kanal') await renderCRM_Kanal();
+        else if (moduleName === 'crm_aktivnosti') await renderCRM_Aktivnosti();
+        else if (moduleName === 'crm_interakcije') await renderCRM_Interakcije();
+    } finally {
+        // Obnovimo contentDiv, če smo še vedno v istem zavihku (preprečimo race condition)
+        const currentTabId = moduleName + (data && data.id ? `_${data.id}` : '');
+        if (window.activeTabId === currentTabId) {
+            contentDiv = container;
+        } else {
+            contentDiv = oldDiv;
+        }
+    }
+};
 
 // --- NAVIGATION ---
 window.toggleNavGroup = function(header) {
@@ -328,23 +523,13 @@ window.potrdiTemeljnicaPopup = function() {
     }
 };
 
-window.refreshCurrentModule = function(moduleOverride = null) {
-    const mod = moduleOverride || sessionStorage.getItem('activeModule') || window.appSelection.module;
-    if (mod === 'partnerji') renderPartnerji();
-    else if (mod === 'izpiski') renderIzpiski();
-    else if (mod === 'zaposleni') renderZaposleni();
-    else if (mod === 'potni_nalogi') renderPotniNalogi();
-    else if (mod === 'osnovna_sredstva') renderOsnovnaSredstva();
-    else if (mod === 'place') renderPlace();
-    else if (mod === 'konti') osveziKontiUI();
-    else if (mod === 'artikli_storitve') renderArtikliStoritve();
-    else if (mod === 'dashboard') renderDashboard();
-    else if (mod === 'glavna_knjiga') renderGlavnaKnjiga();
-    else if (mod === 'konto_kartica') renderKontoKartica();
-    else if (mod === 'help') renderHelp();
-    else if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'prejeti_dobropisi', 'delovni_nalogi'].includes(mod)) {
-        const titles = { 'izdani_racuni': 'Izdani računi', 'prejeti_racuni': 'Prejeti računi', 'ponudbe': 'Ponudbe', 'dobropisi': 'Dobropisi', 'prejeti_dobropisi': 'Prejeti dobropisi', 'delovni_nalogi': 'Delovni nalogi' };
-        renderDokumenti(mod, titles[mod]);
+window.refreshCurrentModule = function() {
+    const tab = window.appTabs.find(t => t.id === window.activeTabId);
+    if (tab) {
+        const container = document.getElementById(`tab-content-${tab.id}`);
+        if (container) {
+            window.renderModuleToContainer(tab.module, container, tab.title, tab.data);
+        }
     }
 };
 
@@ -556,11 +741,12 @@ function buildSplitViewHTML(formHtml, parentType, parentId) {
 }
 
 async function showModule(moduleName) {
-    document.getElementById('dokument-popup-overlay').style.display = 'none';
-    sessionStorage.setItem('activeModule', moduleName);
-    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+    const pOverlay = document.getElementById('partner-popup-overlay');
+    if (pOverlay) pOverlay.classList.remove('active');
+    const dOverlay = document.getElementById('dokument-popup-overlay');
+    if (dOverlay) dOverlay.style.display = 'none';
     
-    // Poskusimo najti povezavo, ki ustreza modulu, da jo označimo kot aktivno
+    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
     let linkToActivate = null;
     if (window.event && window.event.currentTarget && window.event.currentTarget.tagName === 'A') {
         linkToActivate = window.event.currentTarget;
@@ -570,69 +756,44 @@ async function showModule(moduleName) {
     
     if (linkToActivate) {
         linkToActivate.classList.add('active');
-        
-        // Samodejno razširi skupino, če je povezava znotraj nje
         const parentGroup = linkToActivate.closest('.nav-group');
         if (parentGroup) {
-            // Zapremo vse ostale (accordion efekt)
-            document.querySelectorAll('.nav-group').forEach(g => {
-                if (g !== parentGroup) g.classList.remove('open');
-            });
+            document.querySelectorAll('.nav-group').forEach(g => { if (g !== parentGroup) g.classList.remove('open'); });
             parentGroup.classList.add('open');
         } else {
-            // Če kliknemo na povezavo, ki ni v skupini (npr. Nadzorna plošča), zapremo vse skupine
             document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('open'));
         }
     }
 
-    if (moduleName === 'dashboard') {
-        titleEl.textContent = "Nadzorna plošča";
-        await renderDashboard();
-    } else if (moduleName === 'partnerji') {
-
-        titleEl.textContent = "Poslovni partnerji";
-        renderPartnerji();
-    } else if (moduleName === 'artikli_storitve') {
-        console.log("Preklapljam na modul artikli_storitve");
-        titleEl.textContent = "Artikli in storitve";
-        renderArtikliStoritve();
-    } else if (['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi', 'prejeti_dobropisi', 'delovni_nalogi'].includes(moduleName)) {
-        const titleMap = {
-            'izdani_racuni': 'Izdani računi',
-            'prejeti_racuni': 'Prejeti računi',
-            'ponudbe': 'Ponudbe',
-            'dobropisi': 'Dobropisi',
-            'prejeti_dobropisi': 'Prejeti dobropisi',
-            'delovni_nalogi': 'Delovni nalogi'
-        };
-        renderDokumenti(moduleName, titleMap[moduleName]);
-    } else if (moduleName === 'izpiski') {
-        renderIzpiski();
-    } else if (moduleName === 'glavna_knjiga') {
-        renderGlavnaKnjiga();
-    } else if (moduleName === 'osnovna_sredstva') {
-        renderOsnovnaSredstva();
-    } else if (moduleName === 'potni_nalogi') {
-        renderPotniNalogi();
-    } else if (moduleName === 'zaposleni') {
-        renderZaposleni();
-    } else if (moduleName === 'prispevki') {
-        renderPlace();
-    } else if (moduleName === 'konto_kartica') {
-        renderKontoKartica();
-    } else if (moduleName === 'nastavitve') {
-        renderNastavitve();
-    } else if (moduleName === 'help') {
-        renderHelp();
-    } else if (moduleName === 'zgodovina') {
-        await renderHelp();
-        window.renderHelpDetail('zgodovina');
-    } else if (moduleName === 'financna_porocila') {
-        renderFinancnaPorocila();
-    } else {
-        titleEl.textContent = "Neznano";
-        contentDiv.innerHTML = `<p>Modul še ni implementiran.</p>`;
-    }
+    const titleMap = {
+        'dashboard': 'Nadzorna plošča',
+        'partnerji': 'Poslovni partnerji',
+        'artikli_storitve': 'Artikli in storitve',
+        'izdani_racuni': 'Izdani računi',
+        'prejeti_racuni': 'Prejeti računi',
+        'ponudbe': 'Ponudbe',
+        'dobropisi': 'Dobropisi',
+        'prejeti_dobropisi': 'Prejeti dobropisi',
+        'delovni_nalogi': 'Delovni nalogi',
+        'izpiski': 'Bančni izpiski',
+        'glavna_knjiga': 'Glavna knjiga',
+        'osnovna_sredstva': 'Osnovna sredstva',
+        'potni_nalogi': 'Potni nalogi',
+        'zaposleni': 'Zaposleni',
+        'prispevki': 'Plače / Prispevki',
+        'konto_kartica': 'Iskanje po kontih',
+        'nastavitve': 'Nastavitve',
+        'help': 'Pomoč',
+        'zgodovina': 'Zgodovina sprememb',
+        'financna_porocila': 'Finančna poročila',
+        'crm_dashboard': 'CRM Nadzorna plošča',
+        'crm_kanal': 'Prodajni kanal',
+        'crm_aktivnosti': 'Aktivnosti',
+        'crm_interakcije': 'Interakcije'
+    };
+    
+    const title = titleMap[moduleName] || 'Invoice83';
+    window.createTab(moduleName, title);
 }
 
 // Osvežitev dashboarda ob spremembi poslovnega leta
@@ -1068,6 +1229,215 @@ async function renderPartnerji() {
         contentDiv.innerHTML = `<p style="color:red">Napaka pri nalaganju.</p>`;
     }
 }
+
+async function renderCRM_Dashboard() {
+    contentDiv.innerHTML = '<p style="padding:20px;">Nalagam CRM nadzorno ploščo...</p>';
+    try {
+        const [tasks, interactions, partners] = await Promise.all([
+            fetch('/api/crm/tasks').then(r => r.json()),
+            fetch('/api/crm/interactions').then(r => r.json()),
+            fetch('/api/partnerji').then(r => r.json())
+        ]);
+
+        const activeLeads = partners.filter(p => p.status === 'Lead' || p.status === 'Priložnost').length;
+        const pendingTasks = tasks.length;
+        const recentInteractions = interactions.length;
+
+        contentDiv.innerHTML = `
+            <div style="padding: 20px;">
+                <h2 style="margin-bottom: 25px; color: var(--primary-blue);">CRM Nadzorna plošča</h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div class="crm-stat-card">
+                        <div class="crm-stat-value">${activeLeads}</div>
+                        <div class="crm-stat-label">Aktivne priložnosti</div>
+                    </div>
+                    <div class="crm-stat-card">
+                        <div class="crm-stat-value">${pendingTasks}</div>
+                        <div class="crm-stat-label">Odprta opravila</div>
+                    </div>
+                    <div class="crm-stat-card">
+                        <div class="crm-stat-value">${recentInteractions}</div>
+                        <div class="crm-stat-label">Nedavne interakcije</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div>
+                        <h3 style="margin-bottom: 15px;">Aktivnosti (Opravila)</h3>
+                        <div style="background: white; border-radius: 12px; border: 1px solid #eee; overflow: hidden;">
+                            <table style="margin: 0;">
+                                <thead>
+                                    <tr><th>Partner</th><th>Naslov</th><th>Rok</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${tasks.slice(0, 5).map(t => `
+                                        <tr>
+                                            <td>${t.partner_naziv}</td>
+                                            <td>${t.naslov}</td>
+                                            <td>${formatDateJS(t.rok)}</td>
+                                        </tr>
+                                    `).join('') || '<tr><td colspan="3" style="text-align:center">Ni odprtih opravil</td></tr>'}
+                                </tbody>
+                            </table>
+                            <div style="padding: 10px; text-align: center; border-top: 1px solid #eee;">
+                                <a href="#" onclick="showModule('crm_aktivnosti')" style="font-size: 0.9em; font-weight: 600;">Vsa opravila →</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 style="margin-bottom: 15px;">Nedavne interakcije</h3>
+                        <div style="background: white; border-radius: 12px; border: 1px solid #eee; overflow: hidden;">
+                            <table style="margin: 0;">
+                                <thead>
+                                    <tr><th>Partner</th><th>Tip</th><th>Datum</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${interactions.slice(0, 5).map(i => `
+                                        <tr>
+                                            <td>${i.partner_naziv}</td>
+                                            <td>${i.tip}</td>
+                                            <td>${formatDateJS(i.datum)}</td>
+                                        </tr>
+                                    `).join('') || '<tr><td colspan="3" style="text-align:center">Ni nedavnih interakcij</td></tr>'}
+                                </tbody>
+                            </table>
+                            <div style="padding: 10px; text-align: center; border-top: 1px solid #eee;">
+                                <a href="#" onclick="showModule('crm_interakcije')" style="font-size: 0.9em; font-weight: 600;">Vse interakcije →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        contentDiv.innerHTML = `<p style="color:red; padding: 20px;">Napaka pri nalaganju CRM nadzorne plošče: ${e.message}</p>`;
+    }
+}
+
+async function renderCRM_Kanal() {
+    contentDiv.innerHTML = '<p style="padding:20px;">Nalagam prodajni kanal...</p>';
+    try {
+        const res = await fetch('/api/partnerji');
+        const data = await res.json();
+        
+        const stages = [
+            { id: 'Lead', label: 'Potencialna stranka' },
+            { id: 'Priložnost', label: 'Priložnost' },
+            { id: 'Pogajanja', label: 'Pogajanja' },
+            { id: 'Stranka', label: 'Stranka' }
+        ];
+
+        let html = `
+            <div style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
+                <h2 style="margin-bottom: 20px; color: var(--primary-blue);">Prodajni kanal (Pipeline)</h2>
+                <div class="crm-pipeline-container" style="flex: 1;">
+                    ${stages.map(stage => {
+                        const partnersInStage = data.filter(p => p.status === stage.id);
+                        return `
+                            <div class="crm-pipeline-column">
+                                <div class="crm-pipeline-header">
+                                    <span>${stage.label}</span>
+                                    <span style="background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.8em;">${partnersInStage.length}</span>
+                                </div>
+                                ${partnersInStage.map(p => `
+                                    <div class="crm-card" onclick="showUrediPartnerja(${p.id})">
+                                        <div class="crm-card-title">${p.naziv}</div>
+                                        <div class="crm-card-info">${p.kraj || 'Neznan kraj'}</div>
+                                        ${p.email ? `<div class="crm-card-info" style="margin-top:5px; font-size: 0.8em;">📧 ${p.email}</div>` : ''}
+                                    </div>
+                                `).join('')}
+                                ${partnersInStage.length === 0 ? '<div style="color: #adb5bd; font-size: 0.85em; text-align: center; margin-top: 10px; border: 1px dashed #ced4da; padding: 10px; border-radius: 8px;">Prazno</div>' : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+        contentDiv.innerHTML = html;
+    } catch (e) {
+        contentDiv.innerHTML = `<p style="color:red; padding: 20px;">Napaka: ${e.message}</p>`;
+    }
+}
+
+async function renderCRM_Aktivnosti() {
+    contentDiv.innerHTML = '<p style="padding:20px;">Nalagam aktivnosti...</p>';
+    try {
+        const tasks = await fetch('/api/crm/tasks').then(r => r.json());
+        
+        let html = `
+            <div style="padding: 20px;">
+                <h2 style="margin-bottom: 20px; color: var(--primary-blue);">Aktivnosti (Opravila)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Partner</th>
+                            <th>Naslov</th>
+                            <th>Opis</th>
+                            <th>Rok</th>
+                            <th>Status</th>
+                            <th>Prioriteta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tasks.map(t => `
+                            <tr>
+                                <td style="font-weight: 500; color: var(--primary-blue); cursor: pointer; text-decoration: underline;" onclick="showUrediPartnerja(${t.partner_id})">${t.partner_naziv}</td>
+                                <td>${t.naslov}</td>
+                                <td style="font-size: 0.9em; color: #666;">${t.opis || '/'}</td>
+                                <td>${formatDateJS(t.rok)}</td>
+                                <td><span style="background: #e9ecef; padding: 3px 8px; border-radius: 10px; font-size: 0.8em;">${t.status}</span></td>
+                                <td><span style="color: ${t.prioriteta === 'Visoka' ? 'red' : (t.prioriteta === 'Srednja' ? 'orange' : 'green')}; font-weight: 600;">${t.prioriteta}</span></td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="6" style="text-align:center">Ni odprtih opravil</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        contentDiv.innerHTML = html;
+    } catch (e) {
+        contentDiv.innerHTML = `<p style="color:red; padding: 20px;">Napaka: ${e.message}</p>`;
+    }
+}
+
+async function renderCRM_Interakcije() {
+    contentDiv.innerHTML = '<p style="padding:20px;">Nalagam interakcije...</p>';
+    try {
+        const interactions = await fetch('/api/crm/interactions').then(r => r.json());
+        
+        let html = `
+            <div style="padding: 20px;">
+                <h2 style="margin-bottom: 20px; color: var(--primary-blue);">Zgodovina interakcij</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Partner</th>
+                            <th>Datum</th>
+                            <th>Tip</th>
+                            <th>Vsebina</th>
+                            <th>Naslednji korak</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${interactions.map(i => `
+                            <tr>
+                                <td style="font-weight: 500; color: var(--primary-blue); cursor: pointer; text-decoration: underline;" onclick="showUrediPartnerja(${i.partner_id})">${i.partner_naziv}</td>
+                                <td>${formatDateJS(i.datum)}</td>
+                                <td><span style="background: #e7f5ff; color: #1971c2; padding: 3px 8px; border-radius: 10px; font-size: 0.8em; font-weight: 600;">${i.tip}</span></td>
+                                <td style="font-size: 0.9em;">${i.vsebina || '/'}</td>
+                                <td style="font-size: 0.9em; color: #2b8a3e; font-weight: 500;">${i.naslednji_korak || '/'}</td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="5" style="text-align:center">Ni zabeleženih interakcij</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        contentDiv.innerHTML = html;
+    } catch (e) {
+        contentDiv.innerHTML = `<p style="color:red; padding: 20px;">Napaka: ${e.message}</p>`;
+    }
+}
+
 
 function showDodajPartnerja() {
     renderPartnerForm();
@@ -1747,6 +2117,11 @@ window.odpriGlavniPopup = function(title, innerHtml, footerHtml = "", wide = fal
 };
 
 async function showDodajDokument(tip, naslov, editData = null) {
+    if (!window._navigatingHistory) {
+        window._dokumentHistoryStack = [];
+    }
+    window._navigatingHistory = false;
+
     const pRes = await fetch('/api/partnerji');
     const partnerji = await pRes.json();
     window._currentPartnerji = partnerji;
@@ -1758,6 +2133,15 @@ async function showDodajDokument(tip, naslov, editData = null) {
     const defaultNoga = (!nastavitve.zavezanec_za_ddv) ? "DDV ni obračunan na podlagi 1. odstavka 94. člena ZDDV-1" : "";
 
     const isActuallyEdit = !!editData && !!editData.id;
+    
+    // Nastavimo kontekst trenutnega obrazca
+    window._currentFormContext = {
+        tip: tip,
+        naslov: naslov,
+        id: isActuallyEdit ? editData.id : null
+    };
+    window._currentEditId = isActuallyEdit ? editData.id : null;
+
     const title = isActuallyEdit ? `Uredi - ${naslov} (${editData.stevilka})` : `Nov - ${naslov}`;
     const btnText = isActuallyEdit ? "Shrani spremembe" : "Ustvari dokument";
 
@@ -1939,6 +2323,7 @@ async function showDodajDokument(tip, naslov, editData = null) {
                                 <option value="Poslovna kartica" ${editData && editData.nacin_placila === 'Poslovna kartica' ? 'selected' : ''}>Poslovna kartica</option>
                                 <option value="Paypal" ${editData && editData.nacin_placila === 'Paypal' ? 'selected' : ''}>Paypal</option>
                                 <option value="Gotovina" ${editData && editData.nacin_placila === 'Gotovina' ? 'selected' : ''}>Gotovina</option>
+                                <option value="Kompenzacija" ${editData && editData.nacin_placila === 'Kompenzacija' ? 'selected' : ''}>Kompenzacija</option>
                             </select>
                         </div>
                         ${tip === 'prejeti_racuni' ? `
@@ -1948,6 +2333,7 @@ async function showDodajDokument(tip, naslov, editData = null) {
                         </div>
                         ` : `<input type="hidden" id="d_sklic" value="">`}
                     </div>
+                    <div id="kompenzacija_container" style="display: ${editData && editData.nacin_placila === 'Kompenzacija' ? 'block' : 'none'}; margin-top: 15px; border-top: 1px dashed #ced4da; padding-top: 15px;"></div>
                 </div>
 
                 ${tip === 'prejeti_racuni' ? `
@@ -1972,10 +2358,22 @@ async function showDodajDokument(tip, naslov, editData = null) {
             </form>
         </div>
     `;
+    const hasHistory = window._dokumentHistoryStack && window._dokumentHistoryStack.length > 0;
+    const backBtn = hasHistory ? `
+        <button onclick="window.vrniNaPrejsnjiDokument()" 
+            style="background:#fff; border:1px solid #ced4da; font-size:0.85em; cursor:pointer; color:var(--primary-blue); display:inline-flex; align-items:center; gap:5px; font-weight:600; padding: 4px 10px; border-radius: 4px; margin-right: 12px; transition: all 0.2s;"
+            onmouseover="this.style.background='#f1f3f5'" onmouseout="this.style.background='#fff'">
+            ← Nazaj
+        </button>
+    ` : '';
+
     // Ovijemo v split view
     box.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 25px; border-bottom:1px solid #eee; background:#f8f9fa;">
-            <h3 style="margin:0; color:var(--primary-blue);">${title}</h3>
+            <div style="display:flex; align-items:center;">
+                ${backBtn}
+                <h3 style="margin:0; color:var(--primary-blue);">${title}</h3>
+            </div>
             <button onclick="window.zapriDokumentPopup()" style="background:none; border:none; font-size:1.8em; cursor:pointer; color:#868e96; line-height:1;">&times;</button>
         </div>
         <div style="flex:1; overflow-y:auto; padding: 10px 20px;">
@@ -2111,6 +2509,28 @@ async function showDodajDokument(tip, naslov, editData = null) {
         window.initPartnerSearch(document.getElementById('d_partner_search'), document.getElementById('d_partner'), () => {
             if (window.updateDQR) window.updateDQR();
         });
+    }
+
+    // Kompenzacija UI logika
+    window._selectedKompenzacijaDocId = (editData && editData.kompenzacija_doc_id) ? editData.kompenzacija_doc_id : null;
+    
+    const nacinPlacilaSel = document.getElementById('d_nacin_placila');
+    if (nacinPlacilaSel) {
+        nacinPlacilaSel.addEventListener('change', () => {
+            const kompBox = document.getElementById('kompenzacija_container');
+            if (kompBox) {
+                if (nacinPlacilaSel.value === 'Kompenzacija') {
+                    kompBox.style.display = 'block';
+                    window.osveziKompenzacijaUI();
+                } else {
+                    kompBox.style.display = 'none';
+                }
+            }
+        });
+    }
+    
+    if (editData && editData.nacin_placila === 'Kompenzacija') {
+        window.osveziKompenzacijaUI();
     }
 
     // UPN-QR Code generator za urejanje dokumentov
@@ -2436,6 +2856,7 @@ async function shraniDokument(e, tip, naslov, id = null) {
         noga_dokumenta: document.getElementById('d_noga') ? document.getElementById('d_noga').value : "",
         vkljuci_placilo: document.getElementById('d_vkljuci_placilo') ? document.getElementById('d_vkljuci_placilo').checked : true,
         odstotek_placila: document.getElementById('d_odstotek_placila') ? parseFloat(document.getElementById('d_odstotek_placila').value) : 100,
+        kompenzacija_doc_id: document.getElementById('d_nacin_placila')?.value === 'Kompenzacija' ? (window._selectedKompenzacijaDocId || null) : null,
         postavke: postavke
     };
 
@@ -6665,8 +7086,8 @@ try {
         .then(res => res.json())
         .then(data => {
             window.llamaLearningMode = !!data.learning_mode;
-            const activeModule = sessionStorage.getItem('activeModule') || 'dashboard';
-            if (activeModule === 'prejeti_racuni') {
+            const activeTab = window.appTabs.find(t => t.id === window.activeTabId);
+            if (activeTab && activeTab.module === 'prejeti_racuni') {
                 renderDokumenti('prejeti_racuni', 'Prejeti računi');
             }
         })
@@ -6698,8 +7119,12 @@ try {
 
     osveziPodjetja();
     window.osveziLogotip();
-    const lastModule = sessionStorage.getItem('activeModule') || 'dashboard';
-    showModule(lastModule);
+    
+    // Obnovimo shranjene zavihke iz seje ob osvežitvi. Če jih ni, odpremo nadzorno ploščo.
+    if (!window.loadTabsState()) {
+        showModule('dashboard');
+    }
+    
     window._appLoaded = true;
     if (window._bootTimer) clearTimeout(window._bootTimer);
 } catch (bootErr) {
@@ -6987,7 +7412,41 @@ async function renderHelp() {
             `
         },
         {
+            id: 'crm',
+            title: 'CRM in Upravljanje strank',
+            icon: '🤝',
+            content: 'Vodenje prodajnih priložnosti, interakcij in opravil za vaše partnerje.',
+            details: `
+                <h4>CRM Modul (Customer Relationship Management)</h4>
+                <p>Invoice83 zdaj vključuje celovito orodje za upravljanje odnosov s strankami:</p>
+                <ul>
+                    <li><strong>Prodajni kanal (Kanban):</strong> Pregledno sledenje priložnostim od prvega stika do sklenjenega posla.</li>
+                    <li><strong>Interakcije:</strong> Beleženje vseh klicev, e-poštnih sporočil in sestankov neposredno pri partnerju.</li>
+                    <li><strong>Aktivnosti:</strong> Načrtovanje in sledenje opravilom (To-Do), da nikoli ne pozabite na klic ali sestanek.</li>
+                    <li><strong>Zgodovina:</strong> Celovit pregled vseh dogodkov, povezanih s posamezno stranko, na enem mestu.</li>
+                </ul>
+                <p>Modul CRM je tesno povezan s <strong>Partnerji</strong>, kjer lahko vidite vse interakcije neposredno v detajlih partnerja.</p>
+            `
+        },
+        {
+            id: 'kompenzacije',
+            title: 'Kompenzacije in povezovanje',
+            icon: '🔗',
+            content: 'Medsebojno zapiranje dokumentov in povezovanje računov.',
+            details: `
+                <h4>Povezovanje dokumentov in Kompenzacije</h4>
+                <p>Sistem omogoča napredno povezovanje dokumentov za namen kompenzacij ali sledljivosti:</p>
+                <ul>
+                    <li><strong>Iskanje:</strong> Pri urejanju dokumenta lahko v polju "Išči dokument za kompenzacijo" poiščete poljuben račun ali dobropis.</li>
+                    <li><strong>Povezava:</strong> Ko izberete dokument, se ta poveže s trenutnim. To je vidno v razdelku "Kompenzacija".</li>
+                    <li><strong>Navigacija:</strong> S klikom na gumb <strong>Odpri ↗</strong> lahko takoj preklopite na povezan dokument, s gumbom <strong>← Nazaj</strong> pa se vrnete na prejšnjega.</li>
+                </ul>
+                <p>To omogoča hitro prehajanje med povezanimi računi in dobropisi brez iskanja po seznamih.</p>
+            `
+        },
+        {
             id: 'zgodovina',
+
             title: 'Zgodovina sprememb',
             icon: '🕒',
             content: 'Pregled vseh posodobitev in novosti v programu od začetka do danes.',
@@ -6996,8 +7455,43 @@ async function renderHelp() {
                 <div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">15. 05. 2026</span>
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">10. 06. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li>Popravek uvoza datumov storitve, popustov/rabatov, vertikalne postavitve gumbov, ustvarjen backup in ciscenje</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">10. 06. 2026</span>
+                            
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li><strong>CRM Modul:</strong> Celovit sistem za upravljanje strank, kontaktov, interakcij (klici, sestanki) in opravil s kanban pogledom prodajnega kanala.</li>
+                            <li><strong>Kompenzacije:</strong> Napredno povezovanje dokumentov za namen kompenzacij in hitro prehajanje med povezanimi dokumenti (navigacija naprej/nazaj).</li>
+                            <li><strong>Varnost:</strong> Avtomatsko preverjanje podvojenih številk dokumentov ob uvozu in ročnem vnosu, kar preprečuje napake v knjigovodstvu.</li>
+                            <li><strong>UI Modernizacija:</strong> Prehod na sistem pojavnih oken (Popups) za vse dokumente in partnerje, kar omogoča delo brez osveževanja strani.</li>
+                            <li><strong>Popusti in rabati:</strong> Popolna podpora za popuste na nivoju postavk dokumentov z avtomatskim preračunom DDV in skupnega zneska.</li>
+                            <li><strong>Poslovna leta:</strong> Izboljšana logika preklapljanja med leti; sistem si zapomni leto tudi pri hitrem pregledu dokumentov.</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">19. 05. 2026</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li><strong>Preverjanje številk:</strong> Dodano dinamično preverjanje podvojenih številk računov ob izhodu iz polja.</li>
+                            <li><strong>Navigacija:</strong> Sistem si zdaj zapomni aktivni modul po osvežitvi strani (Session Storage).</li>
+                            <li><strong>Stabilnost uvoza:</strong> Popravljeno prepoznavanje določenih formatov e-SLOG XML dokumentov.</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">15. 05. 2026</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Modularna nadzorna plošča:</strong> Prilagodljiv gradnik blokov (Block Builder) za osebno nadzorno ploščo.</li>
@@ -7005,18 +7499,6 @@ async function renderHelp() {
                             <li><strong>Hitrejša navigacija:</strong> Odstranjeni nepotrebni "Nalagam..." zasloni; neposreden dostop do urejanja s klikom na vrstico tabele.</li>
                             <li><strong>Samodejno številčenje:</strong> Vsi dokumenti (izdani, prejeti, ponudbe) zdaj uporabljajo samodejno zaporedno številčenje.</li>
                             <li><strong>Izboljšana odzivnost:</strong> Optimizirano delovanje aplikacije kot enostranska aplikacija (SPA).</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">12. 05. 2026</span>
-                            
-                        </div>
-                        <ul style="margin-top:5px; padding-left:20px;">
-                            <li><strong>Materialno vodenje:</strong> Zaloga se zdaj posodablja v realnem času takoj ob shranjevanju dokumentov (prejeti in izdani računi).</li>
-                            <li><strong>Avtomatizacija šifranta:</strong> Pri ustvarjanju artikla neposredno iz računa se ID-ji samodejno povežejo, kar zagotavlja 100 % točnost zaloge.</li>
-                            <li><strong>Robustnost:</strong> Dodan varnostni mehanizem (fallback), ki artikle poveže po nazivu, če ID ni na voljo.</li>
                         </ul>
                     </div>
 
@@ -8111,4 +8593,178 @@ window.shraniPostavkoKotArtikel = function(row) {
     
     renderArtikliForm(syntheticData, true); 
 };
+
+// --- LOGIKA ZA KOMPENZACIJE IN NAVIGACIJO NAZAJ ---
+
+window.serializeCurrentFormState = function() {
+    const tip = window._currentFormContext ? window._currentFormContext.tip : '';
+    const naslov = window._currentFormContext ? window._currentFormContext.naslov : '';
+    
+    const postavke = [];
+    document.querySelectorAll('#postavke-container .postavka-item').forEach(tr => {
+        postavke.push({
+            artikel_id: parseInt(tr.querySelector('.p-artikel-id')?.value) || null,
+            opis: tr.querySelector('.p-opis')?.value || "",
+            kolicina: parseNumberJS(tr.querySelector('.p-kol')?.value) || 1,
+            enota_mere: tr.querySelector('.p-em')?.value || "",
+            cena_enote: parseNumberJS(tr.querySelector('.p-cena')?.value) || 0,
+            popust: parseNumberJS(tr.querySelector('.p-popust')?.value) || 0,
+            stopnja_ddv: parseNumberJS(tr.querySelector('.p-ddv')?.value) || 0,
+            znesek_skupaj: parseNumberJS(tr.querySelector('.p-znesek')?.value) || 0,
+            konto: tr.querySelector('.p-konto')?.value || ""
+        });
+    });
+
+    const zakljucna = [];
+    document.querySelectorAll('#d_zakljucno_container textarea').forEach(tx => {
+        zakljucna.push(tx.value);
+    });
+
+    return {
+        context: { tip, naslov },
+        data: {
+            id: window._currentEditId,
+            stevilka: document.getElementById('d_stevilka')?.value || "",
+            interna_stevilka: document.getElementById('d_interna_stevilka')?.value || "",
+            partner_id: parseInt(document.getElementById('d_partner')?.value) || null,
+            datum_izdaje: parseDateISO(document.getElementById('d_datum_izdaje')?.value || ""),
+            datum_zapadlosti: parseDateISO(document.getElementById('d_datum_zapadlosti')?.value || ""),
+            datum_storitve_od: parseDateISO(document.getElementById('d_datum_storitve_od')?.value || ""),
+            datum_storitve_do: parseDateISO(document.getElementById('d_datum_storitve_do')?.value || ""),
+            status: document.getElementById('d_status')?.value || "neplačano",
+            datum_placila: parseDateISO(document.getElementById('d_datum_placila')?.value || ""),
+            nacin_placila: document.getElementById('d_nacin_placila')?.value || "",
+            sklic: document.getElementById('d_sklic')?.value || "",
+            noga_dokumenta: document.getElementById('d_noga')?.value || "",
+            valuta: document.getElementById('d_valuta')?.value || "EUR",
+            tecaj: parseNumberJS(document.getElementById('d_tecaj')?.value || "1"),
+            vkljuci_placilo: document.getElementById('d_vkljuci_placilo') ? document.getElementById('d_vkljuci_placilo').checked : true,
+            odstotek_placila: document.getElementById('d_odstotek_placila') ? parseFloat(document.getElementById('d_odstotek_placila').value) : 100,
+            kompenzacija_doc_id: window._selectedKompenzacijaDocId,
+            zakljucno_besedilo: zakljucna.join('\n\n'),
+            postavke: postavke
+        }
+    };
+};
+
+window.vrniNaPrejsnjiDokument = function() {
+    if (!window._dokumentHistoryStack || window._dokumentHistoryStack.length === 0) return;
+    const last = window._dokumentHistoryStack.pop();
+    window._navigatingHistory = true;
+    showDodajDokument(last.context.tip, last.context.naslov, last.data);
+};
+
+window.odpriKompenzacijskiDokument = async function(id, tip) {
+    const state = window.serializeCurrentFormState();
+    if (!window._dokumentHistoryStack) window._dokumentHistoryStack = [];
+    window._dokumentHistoryStack.push(state);
+    
+    window._navigatingHistory = true;
+    // Poimenovanje tipov za naslov
+    let naslov = tip.replace(/_/g, ' ');
+    naslov = naslov.charAt(0).toUpperCase() + naslov.slice(1);
+    
+    try {
+        const res = await fetch(`/api/dokumenti/detajl/${id}`);
+        const data = await res.json();
+        showDodajDokument(tip, naslov, data);
+    } catch(e) {
+        alert("Napaka pri odpiranju dokumenta.");
+    }
+};
+
+window.osveziKompenzacijaUI = async function() {
+    const container = document.getElementById('kompenzacija_container');
+    if (!container) return;
+
+    if (window._selectedKompenzacijaDocId) {
+        container.innerHTML = `<p style="font-size:0.9em; color:#666; margin-bottom:10px;">Nalagam podatke o povezanem dokumentu...</p>`;
+        try {
+            const res = await fetch(`/api/dokumenti/detajl/${window._selectedKompenzacijaDocId}`);
+            if (!res.ok) throw new Error("Dokument ni najden");
+            const doc = await res.json();
+            
+            container.innerHTML = `
+                <div style="display:flex; align-items:center; justify-content:space-between; background:#fff; border:1px solid #ced4da; padding:10px; border-radius:4px;">
+                    <div>
+                        <div style="font-weight:600; color:var(--primary-blue);">${doc.stevilka}</div>
+                        <div style="font-size:0.85em; color:#666;">${doc.partner_naziv} | ${formatMoneyJS(doc.znesek_skupaj)} €</div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="btn btn-blue" style="padding:4px 10px; font-size:0.85em;" onclick="window.odpriKompenzacijskiDokument(${doc.id}, '${doc.tip}')">Odpri ↗</button>
+                        <button type="button" class="btn" style="padding:4px 10px; font-size:0.85em; background:#f8d7da; color:#721c24; border:1px solid #f5c6cb;" onclick="window.odstraniKompenzacijaDok()">Odstrani ✕</button>
+                    </div>
+                </div>
+            `;
+        } catch(e) {
+            container.innerHTML = `<p style="color:red; font-size:0.9em;">Napaka: povezanega dokumenta ni bilo mogoče najti.</p>
+                                   <button type="button" class="btn btn-blue" style="margin-top:5px;" onclick="window._selectedKompenzacijaDocId=null; window.osveziKompenzacijaUI();">Išči znova</button>`;
+        }
+    } else {
+        container.innerHTML = `
+            <div class="form-group">
+                <label>Išči dokument za kompenzacijo (št. ali partner)</label>
+                <input type="text" id="kompenzacija_search" placeholder="Vpišite vsaj 3 znake..." oninput="window.iskiKompenzacijaDok(this.value)">
+                <div id="kompenzacija_search_results" style="margin-top:5px; border:1px solid #eee; border-radius:4px; max-height:200px; overflow-y:auto; background:#fff; display:none;"></div>
+            </div>
+        `;
+    }
+};
+
+window.iskiKompenzacijaDok = async function(query) {
+    const resultsDiv = document.getElementById('kompenzacija_search_results');
+    if (!resultsDiv) return;
+    
+    if (query.length < 3) {
+        resultsDiv.style.display = 'none';
+        return;
+    }
+
+    try {
+        const tipi = ['izdani_racuni', 'prejeti_racuni', 'dobropisi', 'prejeti_dobropisi'];
+        let vsi = [];
+        for (const t of tipi) {
+            const res = await fetch(`/api/dokumenti/${t}`);
+            const data = await res.json();
+            vsi = vsi.concat(data);
+        }
+
+        const filtrirano = vsi.filter(d => {
+            const matchesQuery = d.stevilka.toLowerCase().includes(query.toLowerCase()) || 
+                                 (d.partner_naziv && d.partner_naziv.toLowerCase().includes(query.toLowerCase()));
+            const notSelf = d.id !== window._currentEditId;
+            return matchesQuery && notSelf;
+        });
+
+        if (filtrirano.length === 0) {
+            resultsDiv.innerHTML = `<div style="padding:10px; color:#999; font-size:0.85em;">Ni rezultatov</div>`;
+        } else {
+            resultsDiv.innerHTML = filtrirano.map(d => `
+                <div style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-size:0.85em;" 
+                     onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'"
+                     onclick="window.izberiKompenzacijaDok(${d.id})">
+                    <div style="font-weight:600;">${d.stevilka}</div>
+                    <div style="color:#666;">${d.partner_naziv} | ${formatMoneyJS(d.znesek_skupaj)} €</div>
+                </div>
+            `).join('');
+        }
+        resultsDiv.style.display = 'block';
+
+    } catch(e) {
+        resultsDiv.innerHTML = `<div style="padding:10px; color:red; font-size:0.85em;">Napaka pri iskanju</div>`;
+        resultsDiv.style.display = 'block';
+    }
+};
+
+window.izberiKompenzacijaDok = function(id) {
+    window._selectedKompenzacijaDocId = id;
+    window.osveziKompenzacijaUI();
+};
+
+window.odstraniKompenzacijaDok = function() {
+    window._selectedKompenzacijaDocId = null;
+    window.osveziKompenzacijaUI();
+};
+
+window._appLoaded = true;
 

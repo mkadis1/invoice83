@@ -191,19 +191,30 @@ def update_changelog():
     content = content.replace('background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;', 
                              'background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;')
     content = content.replace('<span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>', '')
-    # Dodamo ločilno črto prejšnjemu vnosu
-    content = content.replace('<div style="margin-bottom:25px;">', '<div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">', 1)
-
-    # 2. Vstavimo nov vnos na vrh
+    
+    # Dodamo ločilno črto prejšnjemu vnosu - bolj robustno iskanje prvega vnosa po markerju
     marker = '<div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">'
     
-    if marker in content:
-        new_content = content.replace(marker, marker + new_entry)
-        with open(APP_JS, 'w', encoding='utf-8') as f:
-            f.write(new_content)
-        print(f"[OK] Zgodovina sprememb posodobljena v {APP_JS}.")
-    else:
+    if marker not in content:
         print("[ERR] Napaka: Marker za zgodovino v app.js ni bil najden!")
+        return
+
+    # Najdemo prvi <div style="margin-bottom:25px;"> po markerju
+    marker_pos = content.find(marker)
+    first_div_pos = content.find('<div style="margin-bottom:25px;">', marker_pos)
+    
+    if first_div_pos != -1:
+        # Repliciramo replace(..., 1) ampak samo po markerju
+        before = content[:first_div_pos]
+        after = content[first_div_pos:]
+        after = after.replace('<div style="margin-bottom:25px;">', '<div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">', 1)
+        content = before + after
+
+    # 2. Vstavimo nov vnos na vrh
+    new_content = content.replace(marker, marker + new_entry)
+    with open(APP_JS, 'w', encoding='utf-8') as f:
+        f.write(new_content)
+    print(f"[OK] Zgodovina sprememb posodobljena v {APP_JS}.")
 
 def run_scripts():
     print(">>> Posodabljanje demo verzije (update_demo.py)...")

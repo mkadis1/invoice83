@@ -1,0 +1,70 @@
+﻿Filename: Telemach CLB-S1-1000427622.pdf
+
+OCR tekst (prvih 1000 znakov):
+Telemach Slovenija d.o.o.
+Ra─ìun ┼ít. CLB-S1-1000427622
+Brn─ìi─ìeva ulica 49A
+1231 Ljubljana ÔÇô ─îrnu─ìe Kraj in datum izdaje: Ljubljana, 31.01.2026
+IBAN: SI56 0400 0027 7723 551
+info@telemach.si
+telemach.si Sklic: SI12 9055460338011
+070 700 700 Obra─ìunsko obdobje: 01.01.2026 - 31.01.2026
+ZOI: 31b04e53bdcb2f7fcb3a8a43dfba0553
+MIHA KADI┼á S.P.
+Spoznajte Telemachov klub in kupujte
+DOBJA VAS 185 ugodneje!
+2390 RAVNE NA KORO┼áKEM Nakupujte na 24 obrokov, ki jih pla─ìate kar na va┼íem
+mese─ìnem ra─ìunu. Preverite ponudbo izdelkov po
+izjemnih cenah in z brezpla─ìno dostavo. Ve─ì na
+telemach.si/shoppster-izdelki.
+┼át. kupca: 1001071150
+Ra─ìun za JANUAR 2026 Znesek 0,67 EUR Rok pla─ìila 28.02.2026
+Telefonska ┼átevilka pogodbe in opis ┼át. merilnih Enote Popust % DDV Znesek Znesek z DDV
+┼ítevilka enot brez DDV
+103021356
+070750457 Mobilni paket ┼áE VE─î 0,097 EN 22 % 0,55 0,67
+Skupaj EUR brez DDV 0,55
+DDV 0,12
+(1) Znesek ra─ìuna EUR z DDV 0,67
+(2) Oprema na obroke 0,00
+(1+2) SKUPAJ ZA PLA─îILO 0,67
+Specifikacija zneska 
+
+--- Kli─ìemo Llama ---
+
+Llama rezultat:
+{
+  "stevilka": "CLB-S1-1000427622",
+  "sklic": "SI12 9055460338011",
+  "datum_izdaje": "2026-01-31",
+  "datum_zapadlosti": "2026-02-28",
+  "datum_storitve_od": "2026-01-01",
+  "datum_storitve_do": "2026-01-31",
+  "znesek_skupaj": 0.67,
+  "znesek_ddv": 0.12,
+  "znesek_brez_ddv": 0.55,
+  "partner": {
+    "naziv": "Telemach Slovenija d.o.o.",
+    "davcna_stevilka": "SI56 0400 0027 7723 551",
+    "trr": "SI56 0400 0027 7723 551",
+    "drzava": "Slovenija",
+    "ulica": "Brn─ìi─ìeva ulica 49A",
+    "kraj": "Ljubljana - ─îrnu─ìe",
+    "postna_stevilka": "1231",
+    "tuji_partner_neprebran": false
+  },
+  "postavke": [
+    {
+      "opis": "Mobilni paket ┼áE VE─î 0,097 EN",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 0.55,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 0.67
+    }
+  ]
+}
+
+Postavke:
+  opis: Mobilni paket ┼áE VE─î 0,097 EN, popust: 0.0, stopnja_ddv: 22.0, cena: 0.55
