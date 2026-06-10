@@ -7276,9 +7276,9 @@ async function renderHelp() {
                 <h4>Pregled aplikacije</h4>
                 <p>Invoice83 je zasnovan tako, da vam prihrani čas pri vsakodnevnih opravilih. Glavne prednosti so:</p>
                 <ul>
-                    <li><strong>Preglednost:</strong> Vse na enem mestu - od računov do plač.</li>
-                    <li><strong>Avtomatizacija:</strong> Pametni uvoz dokumentov in prepoznavanje slik.</li>
-                    <li><strong>Povezanost:</strong> Avtomatsko povezovanje bančnih izpiskov z računi.</li>
+                    <li><strong>Preglednost:</strong> Vse na enem mestu - od računov do glavne knjige.</li>
+                    <li><strong>Avtomatizacija:</strong> Pametni uvoz dokumentov, OCR in samodejno številčenje.</li>
+                    <li><strong>Hitrost:</strong> Sodoben vmesnik (SPA) s pojavnimi okni omogoča delo brez čakanja na nalaganje strani.</li>
                 </ul>
                 <div style="background:#f1f3f5; padding:15px; border-radius:8px; margin-top:15px;">
                     <strong>Namig:</strong> Na nadzorni plošči lahko spremljate prihodke, odhodke in neplačane račune v realnem času.
@@ -7294,15 +7294,14 @@ async function renderHelp() {
                 <div style="text-align:center; margin-bottom:20px;">
                     <img src="/brain/9cbc2d23-060b-4ae5-83e1-2513837211eb/help_invoice_creation_1776943686342.png" style="max-width:100%; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                 </div>
-                <h4>Kako ustvariti nov račun?</h4>
                 <ol>
                     <li>Pojdite v modul <strong>Izdani računi</strong>.</li>
-                    <li>Kliknite gumb <strong>+ Nov dokument</strong>.</li>
-                    <li>Izberite kupca (ali ga dodajte sproti).</li>
-                    <li>Vnesite postavke (naziv, količina, cena).</li>
+                    <li>Kliknite gumb <strong>+ Nov dokument</strong> (odpre se hitro pojavno okno).</li>
+                    <li>Izberite kupca. Številka dokumenta se določi <strong>samodejno</strong>.</li>
+                    <li>Vnesite postavke. Vsaki postavki lahko dodate tudi <strong>popust (rabat)</strong>.</li>
                     <li>Kliknite <strong>Shrani</strong>.</li>
                 </ol>
-                <p>Ko je račun shranjen, ga lahko prenesete kot PDF ali pošljete kupcu direktno iz programa preko e-pošte.</p>
+                <p>Dokumenti so takoj pripravljeni za tisk v PDF ali neposredno pošiljanje po e-pošti.</p>
             `
         },
         {
@@ -7317,8 +7316,9 @@ async function renderHelp() {
                 <h4>Množičen uvoz in OCR</h4>
                 <p>Program Invoice83 podpira napredno tehnologijo OCR za branje podatkov s slik.</p>
                 <ul>
-                    <li><strong>XML uvoz:</strong> Najhitrejši način za e-SLOG račune.</li>
-                    <li><strong>Slike (AliExpress, Temu):</strong> Preprosto naložite sliko računa (PNG/JPG), program pa bo samodejno prepoznal datum, znesek in številko računa.</li>
+                    <li><strong>XML uvoz:</strong> Najhitrejši način za e-SLOG račune s samodejnim prepoznavanjem postavk.</li>
+                    <li><strong>OCR prepoznavanje:</strong> Naložite sliko računa (PNG/JPG), program pa bo samodejno prepoznal datum, znesek in številko.</li>
+                    <li><strong>Preprečevanje dvojnikov:</strong> Sistem vas bo opozoril, če račun s to številko pri istem dobavitelju že obstaja.</li>
                 </ul>
             `
         },
@@ -7370,7 +7370,7 @@ async function renderHelp() {
                     <li>Akontacijo dohodnine.</li>
                     <li>Neto znesek za izplačilo.</li>
                 </ul>
-                <p>Sistem pripravi tudi UPN-QR kode za plačilo vseh prispevkov in neto plače.</p>
+                <p>Sistem pripravi tudi UPN-QR kode za plačilo vseh prispevkov in neto plače. Obračuni se ob knjiženju samodejno prenesejo v <strong>Glavno knjigo</strong>.</p>
             `
         },
         {
@@ -7429,6 +7429,23 @@ async function renderHelp() {
             `
         },
         {
+            id: 'finance',
+            title: 'Glavna knjiga in Finance',
+            icon: '📉',
+            content: 'Samodejno in ročno knjiženje temeljnic, bruto bilanca in finančna poročila.',
+            details: `
+                <h4>Računovodsko vodenje financ</h4>
+                <p>Invoice83 ni le program za račune, ampak celovit računovodski sistem:</p>
+                <ul>
+                    <li><strong>Temeljnice:</strong> Sistem samodejno knjiži prejete in izdane račune ter plače. Omogoča tudi vnos ročnih temeljnic.</li>
+                    <li><strong>Bruto bilanca:</strong> Takojšen vpogled v stanje kontov in poslovanje podjetja.</li>
+                    <li><strong>Konto kartica:</strong> Podrobno iskanje in pregled vseh knjižb na posameznem kontu v izbranem obdobju.</li>
+                    <li><strong>Osnovna sredstva:</strong> Vodenje registra osnovnih sredstev in samodejni obračun amortizacije.</li>
+                </ul>
+                <p>Vsa poročila lahko izvozite za potrebe zunanjega računovodstva ali davčne uprave.</p>
+            `
+        },
+        {
             id: 'kompenzacije',
             title: 'Kompenzacije in povezovanje',
             icon: '🔗',
@@ -7459,21 +7476,12 @@ async function renderHelp() {
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Popravek uvoza datumov storitve, popustov/rabatov, vertikalne postavitve gumbov, ustvarjen backup in ciscenje</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">10. 06. 2026</span>
-                            
-                        </div>
-                        <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>CRM Modul:</strong> Celovit sistem za upravljanje strank, kontaktov, interakcij (klici, sestanki) in opravil s kanban pogledom prodajnega kanala.</li>
                             <li><strong>Kompenzacije:</strong> Napredno povezovanje dokumentov za namen kompenzacij in hitro prehajanje med povezanimi dokumenti (navigacija naprej/nazaj).</li>
                             <li><strong>Varnost:</strong> Avtomatsko preverjanje podvojenih številk dokumentov ob uvozu in ročnem vnosu, kar preprečuje napake v knjigovodstvu.</li>
                             <li><strong>UI Modernizacija:</strong> Prehod na sistem pojavnih oken (Popups) za vse dokumente in partnerje, kar omogoča delo brez osveževanja strani.</li>
                             <li><strong>Popusti in rabati:</strong> Popolna podpora za popuste na nivoju postavk dokumentov z avtomatskim preračunom DDV in skupnega zneska.</li>
+                            <li><strong>OCR Izboljšave:</strong> Natančnejše prepoznavanje datumov storitve, popustov in rabatov pri uvozu dokumentov.</li>
                             <li><strong>Poslovna leta:</strong> Izboljšana logika preklapljanja med leti; sistem si zapomni leto tudi pri hitrem pregledu dokumentov.</li>
                         </ul>
                     </div>
