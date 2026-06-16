@@ -1978,12 +1978,11 @@ async function renderDokumenti(tip, naslov) {
                     ${tip === 'prejeti_racuni' ? `
                         <button class="btn" style="background:#495057; color:white; border:none;" onclick="document.getElementById('eslog-upload').click()">Uvozi račune (XML/ZIP/PNG/PDF)</button>
                         <input type="file" id="eslog-upload" accept=".xml,.zip,.png,.pdf" style="display:none" multiple onchange="window.uvoziEslog(this)">
+                        <label class="llama-toggle-container" style="display:inline-flex; align-items:center; gap:8px; margin-left:15px; background:${window.llamaLearningMode ? 'linear-gradient(135deg, #e7f5ff, #d0ebff)' : 'linear-gradient(135deg, #f1f3f5, #e9ecef)'}; padding:6px 14px; border-radius:30px; border:1px solid ${window.llamaLearningMode ? '#a5d8ff' : '#ced4da'}; cursor:pointer; user-select:none; font-size:0.85em; font-weight:600; color:${window.llamaLearningMode ? '#1971c2' : '#495057'}; box-shadow:${window.llamaLearningMode ? '0 2px 8px rgba(28, 126, 214, 0.15)' : '0 2px 5px rgba(0,0,0,0.05)'}; transition:all 0.2s;">
+                            <input type="checkbox" id="llama-learning-toggle" style="width:16px; height:16px; cursor:pointer; accent-color:#1c7ed6; margin:0;" ${window.llamaLearningMode ? 'checked' : ''} onchange="window.toggleLlamaLearningMode(this.checked)">
+                            <span style="display:inline-flex; align-items:center; gap:4px;">🤖 Način učenja Llama: <strong style="text-decoration: underline; text-underline-offset: 3px;">${window.llamaLearningMode ? 'VKLOPLJEN' : 'IZKLOPLJEN'}</strong></span>
+                        </label>
                     ` : ''}
-                    
-                    <label class="llama-toggle-container" style="display:inline-flex; align-items:center; gap:8px; margin-left:15px; background:${window.llamaLearningMode ? 'linear-gradient(135deg, #e7f5ff, #d0ebff)' : 'linear-gradient(135deg, #f1f3f5, #e9ecef)'}; padding:6px 14px; border-radius:30px; border:1px solid ${window.llamaLearningMode ? '#a5d8ff' : '#ced4da'}; cursor:pointer; user-select:none; font-size:0.85em; font-weight:600; color:${window.llamaLearningMode ? '#1971c2' : '#495057'}; box-shadow:${window.llamaLearningMode ? '0 2px 8px rgba(28, 126, 214, 0.15)' : '0 2px 5px rgba(0,0,0,0.05)'}; transition:all 0.2s;">
-                        <input type="checkbox" id="llama-learning-toggle" style="width:16px; height:16px; cursor:pointer; accent-color:#1c7ed6; margin:0;" ${window.llamaLearningMode ? 'checked' : ''} onchange="window.toggleLlamaLearningMode(this.checked)">
-                        <span style="display:inline-flex; align-items:center; gap:4px;">🤖 Način učenja Llama: <strong style="text-decoration: underline; text-underline-offset: 3px;">${window.llamaLearningMode ? 'VKLOPLJEN' : 'IZKLOPLJEN'}</strong></span>
-                    </label>
                 </div>
                 ${window.renderSortControls(tip, sortFields, `renderDokumenti('${tip}', '${naslov}')`)}
             </div>
@@ -5523,11 +5522,20 @@ window.showDodajZaposleni = function(editData = null) {
                     <div class="form-group" style="flex:2"><label>Naslov (Ulica in hišna št.)</label><input type="text" id="z_naslov" value="${editData?.naslov || ''}"></div>
                     <div class="form-group" style="flex:1"><label>Pošta in kraj</label><input type="text" id="z_posta_kraj" value="${editData?.posta_kraj || ''}" placeholder="npr. 2392 Mežica"></div>
                 </div>
-                <div style="display:flex; gap:10px;">
+                <div style="display:flex; gap:10px; align-items:flex-end;">
                     <div class="form-group" style="flex:1"><label>Davčna številka</label><input type="text" id="z_davcna" value="${editData?.davcna_stevilka || ''}"></div>
                     <div class="form-group" style="flex:1"><label>Delovno mesto</label><input type="text" id="z_delovno" value="${editData?.delovno_mesto || ''}"></div>
-                    <div class="form-group" style="flex:1"><label>Razdalja do podjetja (km)</label><input type="number" step="0.1" id="z_razdalja" value="${editData?.razdalja_do_podjetja !== undefined ? editData.razdalja_do_podjetja : 0.0}"></div>
+                    <div class="form-group" style="flex:1; position:relative;">
+                        <label>Razdalja do podjetja (km)</label>
+                        <div style="display:flex; gap:5px;">
+                            <input type="number" step="0.1" id="z_razdalja" value="${editData?.razdalja_do_podjetja !== undefined ? editData.razdalja_do_podjetja : 0.0}" style="flex:1;">
+                            <button type="button" class="btn" style="background:#e7f5ff; color:#1971c2; border:1px solid #a5d8ff; padding:8px 12px; font-weight:600; font-size:0.9em; white-space:nowrap; transition:0.2s;" onclick="window.zaposleniIzracunajRazdaljoOSM(this)">
+                                🌍 Izračunaj
+                            </button>
+                        </div>
+                    </div>
                 </div>
+                <p id="z_osm_info" style="font-size:0.85em; margin:5px 0 10px 0; color:#1971c2; font-style:italic; display:none;">Računam razdaljo s pomočjo OpenStreetMap...</p>
                 <div class="form-group"><label>TRR / IBAN</label><input type="text" id="z_iban" value="${editData?.iban || ''}"></div>
                 
                 <div style="background:#f8f9fa; padding:15px; border-radius:6px; margin-top:20px; border:1px solid #e9ecef;">
@@ -5992,6 +6000,67 @@ window.pnIzracunajRazdaljoOSM = async function(btn) {
     }
     btn.disabled = false;
     info.style.display = 'none';
+};
+
+window.zaposleniIzracunajRazdaljoOSM = async function(btn) {
+    const naslov = document.getElementById('z_naslov').value.trim();
+    const postaKraj = document.getElementById('z_posta_kraj').value.trim();
+    
+    if(!naslov || !postaKraj) {
+        alert("Za izračun razdalje najprej vnesite naslov ter pošto in kraj zaposlenega!");
+        return;
+    }
+    
+    btn.disabled = true;
+    const info = document.getElementById('z_osm_info');
+    if(info) info.style.display = 'block';
+    
+    try {
+        const res = await fetch('/api/nastavitve');
+        if(!res.ok) throw new Error("Ni mogoče pridobiti nastavitev podjetja");
+        const nData = await res.json();
+        
+        const pNaslov = nData.ulica ? nData.ulica.trim() : '';
+        const pPostaKraj = nData.posta_kraj ? nData.posta_kraj.trim() : '';
+        
+        if(!pNaslov || !pPostaKraj) {
+            alert("Najprej v Nastavitvah podjetja izpolnite naslov podjetja!");
+            btn.disabled = false;
+            if(info) info.style.display = 'none';
+            return;
+        }
+        
+        const zapNaslovPoln = `${naslov}, ${postaKraj}, Slovenia`;
+        const podNaslovPoln = `${pNaslov}, ${pPostaKraj}, Slovenia`;
+        
+        const zapKoor = await obdelajOSMKoordinate(zapNaslovPoln);
+        const podKoor = await obdelajOSMKoordinate(podNaslovPoln);
+        
+        if(!zapKoor) {
+            alert("Sistem ni prepoznal naslova zaposlenega. Poskusite natančneje zapisati ulico, kraj in pošto.");
+            btn.disabled = false;
+            if(info) info.style.display = 'none';
+            return;
+        }
+        if(!podKoor) {
+            alert("Sistem ni prepoznal naslova podjetja v nastavitvah. Preverite nastavitve podjetja.");
+            btn.disabled = false;
+            if(info) info.style.display = 'none';
+            return;
+        }
+        
+        const totalKm = await dobiOSMRazdaljo(zapKoor.lon, zapKoor.lat, podKoor.lon, podKoor.lat);
+        
+        const inputRazdalja = document.getElementById('z_razdalja');
+        if(inputRazdalja) {
+            inputRazdalja.value = totalKm.toFixed(1);
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Napaka pri povezavi z OpenStreetMap!");
+    }
+    btn.disabled = false;
+    if(info) info.style.display = 'none';
 };
 
 window.shraniPN = async function(e, id) {
@@ -8009,7 +8078,10 @@ async function renderZgodovina() {
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
-                            <li><strong>Test:</strong> Prva uspešna osvežitev zgodovine sprememb kot samostojnega modula.</li>
+                            <li><strong>Obračun plač in prispevkov:</strong> Razmejitev na "Skupaj prispevki" in "Skupaj povračila" v desnem delu obračunskega lista (pod QR kodo). Prehrana (malica) in potni stroški se ne vštevata več v prispevke in se ne seštevata skupaj.</li>
+                            <li><strong>Potni nalogi:</strong> Izboljšana logika — zaposlenim se ne izpolnijo vnaprej dnevi in kilometri v potnih nalogih (ko gre za potne stroške), temveč se to vpisuje/izračunava dinamično.</li>
+                            <li><strong>Popravek prevoza:</strong> Odpravljena napaka pri preračunavanju "Skupaj prevoz" (narobe preračunano od aprila naprej).</li>
+                            <li><strong>Uporabniški vmesnik (UI):</strong> Vzpostavljen ločen, samostojen zavihek "Zgodovina sprememb" ter osvežena in posodobljena "Navodila in pomoč".</li>
                         </ul>
                     </div>
 
