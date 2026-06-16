@@ -691,17 +691,13 @@ window.PrilogeUI = {
         panel.innerHTML = `
             <div class="preview-tabs">${tabsHtml}</div>
             <div class="preview-frame-container">${previewHtml}</div>
-                <div class="attachment-actions" style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
-                    <button class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px;" onclick="window.open('${active.url}')">${ICONS.download} Prenesi</button>
-                    ${(this.parentType === 'dokumenti') ? `
-                        <button class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px;" onclick="posljiEmail(${this.parentId})">${ICONS.send} Pošlji po e-pošti</button>
-                    ` : ''}
-                    ${(this.parentType === 'dokumenti' && this.zadnjePoslano) ? `
-                        <span style="font-size:0.85em; color:#2b8a3e; display:flex; align-items:center; gap:5px;">
-                            <span style="font-size:1.2em;">✉</span> Poslano: ${formatDateJS(this.zadnjePoslano.split(' ')[0])} ob ${this.zadnjePoslano.split(' ')[1].substring(0,5)}
-                        </span>
-                    ` : ''}
+            ${(this.parentType === 'dokumenti' && this.zadnjePoslano) ? `
+                <div class="attachment-actions" style="display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding: 10px 15px;">
+                    <span style="font-size:0.85em; color:#2b8a3e; display:flex; align-items:center; gap:5px;">
+                        <span style="font-size:1.2em;">✉</span> Poslano: ${formatDateJS(this.zadnjePoslano.split(' ')[0])} ob ${this.zadnjePoslano.split(' ')[1].substring(0,5)}
+                    </span>
                 </div>
+            ` : ''}
         `;
     },
 
@@ -1978,10 +1974,6 @@ async function renderDokumenti(tip, naslov) {
                     ${tip === 'prejeti_racuni' ? `
                         <button class="btn" style="background:#495057; color:white; border:none;" onclick="document.getElementById('eslog-upload').click()">Uvozi račune (XML/ZIP/PNG/PDF)</button>
                         <input type="file" id="eslog-upload" accept=".xml,.zip,.png,.pdf" style="display:none" multiple onchange="window.uvoziEslog(this)">
-                        <label class="llama-toggle-container" style="display:inline-flex; align-items:center; gap:8px; margin-left:15px; background:${window.llamaLearningMode ? 'linear-gradient(135deg, #e7f5ff, #d0ebff)' : 'linear-gradient(135deg, #f1f3f5, #e9ecef)'}; padding:6px 14px; border-radius:30px; border:1px solid ${window.llamaLearningMode ? '#a5d8ff' : '#ced4da'}; cursor:pointer; user-select:none; font-size:0.85em; font-weight:600; color:${window.llamaLearningMode ? '#1971c2' : '#495057'}; box-shadow:${window.llamaLearningMode ? '0 2px 8px rgba(28, 126, 214, 0.15)' : '0 2px 5px rgba(0,0,0,0.05)'}; transition:all 0.2s;">
-                            <input type="checkbox" id="llama-learning-toggle" style="width:16px; height:16px; cursor:pointer; accent-color:#1c7ed6; margin:0;" ${window.llamaLearningMode ? 'checked' : ''} onchange="window.toggleLlamaLearningMode(this.checked)">
-                            <span style="display:inline-flex; align-items:center; gap:4px;">🤖 Način učenja Llama: <strong style="text-decoration: underline; text-underline-offset: 3px;">${window.llamaLearningMode ? 'VKLOPLJEN' : 'IZKLOPLJEN'}</strong></span>
-                        </label>
                     ` : ''}
                 </div>
                 ${window.renderSortControls(tip, sortFields, `renderDokumenti('${tip}', '${naslov}')`)}
@@ -2420,9 +2412,17 @@ async function showDodajDokument(tip, naslov, editData = null) {
 
                 <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <button type="submit" class="btn btn-blue">${btnText}</button>
+                    ${isActuallyEdit ? `
+                        <button type="button" class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px;" onclick="posljiEmail(${editData.id})">${ICONS.send} Pošlji po e-pošti</button>
+                    ` : ''}
                     ${isActuallyEdit && tip === 'izdani_racuni' ? `
                         <button type="button" class="btn btn-orange" onclick="window.izvoziEslogXml(${editData.id})">Prenesi e-SLOG XML</button>
-                        <button type="button" class="btn btn-green" onclick="prenesiPDF(${editData.id})">Prenesi PDF</button>
+                    ` : ''}
+                    ${isActuallyEdit && (tip === 'izdani_racuni' || tip === 'ponudbe') ? `
+                        <button type="button" class="btn btn-green" style="display:flex; align-items:center; gap:5px;" onclick="prenesiPDF(${editData.id})">${ICONS.download} Prenesi PDF</button>
+                    ` : ''}
+                    ${isActuallyEdit && (tip === 'prejeti_racuni' || tip === 'prejeti_dobropisi') ? `
+                        <button type="button" class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px;" onclick="if(window.PrilogeUI && window.PrilogeUI._liste && window.PrilogeUI._liste.length > 0) { window.open(window.PrilogeUI._liste[0].url) } else { alert('Ni naloženih prilog za ta dokument.') }">${ICONS.download} Prenesi prejeti dokument</button>
                     ` : ''}
                     <button type="button" class="btn" onclick="window.zapriDokumentPopup()" style="color: var(--text-main); background: #eee;">Prekliči</button>
                 </div>
@@ -8085,8 +8085,6 @@ async function renderZgodovina() {
                         </ul>
                     </div>
 
-                <h4>Zgodovina sprememb</h4>
-                <div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">10. 06. 2026</span>
@@ -8247,7 +8245,6 @@ async function renderZgodovina() {
                         </ul>
                     </div>
 
-                </div>
             </div>
         </div>
     `;

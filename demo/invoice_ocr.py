@@ -1644,7 +1644,7 @@ def process_invoice_data(source, filename):
         tip = 'prejeti_dobropisi'
 
         
-    # Za SP (Stanovanjsko podjetje) dokumente - preskoci Llamo, uporabi deterministicni parser
+    # 1. Za SP (Stanovanjsko podjetje) dokumente - preskoči Llamo, uporabi deterministični parser
     if _is_sp_document(filename, text):
         data = {
             "stevilka": "NEZNANA", "sklic": "",
@@ -1681,7 +1681,45 @@ def process_invoice_data(source, filename):
             'tip': tip
         }
 
-    # Poskusi z Llama AI
+    # 2. Poskusi najprej s standardnim regex/tekstovnim parserjem
+    regex_res = parse_invoice_data(text)
+    parser_successful = False
+    
+    if isinstance(regex_res, dict):
+        regex_res['ocr_text'] = text
+        if _is_credit_note(filename, text):
+            regex_res = fix_credit_note_data(regex_res, text, filename)
+        regex_res = post_process_invoice_data(regex_res)
+        
+        if 'sklic' not in regex_res or not regex_res['sklic']:
+            regex_res['sklic'] = find_sklic(text)
+            
+        # Preveri, če so ključni podatki uspešno prebrani
+        has_stevilka = regex_res.get("stevilka") and regex_res.get("stevilka") != "NEZNANA"
+        has_partner = regex_res.get("partner", {}).get("naziv") and regex_res.get("partner", {}).get("naziv") != "Neznan Partner"
+        has_znesek = regex_res.get("znesek_skupaj", 0.0) > 0.01
+        
+        if has_stevilka and has_partner and has_znesek:
+            parser_successful = True
+
+    # 3. Če je parser uspešen, neposredno vrni njegove rezultate (preskoči Llamo)
+    if parser_successful:
+        if 'datum_storitve_od' not in regex_res:
+            regex_res['datum_storitve_od'] = regex_res.get('datum_storitve', regex_res.get('datum_izdaje', ''))
+        if 'datum_storitve_do' not in regex_res:
+            regex_res['datum_storitve_do'] = regex_res.get('datum_storitve', regex_res.get('datum_izdaje', ''))
+        if 'datum_storitve' not in regex_res:
+            regex_res['datum_storitve'] = regex_res.get('datum_storitve_od', '')
+        if 'partner' in regex_res and isinstance(regex_res['partner'], dict):
+            regex_res.setdefault('partner_naziv', regex_res['partner'].get('naziv', ''))
+            regex_res.setdefault('partner_davcna', regex_res['partner'].get('davcna_stevilka', ''))
+            regex_res.setdefault('partner_trr', regex_res['partner'].get('trr', ''))
+        regex_res['tip'] = tip
+        print(f"[Parser] Uspešno prepoznavanje za {filename}. Preskakujem Llama AI.")
+        return regex_res
+
+    # 4. Če parser ni bil povsem uspešen, uporabi Llama AI kot pametno alternativo
+    print(f"[Parser] Nepopolni podatki za {filename}, poskušam z Llama AI...")
     if ensure_ollama_running("llama3"):
         try:
             parsed = parse_with_llama(text, filename, "llama3")
@@ -1707,7 +1745,6 @@ def process_invoice_data(source, filename):
                     'datum_storitve': datum_storitve_od,
                     'datum_storitve_od': datum_storitve_od,
                     'datum_storitve_do': datum_storitve_do,
-                    # Gnezden partner dict — zahtevan za _enrich_eslog_data in _save_imported_eslog
                     'partner': {
                         'naziv': partner_naziv,
                         'davcna_stevilka': partner_davcna,
@@ -1718,7 +1755,6 @@ def process_invoice_data(source, filename):
                         'postna_stevilka': partner_info.get("postna_stevilka", ""),
                         'tuji_partner_neprebran': partner_info.get("tuji_partner_neprebran", False),
                     },
-                    # Ohranimo tudi ploščate ključe za način učenja in prikaz
                     'partner_naziv': partner_naziv,
                     'partner_davcna': partner_davcna,
                     'partner_trr': partner_trr,
@@ -1732,34 +1768,20 @@ def process_invoice_data(source, filename):
         except Exception as e:
             print(f"Llama AI extraction failed, falling back to regex: {e}")
             
-    # Regex fallback
-    res = parse_invoice_data(text)
-    if isinstance(res, dict):
-        res['ocr_text'] = text
-        # Za SP dokumente apliciraj deterministicni popravek
-        if _is_sp_document(filename, text):
-            res = fix_sp_data(res, text, filename)
-        if _is_credit_note(filename, text):
-            res = fix_credit_note_data(res, text, filename)
-        res = post_process_invoice_data(res)
-        
-        # Regex extraction for sklic
-        if 'sklic' not in res or not res['sklic']:
-            res['sklic'] = find_sklic(text)
-        # Zagotovimo, da ima regex fallback tudi datum_storitve_od/do
-        if 'datum_storitve_od' not in res:
-            res['datum_storitve_od'] = res.get('datum_storitve', res.get('datum_izdaje', ''))
-        if 'datum_storitve_do' not in res:
-            res['datum_storitve_do'] = res.get('datum_storitve', res.get('datum_izdaje', ''))
-        if 'datum_storitve' not in res:
-            res['datum_storitve'] = res.get('datum_storitve_od', '')
-        # Zagotovimo ploščate partner ključe za način učenja
-        if 'partner' in res and isinstance(res['partner'], dict):
-            res.setdefault('partner_naziv', res['partner'].get('naziv', ''))
-            res.setdefault('partner_davcna', res['partner'].get('davcna_stevilka', ''))
-            res.setdefault('partner_trr', res['partner'].get('trr', ''))
-        res['tip'] = tip
-    return res
+    # 5. Ultimate fallback na prvotne regex rezultate (tudi če so nepopolni)
+    if isinstance(regex_res, dict):
+        if 'datum_storitve_od' not in regex_res:
+            regex_res['datum_storitve_od'] = regex_res.get('datum_storitve', regex_res.get('datum_izdaje', ''))
+        if 'datum_storitve_do' not in regex_res:
+            regex_res['datum_storitve_do'] = regex_res.get('datum_storitve', regex_res.get('datum_izdaje', ''))
+        if 'datum_storitve' not in regex_res:
+            regex_res['datum_storitve'] = regex_res.get('datum_storitve_od', '')
+        if 'partner' in regex_res and isinstance(regex_res['partner'], dict):
+            regex_res.setdefault('partner_naziv', regex_res['partner'].get('naziv', ''))
+            regex_res.setdefault('partner_davcna', regex_res['partner'].get('davcna_stevilka', ''))
+            regex_res.setdefault('partner_trr', regex_res['partner'].get('trr', ''))
+        regex_res['tip'] = tip
+    return regex_res
 
 
 
