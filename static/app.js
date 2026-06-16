@@ -2413,16 +2413,16 @@ async function showDodajDokument(tip, naslov, editData = null) {
                 <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <button type="submit" class="btn btn-blue">${btnText}</button>
                     ${isActuallyEdit ? `
-                        <button type="button" class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px;" onclick="posljiEmail(${editData.id})">${ICONS.send} Pošlji po e-pošti</button>
+                        <button type="button" class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px; transition: background 0.2s;" onmouseover="this.style.background='#f1f3f5'" onmouseout="this.style.background='#fff'" onclick="posljiEmail(${editData.id})">${ICONS.send} Pošlji po e-pošti</button>
                     ` : ''}
                     ${isActuallyEdit && tip === 'izdani_racuni' ? `
-                        <button type="button" class="btn btn-orange" onclick="window.izvoziEslogXml(${editData.id})">Prenesi e-SLOG XML</button>
+                        <button type="button" class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px; transition: background 0.2s;" onmouseover="this.style.background='#f1f3f5'" onmouseout="this.style.background='#fff'" onclick="window.izvoziEslogXml(${editData.id})">${ICONS.download} Prenesi e-SLOG XML</button>
                     ` : ''}
                     ${isActuallyEdit && (tip === 'izdani_racuni' || tip === 'ponudbe') ? `
-                        <button type="button" class="btn btn-green" style="display:flex; align-items:center; gap:5px;" onclick="prenesiPDF(${editData.id})">${ICONS.download} Prenesi PDF</button>
+                        <button type="button" class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px; transition: background 0.2s;" onmouseover="this.style.background='#f1f3f5'" onmouseout="this.style.background='#fff'" onclick="prenesiPDF(${editData.id})">${ICONS.download} Prenesi PDF</button>
                     ` : ''}
                     ${isActuallyEdit && (tip === 'prejeti_racuni' || tip === 'prejeti_dobropisi') ? `
-                        <button type="button" class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px;" onclick="if(window.PrilogeUI && window.PrilogeUI._liste && window.PrilogeUI._liste.length > 0) { window.open(window.PrilogeUI._liste[0].url) } else { alert('Ni naloženih prilog za ta dokument.') }">${ICONS.download} Prenesi prejeti dokument</button>
+                        <button type="button" class="btn" style="background:white; color:#495057; border:1px solid #dee2e6; display:flex; align-items:center; gap:5px; transition: background 0.2s;" onmouseover="this.style.background='#f1f3f5'" onmouseout="this.style.background='#fff'" onclick="if(window.PrilogeUI && window.PrilogeUI._liste && window.PrilogeUI._liste.length > 0) { window.open(window.PrilogeUI._liste[0].url) } else { alert('Ni naloženih prilog za ta dokument.') }">${ICONS.download} Prenesi prejeti dokument</button>
                     ` : ''}
                     <button type="button" class="btn" onclick="window.zapriDokumentPopup()" style="color: var(--text-main); background: #eee;">Prekliči</button>
                 </div>
@@ -8076,6 +8076,16 @@ async function renderZgodovina() {
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">16. 06. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li><strong>Oblikovanje:</strong> Gumbi za prenos dokumentov imajo sedaj boljšo vidnost ter enak, prefinjen bel slog s svetlo obrobo in prehodom ob preletu, kot gumb "Pošlji po e-pošti".</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">16. 06. 2026</span>
+                            
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Obračun plač in prispevkov:</strong> Razmejitev na "Skupaj prispevki" in "Skupaj povračila" v desnem delu obračunskega lista (pod QR kodo). Prehrana (malica) in potni stroški se ne vštevata več v prispevke in se ne seštevata skupaj.</li>
