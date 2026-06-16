@@ -1499,6 +1499,75 @@ Here is the invoice text:
     return parsed
 
 
+def parse_bank_statement_with_llama(text, filename, model="llama3"):
+    import requests
+    import json
+    
+    url = "http://localhost:11434/api/chat"
+    prompt = f"""
+Extract structured bank statement data from the following text representation of a bank statement.
+
+CONTEXT:
+- The PDF filename is: "{filename}"
+
+Return ONLY a valid JSON object matching this schema:
+{{
+  "statement_number": "Statement number (string)",
+  "statement_date": "Date of statement (YYYY-MM-DD)",
+  "opening_balance": Opening balance (float),
+  "closing_balance": Closing balance (float),
+  "transactions": [
+    {{
+      "date": "Transaction date (YYYY-MM-DD)",
+      "partner": "Counterparty name (string)",
+      "description": "Transaction description / purpose (string)",
+      "amount": Transaction amount (positive float),
+      "type": "Transaction type: 'breme' for outgoing/debit, 'dobro' for incoming/credit",
+      "code": "Purpose code (e.g. 'PMNT', 'OTHR', etc., string)"
+    }}
+  ]
+}}
+
+Here is the bank statement text:
+---
+{text}
+---
+"""
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a precise accounting extraction assistant. Your job is to extract bank statement transactions. Output ONLY a valid JSON object matching the requested schema. No conversational text."
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
+    
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": False,
+        "format": "json",
+        "options": {
+            "temperature": 0.0
+        }
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=60)
+        response.raise_for_status()
+        res_json = response.json()
+        content = res_json['message']['content']
+        parsed = json.loads(content)
+        return parsed
+    except Exception as e:
+        print(f"Llama bank statement extraction failed: {e}")
+        return None
+
+
+
 def post_process_invoice_data(data):
     if not data:
         return data
@@ -1570,6 +1639,11 @@ def process_invoice_data(source, filename):
     else:
         return None
         
+    tip = 'prejeti_racuni'
+    if _is_credit_note(filename, text):
+        tip = 'prejeti_dobropisi'
+
+        
     # Za SP (Stanovanjsko podjetje) dokumente - preskoci Llamo, uporabi deterministicni parser
     if _is_sp_document(filename, text):
         data = {
@@ -1603,7 +1677,8 @@ def process_invoice_data(source, filename):
             'znesek_brez_ddv': float(data.get("znesek_brez_ddv", 0.0)),
             'znesek_ddv': float(data.get("znesek_ddv", 0.0)),
             'postavke': data.get("postavke", []),
-            'ocr_text': text
+            'ocr_text': text,
+            'tip': tip
         }
 
     # Poskusi z Llama AI
@@ -1651,7 +1726,8 @@ def process_invoice_data(source, filename):
                     'znesek_brez_ddv': float(parsed.get("znesek_brez_ddv", 0.0)),
                     'znesek_ddv': float(parsed.get("znesek_ddv", 0.0)),
                     'postavke': parsed.get("postavke", []),
-                    'ocr_text': text
+                    'ocr_text': text,
+                    'tip': tip
                 }
         except Exception as e:
             print(f"Llama AI extraction failed, falling back to regex: {e}")
@@ -1682,7 +1758,14 @@ def process_invoice_data(source, filename):
             res.setdefault('partner_naziv', res['partner'].get('naziv', ''))
             res.setdefault('partner_davcna', res['partner'].get('davcna_stevilka', ''))
             res.setdefault('partner_trr', res['partner'].get('trr', ''))
+        res['tip'] = tip
     return res
+
+
+
+def is_credit_note(filename, text):
+    return _is_credit_note(filename, text)
+
 
 def process_sample_file(file_path):
     return process_invoice_data(file_path, file_path)

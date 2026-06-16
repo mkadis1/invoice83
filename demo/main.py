@@ -250,15 +250,6 @@ class ArtiklStoritev(BaseModel):
     vodi_zalogo: Optional[bool] = False
     zacetna_zaloga: Optional[float] = 0.0
 
-@app.get("/api/konti")
-def get_kontni_nacrt():
-    conn = database.get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT stevilka, naziv FROM kontni_nacrt ORDER BY stevilka")
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
 # --- ARTIKLI IN STORITVE ---
 def _naslednja_sifra(cursor, vrsta: str) -> str:
     """Generira naslednjo šifro: A001, A002... ali S001, S002..."""
@@ -875,10 +866,12 @@ def get_odprte_postavke(partner_id: int):
     # Računamo preostanek: znesek_skupaj - vsota vseh povezav v placila_povezave
     cursor.execute("""
         SELECT d.id, d.tip, d.stevilka, d.datum_izdaje, d.datum_zapadlosti, d.znesek_skupaj, d.status,
-        IFNULL((SELECT SUM(znesek) FROM placila_povezave WHERE dokument_id = d.id), 0) as placano_znesek
+               p.naziv as partner_naziv,
+               IFNULL((SELECT SUM(znesek) FROM placila_povezave WHERE dokument_id = d.id), 0) as placano_znesek
         FROM dokumenti d
+        LEFT JOIN partnerji p ON d.partner_id = p.id
         WHERE d.partner_id = ? AND d.tip IN ('izdani_racuni', 'prejeti_racuni', 'dobropisi', 'prejeti_dobropisi')
-        AND (d.status != 'plačano' OR d.status IS NULL)
+          AND (d.status != 'plačano' OR d.status IS NULL)
         ORDER BY d.datum_zapadlosti ASC
     """, (partner_id,))
     rows = cursor.fetchall()
@@ -892,14 +885,40 @@ def get_odprte_postavke(partner_id: int):
             result.append(d)
     return result
 
+@app.get("/api/likvidacija/iskanje_racunov")
+def iskanje_racunov(q: str):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT d.id, d.tip, d.stevilka, d.datum_izdaje, d.datum_zapadlosti, d.znesek_skupaj, d.status,
+               p.naziv as partner_naziv,
+               IFNULL((SELECT SUM(znesek) FROM placila_povezave WHERE dokument_id = d.id), 0) as placano_znesek
+        FROM dokumenti d
+        LEFT JOIN partnerji p ON d.partner_id = p.id
+        WHERE (d.stevilka LIKE ? OR p.naziv LIKE ?)
+          AND d.tip IN ('izdani_racuni', 'prejeti_racuni', 'dobropisi', 'prejeti_dobropisi')
+        ORDER BY d.datum_zapadlosti ASC
+    """, (f"%{q}%", f"%{q}%"))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    result = []
+    for r in rows:
+        d = dict(r)
+        d['preostanek'] = round(d['znesek_skupaj'] - d['placano_znesek'], 2)
+        # Pri ročnem iskanju vrnemo vse ujemajoče se račune, tudi že plačane, da jih je mogoče povezati
+        result.append(d)
+    return result
+
 @app.get("/api/likvidacija/povezave/{izpisek_postavka_id}")
 def get_povezave_postavke(izpisek_postavka_id: int):
     conn = database.get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT pp.*, d.stevilka, d.tip, d.datum_izdaje
+        SELECT pp.*, d.stevilka, d.tip, d.datum_izdaje, p.naziv as partner_naziv
         FROM placila_povezave pp
         JOIN dokumenti d ON pp.dokument_id = d.id
+        LEFT JOIN partnerji p ON d.partner_id = p.id
         WHERE pp.izpisek_postavka_id = ?
     """, (izpisek_postavka_id,))
     rows = cursor.fetchall()
@@ -1049,6 +1068,254 @@ def delete_logo():
         return {"status": "success", "deleted": deleted}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# =============================================
+# UJP B2B NASTAVITVE IN POŠILJANJE E-RAČUNOV
+# =============================================
+
+UJP_CERTS_DIR = Path("ujp_certs")
+UJP_CERTS_DIR.mkdir(exist_ok=True)
+
+@app.post("/api/nastavitve/ujp_cert")
+async def upload_ujp_cert(file: UploadFile = File(...)):
+    """Naloži sistemsko digitalno potrdilo (.p12/.pfx) za UJP B2B."""
+    try:
+        content = await file.read()
+        ext = file.filename.split('.')[-1].lower()
+        if ext not in ['p12', 'pfx']:
+            raise HTTPException(status_code=400, detail="Podprte so samo datoteke .p12 ali .pfx")
+        
+        # Shranimo potrdilo varno v ujp_certs/ mapo
+        cert_filename = f"ujp_cert.{ext}"
+        cert_path = UJP_CERTS_DIR / cert_filename
+        with open(cert_path, "wb") as f:
+            f.write(content)
+        
+        # Shranimo pot v bazo
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE nastavitve SET ujp_cert_path=? WHERE id=1", (str(cert_path),))
+        conn.commit()
+        conn.close()
+        
+        return {"status": "success", "filename": cert_filename}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/nastavitve/ujp_settings")
+def save_ujp_settings(data: dict):
+    """Shrani UJP B2B nastavitve (geslo potrdila, testni način)."""
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE nastavitve SET ujp_cert_password=?, ujp_test_mode=? WHERE id=1",
+        (data.get("ujp_cert_password", ""), 1 if data.get("ujp_test_mode", True) else 0)
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+@app.get("/api/nastavitve/ujp_status")
+def get_ujp_status():
+    """Vrne status UJP B2B nastavitev (ali je potrdilo naloženo)."""
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT ujp_cert_path, ujp_cert_password, ujp_test_mode FROM nastavitve WHERE id=1")
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return {"cert_loaded": False, "test_mode": True}
+    cert_path = row["ujp_cert_path"] or ""
+    cert_loaded = bool(cert_path and os.path.exists(cert_path))
+    return {
+        "cert_loaded": cert_loaded,
+        "cert_filename": os.path.basename(cert_path) if cert_loaded else None,
+        "test_mode": bool(row["ujp_test_mode"] if row["ujp_test_mode"] is not None else 1)
+    }
+
+@app.delete("/api/nastavitve/ujp_cert")
+def delete_ujp_cert():
+    """Izbriše naloženo UJP digitalno potrdilo."""
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT ujp_cert_path FROM nastavitve WHERE id=1")
+    row = cursor.fetchone()
+    if row and row["ujp_cert_path"]:
+        try:
+            if os.path.exists(row["ujp_cert_path"]):
+                os.remove(row["ujp_cert_path"])
+        except:
+            pass
+    cursor.execute("UPDATE nastavitve SET ujp_cert_path=NULL WHERE id=1")
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+def _generate_ujp_soap_envelope(xml_content: bytes, stevilka: str) -> str:
+    """Generira SOAP ovojnico za pošiljanje e-računa na UJP B2B."""
+    import base64
+    encoded = base64.b64encode(xml_content).decode('utf-8')
+    return f"""<?xml version="1.0" encoding="utf-8"?>
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                 xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+  <soap12:Body>
+    <SendInvoice xmlns="http://ujpnet.ujp.gov.si/b2b/">
+      <invoiceData>{encoded}</invoiceData>
+      <fileName>eslog_{stevilka}.xml</fileName>
+    </SendInvoice>
+  </soap12:Body>
+</soap12:Envelope>"""
+
+@app.post("/api/dokumenti/posji_ujp/{id}")
+def poslji_na_ujp(id: int):
+    """Pošlje izdani račun neposredno na UJP B2B vmesnik."""
+    conn = database.get_db()
+    cursor = conn.cursor()
+    
+    # Pridobi nastavitve
+    cursor.execute("SELECT ujp_cert_path, ujp_cert_password, ujp_test_mode FROM nastavitve WHERE id=1")
+    settings = cursor.fetchone()
+    if not settings or not settings["ujp_cert_path"]:
+        conn.close()
+        raise HTTPException(status_code=400, detail="UJP digitalno potrdilo ni naloženo. Naložite ga v Nastavitve → UJP e-Račun.")
+    
+    cert_path = settings["ujp_cert_path"]
+    cert_password = settings["ujp_cert_password"] or ""
+    test_mode = bool(settings["ujp_test_mode"] if settings["ujp_test_mode"] is not None else 1)
+    
+    if not os.path.exists(cert_path):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Datoteka digitalnega potrdila ne obstaja. Naložite jo znova v nastavitve.")
+    
+    # Pridobi podatke o računu
+    cursor.execute("SELECT * FROM dokumenti WHERE id=?", (id,))
+    inv = cursor.fetchone()
+    if not inv:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Račun ni najden.")
+    if inv["tip"] != "izdani_racuni":
+        conn.close()
+        raise HTTPException(status_code=400, detail="Na UJP je mogoče pošiljati samo izdane račune.")
+    
+    cursor.execute("SELECT * FROM partnerji WHERE id=?", (inv["partner_id"],))
+    partner = cursor.fetchone()
+    partner_dict = dict(partner) if partner else {"naziv": "Neznan", "ulica": "", "postna_stevilka": "", "kraj": "", "drzava": "Slovenija", "davcna_stevilka": "", "zavezanec_za_ddv": 0, "trr": ""}
+    
+    cursor.execute("SELECT * FROM dokumenti_postavke WHERE dokument_id=?", (id,))
+    items = [dict(r) for r in cursor.fetchall()]
+    
+    cursor.execute("SELECT * FROM nastavitve WHERE id=1")
+    company = cursor.fetchone()
+    conn.close()
+    
+    # Generiraj e-SLOG XML
+    xml_content = generate_eslog_xml(dict(inv), dict(company), partner_dict, items)
+    stevilka = inv["stevilka"]
+    
+    # Pripravi SOAP ovojnico
+    soap_body = _generate_ujp_soap_envelope(xml_content, stevilka)
+    
+    # Endpoint (testni ali produkcijski)
+    if test_mode:
+        endpoint = "https://betaujpnet.ujp.gov.si/b2b/service.svc"
+    else:
+        endpoint = "https://ujpnet.ujp.gov.si/b2b/service.svc"
+    
+    # Izvleči PEM certifikat in ključ iz .p12 datoteke
+    try:
+        from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, NoEncryption
+        from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
+        import tempfile
+        
+        with open(cert_path, "rb") as f:
+            p12_data = f.read()
+        
+        password_bytes = cert_password.encode("utf-8") if cert_password else None
+        private_key, certificate, _ = load_key_and_certificates(p12_data, password_bytes)
+        
+        # Zapišemo začasne PEM datoteke za requests
+        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as cert_pem_file:
+            cert_pem_file.write(certificate.public_bytes(Encoding.PEM))
+            cert_pem_path = cert_pem_file.name
+        
+        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as key_pem_file:
+            key_pem_file.write(private_key.private_bytes(Encoding.PEM, PrivateFormat.TraditionalOpenSSL, NoEncryption()))
+            key_pem_path = key_pem_file.name
+        
+        # Pošlji SOAP zahtevek z mTLS
+        headers = {
+            "Content-Type": "application/soap+xml; charset=utf-8",
+            "SOAPAction": "http://ujpnet.ujp.gov.si/b2b/IService/SendInvoice"
+        }
+        response = requests.post(
+            endpoint,
+            data=soap_body.encode("utf-8"),
+            headers=headers,
+            cert=(cert_pem_path, key_pem_path),
+            timeout=30,
+            verify=True
+        )
+        
+        # Počistimo začasne datoteke
+        try:
+            os.unlink(cert_pem_path)
+            os.unlink(key_pem_path)
+        except:
+            pass
+        
+        # Zabeležimo rezultat
+        status = "success" if response.status_code == 200 else "error"
+        odgovor = response.text[:2000] if response.text else str(response.status_code)
+        
+        conn2 = database.get_db()
+        cursor2 = conn2.cursor()
+        cursor2.execute(
+            "INSERT INTO ujp_log (dokument_id, stevilka, status, odgovor) VALUES (?,?,?,?)",
+            (id, stevilka, status, odgovor)
+        )
+        conn2.commit()
+        conn2.close()
+        
+        if response.status_code == 200:
+            return {"status": "success", "message": f"Račun {stevilka} je bil uspešno poslan na UJP{' (testno okolje)' if test_mode else ''}.", "odgovor": odgovor}
+        else:
+            raise HTTPException(status_code=400, detail=f"UJP je vrnil napako {response.status_code}: {odgovor[:500]}")
+    
+    except HTTPException:
+        raise
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Manjka knjižnica 'cryptography'. Zaženite: pip install cryptography")
+    except Exception as e:
+        # Zabeležimo napako
+        try:
+            conn3 = database.get_db()
+            cursor3 = conn3.cursor()
+            cursor3.execute(
+                "INSERT INTO ujp_log (dokument_id, stevilka, status, odgovor) VALUES (?,?,?,?)",
+                (id, str(inv.get("stevilka", "")), "error", str(e)[:2000])
+            )
+            conn3.commit()
+            conn3.close()
+        except:
+            pass
+        raise HTTPException(status_code=500, detail=f"Napaka pri pošiljanju: {str(e)}")
+
+@app.get("/api/ujp_log")
+def get_ujp_log():
+    """Vrne dnevnik pošiljanj na UJP."""
+    conn = database.get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM ujp_log ORDER BY id DESC LIMIT 100")
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception:
+        conn.close()
+        return []
 
 def izracunaj_kontrolno_stevilko(stevilka_str):
     """
@@ -1656,7 +1923,19 @@ def parse_eslog_xml(xml_data):
         
     root = ET.fromstring(xml_data)
     
+    # 0. Ugotovimo tip dokumenta (380 = Racun, 381 = Dobropis)
+    doc_type_code = "380"
+    for el in root.iter():
+        tag = el.tag.split('}')[-1]
+        if tag == 'InvoiceTypeCode' or tag == 'D_1001':
+            if el.text:
+                doc_type_code = el.text.strip()
+                break
+    
+    tip = 'prejeti_dobropisi' if doc_type_code == '381' else 'prejeti_racuni'
+
     def get_tag(el):
+
         return el.tag.split('}')[-1]
 
     def find_all(tag_name, root_el=root):
@@ -1701,7 +1980,8 @@ def parse_eslog_xml(xml_data):
         return None
 
     # 1. Številka računa
-    stevilka = find_edi_val('S_BGM', 'D_1001', '380', 'D_1004')
+    stevilka = find_edi_val('S_BGM', 'D_1001', doc_type_code, 'D_1004')
+
     if not stevilka:
         # Bolj robusten fallback za EDIFACT (poišči D_1004 v kateremkoli S_BGM)
         for bgm in find_all('S_BGM'):
@@ -1863,8 +2143,10 @@ def parse_eslog_xml(xml_data):
         "znesek_skupaj": znesek_skupaj,
         "znesek_brez_ddv": znesek_brez_ddv,
         "znesek_ddv": znesek_ddv,
-        "postavke": postavke
+        "postavke": postavke,
+        "tip": tip
     }
+
 
 @app.post("/api/dokumenti/import_eslog_pregled")
 async def import_eslog_pregled(file: UploadFile = File(...)):
@@ -2057,10 +2339,6 @@ async def import_eslog_bulk_potrdi(request_data: dict):
         except Exception as e:
             print(f"Bulk save error: {e}")
     return {"status": "success", "count": len(results), "ids": results}
-
-            
-    conn.close()
-    return {"status": "finished", "results": results}
 
 async def _save_imported_eslog(data):
     conn = database.get_db()
@@ -2913,6 +3191,287 @@ def check_stevilka(stevilka: str, tip: str, exclude_id: Optional[int] = None):
         return {"obstaja": True, "id": row["id"]}
     return {"obstaja": False}
 
+def generate_eslog_xml(inv, company, partner, items):
+    import xml.etree.ElementTree as ET
+    from xml.sax.saxutils import escape
+    
+    def parse_posta_kraj(pk):
+        if not pk:
+            return "", ""
+        m = re.search(r'(\d{4})\s+(.+)', pk)
+        if m:
+            return m.group(1), m.group(2)
+        return "", pk
+
+    supplier_zip, supplier_city = parse_posta_kraj(company.get('posta_kraj', ''))
+    customer_zip = partner.get('postna_stevilka', '')
+    customer_city = partner.get('kraj', '')
+    
+    ET.register_namespace('', 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2')
+    ET.register_namespace('cac', 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2')
+    ET.register_namespace('cbc', 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2')
+    
+    root = ET.Element('{urn:oasis:names:specification:ubl:schema:xsd:Invoice-2}Invoice')
+    
+    customization_id = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}CustomizationID')
+    customization_id.text = 'urn:cen.eu:en16931:2017#compliant#urn:epos.si:eslog:2.0'
+    
+    profile_id = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ProfileID')
+    profile_id.text = 'urn:fdc:peppol.eu:poacc:billing:01:1.0'
+    
+    doc_id = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ID')
+    doc_id.text = str(inv.get('stevilka', ''))
+    
+    issue_date = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}IssueDate')
+    issue_date.text = str(inv.get('datum_izdaje', ''))
+    
+    due_date = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}DueDate')
+    due_date.text = str(inv.get('datum_zapadlosti', ''))
+    
+    invoice_type = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}InvoiceTypeCode')
+    invoice_type.text = '381' if inv.get('tip') in ['dobropis', 'dobropisi', 'prejeti_dobropisi'] else '380'
+    
+    currency = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}DocumentCurrencyCode')
+    currency.text = 'EUR'
+    
+    if inv.get('datum_storitve_do') or inv.get('datum_storitve_od'):
+        delivery = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Delivery')
+        actual_date = ET.SubElement(delivery, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ActualDeliveryDate')
+        actual_date.text = str(inv.get('datum_storitve_do') or inv.get('datum_storitve_od') or inv.get('datum_izdaje'))
+    
+    supplier_party = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}AccountingSupplierParty')
+    party = ET.SubElement(supplier_party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Party')
+    
+    party_name = ET.SubElement(party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PartyName')
+    name = ET.SubElement(party_name, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}Name')
+    name.text = str(company.get('naziv', ''))
+    
+    postal_addr = ET.SubElement(party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PostalAddress')
+    street = ET.SubElement(postal_addr, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}StreetName')
+    street.text = str(company.get('ulica', ''))
+    if supplier_zip:
+        p_zone = ET.SubElement(postal_addr, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}PostalZone')
+        p_zone.text = str(supplier_zip)
+    city = ET.SubElement(postal_addr, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}CityName')
+    city.text = str(supplier_city)
+    country = ET.SubElement(postal_addr, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Country')
+    c_code = ET.SubElement(country, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}IdentificationCode')
+    c_code.text = 'SI'
+    
+    supplier_vat = str(company.get('davcna_stevilka', '')).strip()
+    if supplier_vat:
+        vat_clean = re.sub(r'[^0-9]', '', supplier_vat)
+        vat_formatted = f"SI{vat_clean}" if company.get('zavezanec_za_ddv') else vat_clean
+        
+        party_tax = ET.SubElement(party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PartyTaxScheme')
+        company_id = ET.SubElement(party_tax, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}CompanyID')
+        company_id.text = vat_formatted
+        tax_scheme = ET.SubElement(party_tax, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxScheme')
+        tax_id = ET.SubElement(tax_scheme, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ID')
+        tax_id.text = 'VAT'
+        
+    party_legal = ET.SubElement(party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PartyLegalEntity')
+    reg_name = ET.SubElement(party_legal, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}RegistrationName')
+    reg_name.text = str(company.get('naziv', ''))
+    
+    customer_party = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}AccountingCustomerParty')
+    c_party = ET.SubElement(customer_party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Party')
+    
+    c_party_name = ET.SubElement(c_party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PartyName')
+    c_name = ET.SubElement(c_party_name, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}Name')
+    c_name.text = str(partner.get('naziv', ''))
+    
+    c_postal_addr = ET.SubElement(c_party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PostalAddress')
+    c_street = ET.SubElement(c_postal_addr, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}StreetName')
+    c_street.text = str(partner.get('ulica', ''))
+    if customer_zip:
+        c_p_zone = ET.SubElement(c_postal_addr, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}PostalZone')
+        c_p_zone.text = str(customer_zip)
+    c_city = ET.SubElement(c_postal_addr, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}CityName')
+    c_city.text = str(customer_city)
+    c_country = ET.SubElement(c_postal_addr, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Country')
+    c_c_code = ET.SubElement(c_country, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}IdentificationCode')
+    c_c_code.text = str(partner.get('drzava', 'SI')) or 'SI'
+    
+    customer_vat = str(partner.get('davcna_stevilka', '')).strip()
+    if customer_vat:
+        c_vat_clean = re.sub(r'[^0-9]', '', customer_vat)
+        c_vat_formatted = f"SI{c_vat_clean}" if partner.get('zavezanec_za_ddv') else c_vat_clean
+        
+        c_party_tax = ET.SubElement(c_party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PartyTaxScheme')
+        c_company_id = ET.SubElement(c_party_tax, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}CompanyID')
+        c_company_id.text = c_vat_formatted
+        c_tax_scheme = ET.SubElement(c_party_tax, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxScheme')
+        c_tax_id = ET.SubElement(c_tax_scheme, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ID')
+        c_tax_id.text = 'VAT'
+        
+    c_party_legal = ET.SubElement(c_party, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PartyLegalEntity')
+    c_reg_name = ET.SubElement(c_party_legal, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}RegistrationName')
+    c_reg_name.text = str(partner.get('naziv', ''))
+    
+    pm = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PaymentMeans')
+    pm_code = ET.SubElement(pm, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}PaymentMeansCode')
+    pm_code.text = '30'
+    
+    p_id = ET.SubElement(pm, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}PaymentID')
+    p_id.text = str(inv.get('sklic', '')) or f"SI00 {inv.get('stevilka')}"
+    
+    if company.get('trr'):
+        payee_acc = ET.SubElement(pm, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}PayeeFinancialAccount')
+        acc_id = ET.SubElement(payee_acc, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ID')
+        acc_id.text = re.sub(r'[^a-zA-Z0-9]', '', str(company.get('trr', '')))
+        
+        if company.get('banka'):
+            branch = ET.SubElement(payee_acc, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}FinancialInstitutionBranch')
+            branch_name = ET.SubElement(branch, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}Name')
+            branch_name.text = str(company.get('banka'))
+            
+    vat_groups = {}
+    for item in items:
+        rate = item.get('stopnja_ddv', 22.0)
+        qty = item.get('kolicina', 1.0)
+        price = item.get('cena_enote', 0.0)
+        discount = item.get('popust', 0.0)
+        
+        line_base = qty * price * (1 - discount / 100)
+        line_vat = line_base * (rate / 100)
+        
+        if rate not in vat_groups:
+            vat_groups[rate] = {'base': 0.0, 'vat': 0.0}
+        vat_groups[rate]['base'] += line_base
+        vat_groups[rate]['vat'] += line_vat
+
+    total_vat = sum(g['vat'] for g in vat_groups.values())
+    
+    tax_total = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxTotal')
+    t_amount = ET.SubElement(tax_total, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}TaxAmount')
+    t_amount.set('currencyID', 'EUR')
+    t_amount.text = f"{total_vat:.2f}"
+    
+    for rate, g in vat_groups.items():
+        subtotal = ET.SubElement(tax_total, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxSubtotal')
+        taxable_amt = ET.SubElement(subtotal, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}TaxableAmount')
+        taxable_amt.set('currencyID', 'EUR')
+        taxable_amt.text = f"{g['base']:.2f}"
+        
+        sub_tax_amt = ET.SubElement(subtotal, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}TaxAmount')
+        sub_tax_amt.set('currencyID', 'EUR')
+        sub_tax_amt.text = f"{g['vat']:.2f}"
+        
+        tax_category = ET.SubElement(subtotal, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxCategory')
+        tc_id = ET.SubElement(tax_category, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ID')
+        tc_id.text = 'S'
+        tc_percent = ET.SubElement(tax_category, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}Percent')
+        tc_percent.text = f"{rate:.1f}"
+        
+        tc_scheme = ET.SubElement(tax_category, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxScheme')
+        tcs_id = ET.SubElement(tc_scheme, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ID')
+        tcs_id.text = 'VAT'
+        
+    net_total = sum(g['base'] for g in vat_groups.values())
+    gross_total = net_total + total_vat
+    
+    monetary_total = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}LegalMonetaryTotal')
+    
+    line_ext = ET.SubElement(monetary_total, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}LineExtensionAmount')
+    line_ext.set('currencyID', 'EUR')
+    line_ext.text = f"{net_total:.2f}"
+    
+    tax_excl = ET.SubElement(monetary_total, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}TaxExclusiveAmount')
+    tax_excl.set('currencyID', 'EUR')
+    tax_excl.text = f"{net_total:.2f}"
+    
+    tax_incl = ET.SubElement(monetary_total, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}TaxInclusiveAmount')
+    tax_incl.set('currencyID', 'EUR')
+    tax_incl.text = f"{gross_total:.2f}"
+    
+    payable = ET.SubElement(monetary_total, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}PayableAmount')
+    payable.set('currencyID', 'EUR')
+    payable.text = f"{gross_total:.2f}"
+    
+    for idx, item in enumerate(items, 1):
+        line = ET.SubElement(root, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}InvoiceLine')
+        
+        line_id = ET.SubElement(line, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ID')
+        line_id.text = str(idx)
+        
+        qty = item.get('kolicina', 1.0)
+        invoiced_qty = ET.SubElement(line, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}InvoicedQuantity')
+        invoiced_qty.set('unitCode', 'H87')
+        invoiced_qty.text = f"{qty:.3f}"
+        
+        price = item.get('cena_enote', 0.0)
+        discount = item.get('popust', 0.0)
+        line_base = qty * price * (1 - discount / 100)
+        
+        line_ext_amt = ET.SubElement(line, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}LineExtensionAmount')
+        line_ext_amt.set('currencyID', 'EUR')
+        line_ext_amt.text = f"{line_base:.2f}"
+        
+        l_item = ET.SubElement(line, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Item')
+        l_item_name = ET.SubElement(l_item, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}Name')
+        l_item_name.text = str(item.get('opis', ''))
+        
+        class_tax = ET.SubElement(l_item, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}ClassifiedTaxCategory')
+        ct_id = ET.SubElement(class_tax, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ID')
+        ct_id.text = 'S'
+        ct_pct = ET.SubElement(class_tax, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}Percent')
+        ct_pct.text = f"{item.get('stopnja_ddv', 22.0):.1f}"
+        
+        ct_scheme = ET.SubElement(class_tax, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}TaxScheme')
+        cts_id = ET.SubElement(ct_scheme, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ID')
+        cts_id.text = 'VAT'
+        
+        l_price = ET.SubElement(line, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Price')
+        l_price_amt = ET.SubElement(l_price, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}PriceAmount')
+        l_price_amt.set('currencyID', 'EUR')
+        l_price_amt.text = f"{price:.4f}"
+        
+        if discount > 0:
+            allowance = ET.SubElement(line, '{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}AllowanceCharge')
+            chg_indicator = ET.SubElement(allowance, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}ChargeIndicator')
+            chg_indicator.text = 'false'
+            
+            allowance_amt = ET.SubElement(allowance, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}Amount')
+            allowance_amt.set('currencyID', 'EUR')
+            allowance_amt.text = f"{(qty * price * discount / 100):.2f}"
+            
+            base_amt = ET.SubElement(allowance, '{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}BaseAmount')
+            base_amt.set('currencyID', 'EUR')
+            base_amt.text = f"{(qty * price):.2f}"
+            
+    xml_str = ET.tostring(root, encoding='utf-8')
+    return b'<?xml version="1.0" encoding="UTF-8"?>\n' + xml_str
+
+@app.get("/api/dokumenti/eslog/{id}")
+def get_eslog_xml(id: int):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM dokumenti WHERE id = ?", (id,))
+    inv = cursor.fetchone()
+    if not inv:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Račun ni najden")
+        
+    cursor.execute("SELECT * FROM partnerji WHERE id = ?", (inv['partner_id'],))
+    partner = cursor.fetchone()
+    if not partner:
+        partner = {"naziv": "Neznan partner", "ulica": "", "postna_stevilka": "", "kraj": "", "drzava": "Slovenija", "davcna_stevilka": "", "zavezanec_za_ddv": 0, "trr": ""}
+        
+    cursor.execute("SELECT * FROM dokumenti_postavke WHERE dokument_id = ?", (id,))
+    items = [dict(r) for r in cursor.fetchall()]
+    
+    cursor.execute("SELECT * FROM nastavitve WHERE id = 1")
+    company = cursor.fetchone()
+    conn.close()
+    
+    xml_content = generate_eslog_xml(dict(inv), dict(company), dict(partner), items)
+    
+    filename = f"eslog_{inv['stevilka']}.xml"
+    return Response(content=xml_content, media_type="application/xml", headers={
+        "Content-Disposition": f"attachment; filename={filename}"
+    })
+
 @app.get("/api/dokumenti/{tip}")
 
 def get_dokumenti(tip: str):
@@ -3709,7 +4268,27 @@ async def parse_izpisek(file: UploadFile = File(...)):
                         tmp.write(data)
                         tmp_path = tmp.name
                     raw_data = extract_data_from_pdf(tmp_path)
+                    
+                    # Llama fallback if regex fails
+                    if (not raw_data or not raw_data.get('transactions')) and invoice_ocr.ensure_ollama_running("llama3"):
+                        print(f"Regex parsing failed for {name}, trying Llama3 fallback...")
+                        try:
+                            pdf_text = invoice_ocr.extract_text_from_pdf(data)
+                            llama_data = invoice_ocr.parse_bank_statement_with_llama(pdf_text, name)
+                            if llama_data and llama_data.get('transactions'):
+                                raw_data = {
+                                    'statement_date': llama_data.get('statement_date', datetime.now().strftime("%Y-%m-%d")),
+                                    'statement_number': llama_data.get('statement_number', 'UNKNOWN'),
+                                    'opening_balance': llama_data.get('opening_balance', 0.0),
+                                    'closing_balance': llama_data.get('closing_balance', 0.0),
+                                    'transactions': llama_data['transactions']
+                                }
+                                print(f"Llama3 successfully extracted {len(raw_data['transactions'])} transactions.")
+                        except Exception as llama_err:
+                            print(f"Llama fallback failed for {name}: {llama_err}")
+                            
                     os.unlink(tmp_path)
+
                 elif name.lower().endswith('.xml'):
                     raw_data = extract_data_from_sepa_xml(data, name)
                 

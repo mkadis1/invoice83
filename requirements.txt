@@ -9,3 +9,4 @@ pdfplumber
 fpdf2
 qrcode[pil]
 python-multipart
+cryptography

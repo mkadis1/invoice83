@@ -420,6 +420,40 @@ def init_db():
         pass
 
     try:
+        cursor.execute("ALTER TABLE nastavitve ADD COLUMN ujp_cert_path TEXT")
+    except:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE nastavitve ADD COLUMN ujp_cert_password TEXT")
+    except:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE nastavitve ADD COLUMN ujp_test_mode BOOLEAN DEFAULT 1")
+    except:
+        pass
+
+    try:
+        pass
+    except:
+        pass
+
+    try:
+        cursor.executescript("""
+        CREATE TABLE IF NOT EXISTS ujp_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dokument_id INTEGER,
+            stevilka TEXT,
+            poslano_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status TEXT,
+            odgovor TEXT
+        );
+        """)
+    except:
+        pass
+
+    try:
         cursor.execute("ALTER TABLE dokumenti ADD COLUMN sklic TEXT")
     except:
         pass
@@ -427,6 +461,38 @@ def init_db():
     # Migracija: Kompenzacija - povezava na drug dokument
     try:
         cursor.execute("ALTER TABLE dokumenti ADD COLUMN kompenzacija_doc_id INTEGER")
+    except:
+        pass
+
+    # Migracije za zaposleni
+    try:
+        cursor.execute("ALTER TABLE zaposleni ADD COLUMN posta_kraj TEXT")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE zaposleni ADD COLUMN razdalja_do_podjetja REAL DEFAULT 0.0")
+    except:
+        pass
+
+    # Migracije za place
+    try:
+        cursor.execute("ALTER TABLE place ADD COLUMN st_malic INTEGER")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE place ADD COLUMN cena_malice REAL DEFAULT 7.96")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE place ADD COLUMN st_dni_pot INTEGER")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE place ADD COLUMN km_enosmerno REAL")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE place ADD COLUMN cena_km REAL DEFAULT 0.21")
     except:
         pass
 

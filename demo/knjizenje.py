@@ -281,8 +281,8 @@ def knjizi_placa(placa_id: int, temeljnica_id: int = None, novi_naziv: str = Non
             temeljnica_id = _ustvari_temeljnico_header(cursor, leto, 'PLA', stevilka, novi_naziv, "Obračun plač")
             
         if vrsta in ['sp_100', 'sp_50']:
-            # S.P. - Prispevki + morebitna malica in potni stroški
-            znesek = p['znesek_skupaj']
+            # S.P. - Prispevki (brez malice in potnih stroškov)
+            znesek = (p['znesek_piz'] or 0) + (p['znesek_zz'] or 0) + (p['znesek_zap'] or 0) + (p['znesek_starsevsko'] or 0) + (p['znesek_ozp'] or 0) + (p['znesek_do'] or 0)
             potni = _get_znesek(p, 'potni_stroski')
             malica = _get_znesek(p, 'malica')
             konto_pris = p['konto_prispevkov'] if p['konto_prispevkov'] else '265000'

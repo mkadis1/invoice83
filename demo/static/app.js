@@ -545,21 +545,42 @@ window.appSortState = {
     'izpiski': { field: 'datum', order: 'desc' },
     'zaposleni': { field: 'priimek_ime', order: 'asc' },
     'potni_nalogi': { field: 'datum_odhoda', order: 'desc' },
-    'osnovna_sredstva': { field: 'datum_nabave', order: 'desc' }
+    'osnovna_sredstva': { field: 'datum_nabave', order: 'desc' },
+    'prispevki': { field: 'leto_mesec', order: 'desc' }
 };
 
 window.sortAppData = function(data, moduleName) {
     const state = window.appSortState[moduleName] || { field: 'id', order: 'desc' };
+    const mesecVrednosti = {
+        'januar': 1, 'februar': 2, 'marec': 3, 'april': 4, 'maj': 5, 'junij': 6,
+        'julij': 7, 'avgust': 8, 'september': 9, 'oktober': 10, 'november': 11, 'december': 12
+    };
+
     return [...data].sort((a, b) => {
         let valA = a[state.field];
         let valB = b[state.field];
         
+        // Posebna logika za razvrščanje po mesecu/letu
+        if (state.field === 'leto_mesec') {
+            const letoA = parseInt(a.leto) || 0;
+            const letoB = parseInt(b.leto) || 0;
+            if (letoA !== letoB) {
+                return state.order === 'asc' ? letoA - letoB : letoB - letoA;
+            }
+            const mesecA = mesecVrednosti[(a.mesec || "").toLowerCase()] || 0;
+            const mesecB = mesecVrednosti[(b.mesec || "").toLowerCase()] || 0;
+            return state.order === 'asc' ? mesecA - mesecB : mesecB - mesecA;
+        }
+
         // Posebno ravnanje za številke (zneski)
-        if (state.field.includes('znesek') || state.field === 'kolicina' || state.field === 'cena_enote') {
+        if (state.field.includes('znesek') || state.field === 'kolicina' || state.field === 'cena_enote' || state.field === 'bruto_placa') {
             valA = parseFloat(valA) || 0;
             valB = parseFloat(valB) || 0;
+            if (valA < valB) return state.order === 'asc' ? -1 : 1;
+            if (valA > valB) return state.order === 'asc' ? 1 : -1;
+            return 0;
         } else {
-            // Vse ostalo kot string (datumi v ISO formatu YYYY-MM-DD se pravilno sortiral kot stringi)
+            // Vse ostalo kot string
             valA = (valA || "").toString().toLowerCase();
             valB = (valB || "").toString().toLowerCase();
         }
@@ -1957,12 +1978,12 @@ async function renderDokumenti(tip, naslov) {
                     ${tip === 'prejeti_racuni' ? `
                         <button class="btn" style="background:#495057; color:white; border:none;" onclick="document.getElementById('eslog-upload').click()">Uvozi račune (XML/ZIP/PNG/PDF)</button>
                         <input type="file" id="eslog-upload" accept=".xml,.zip,.png,.pdf" style="display:none" multiple onchange="window.uvoziEslog(this)">
-                        
-                        <label class="llama-toggle-container" style="display:inline-flex; align-items:center; gap:8px; margin-left:15px; background:${window.llamaLearningMode ? 'linear-gradient(135deg, #e7f5ff, #d0ebff)' : 'linear-gradient(135deg, #f1f3f5, #e9ecef)'}; padding:6px 14px; border-radius:30px; border:1px solid ${window.llamaLearningMode ? '#a5d8ff' : '#ced4da'}; cursor:pointer; user-select:none; font-size:0.85em; font-weight:600; color:${window.llamaLearningMode ? '#1971c2' : '#495057'}; box-shadow:${window.llamaLearningMode ? '0 2px 8px rgba(28, 126, 214, 0.15)' : '0 2px 5px rgba(0,0,0,0.05)'}; transition:all 0.2s;">
-                            <input type="checkbox" id="llama-learning-toggle" style="width:16px; height:16px; cursor:pointer; accent-color:#1c7ed6; margin:0;" ${window.llamaLearningMode ? 'checked' : ''} onchange="window.toggleLlamaLearningMode(this.checked)">
-                            <span style="display:inline-flex; align-items:center; gap:4px;">🤖 Način učenja Llama: <strong style="text-decoration: underline; text-underline-offset: 3px;">${window.llamaLearningMode ? 'VKLOPLJEN' : 'IZKLOPLJEN'}</strong></span>
-                        </label>
                     ` : ''}
+                    
+                    <label class="llama-toggle-container" style="display:inline-flex; align-items:center; gap:8px; margin-left:15px; background:${window.llamaLearningMode ? 'linear-gradient(135deg, #e7f5ff, #d0ebff)' : 'linear-gradient(135deg, #f1f3f5, #e9ecef)'}; padding:6px 14px; border-radius:30px; border:1px solid ${window.llamaLearningMode ? '#a5d8ff' : '#ced4da'}; cursor:pointer; user-select:none; font-size:0.85em; font-weight:600; color:${window.llamaLearningMode ? '#1971c2' : '#495057'}; box-shadow:${window.llamaLearningMode ? '0 2px 8px rgba(28, 126, 214, 0.15)' : '0 2px 5px rgba(0,0,0,0.05)'}; transition:all 0.2s;">
+                        <input type="checkbox" id="llama-learning-toggle" style="width:16px; height:16px; cursor:pointer; accent-color:#1c7ed6; margin:0;" ${window.llamaLearningMode ? 'checked' : ''} onchange="window.toggleLlamaLearningMode(this.checked)">
+                        <span style="display:inline-flex; align-items:center; gap:4px;">🤖 Način učenja Llama: <strong style="text-decoration: underline; text-underline-offset: 3px;">${window.llamaLearningMode ? 'VKLOPLJEN' : 'IZKLOPLJEN'}</strong></span>
+                    </label>
                 </div>
                 ${window.renderSortControls(tip, sortFields, `renderDokumenti('${tip}', '${naslov}')`)}
             </div>
@@ -2024,6 +2045,8 @@ async function renderDokumenti(tip, naslov) {
                                     `<button class="icon-btn btn-green" onclick="window.knjiziPosamezen(${d.id}, 'knjizi', '${tip}')" title="Knjiži">${ICONS.book}</button>` : 
                                     `<button class="icon-btn btn-orange" onclick="window.knjiziPosamezen(${d.id}, 'razknjizi', '${tip}')" title="Razknjiži">${ICONS.unbook}</button>`
                                 ) : ''}
+                            ${tip === 'izdani_racuni' ? `<button class="icon-btn btn-blue" onclick="window.izvoziEslogXml(${d.id})" title="Izvozi e-SLOG XML (UJP)">📄 XML</button>` : ''}
+                            ${tip === 'izdani_racuni' ? `<button class="icon-btn" style="background:#1864ab; color:white;" onclick="window.posljiNaUjp(${d.id}, '${d.stevilka}')" title="Pošlji neposredno na UJP B2B">🏛️</button>` : ''}
                             ${tip === 'ponudbe' ? `<button class="icon-btn btn-green" onclick="window.ustvariRacunIzPonudbe(${d.id})" title="Ustvari račun">${ICONS.invoice}</button>` : ''}
                             ${(tip === 'ponudbe' || tip === 'izdani_racuni') ? `<button class="icon-btn btn-orange" onclick="window.ustvariDelovniNalog(${d.id})" title="Ustvari delovni nalog">🛠️</button>` : ''}
                             <button class="icon-btn" onclick="window.kopirajDokument(${d.id}, '${tip}', '${naslov}')" title="Kopiraj">${ICONS.copy}</button>
@@ -2057,9 +2080,14 @@ async function showUrediDokument(id, tip, naslov) {
 window.osveziTecaj = async function() {
     const vEl = document.getElementById('d_valuta');
     const tEl = document.getElementById('d_tecaj');
+    const eurContainer = document.getElementById('d_znesek_eur_container');
     if (!vEl || !tEl) return;
 
     const valuta = vEl.value;
+    if (eurContainer) {
+        eurContainer.style.display = (valuta === 'EUR') ? 'none' : 'block';
+    }
+    
     if (valuta === 'EUR') {
         tEl.value = '1,0000';
         window.kalkulirajZneske();
@@ -2082,10 +2110,46 @@ window.osveziTecaj = async function() {
         const data = await res.json();
         if (data.rates && data.rates.EUR) {
             tEl.value = formatNumberJS(data.rates.EUR, 4);
+            const eurEl = document.getElementById('d_znesek_eur');
+            if (eurEl) eurEl.value = '';
             window.kalkulirajZneske();
         }
     } catch(e) { 
         console.error("Napaka pri pridobivanju tečaja", e);
+    }
+};
+
+window.kalkulirajTecajIzEur = function() {
+    const vEl = document.getElementById('d_valuta');
+    const tEl = document.getElementById('d_tecaj');
+    const eurEl = document.getElementById('d_znesek_eur');
+    if (!vEl || !tEl || !eurEl) return;
+
+    const valuta = vEl.value;
+    if (valuta === 'EUR') return;
+
+    const zeleniEur = parseNumberJS(eurEl.value);
+    if (!zeleniEur || zeleniEur <= 0) return;
+
+    // Izračunamo skupno vrednost v tuji valuti
+    let skupajValuta = 0;
+    document.querySelectorAll('#postavke-container .postavka-item').forEach(tr => {
+        const kol = parseNumberJS(tr.querySelector('.p-kol').value) || 1;
+        const cena = parseNumberJS(tr.querySelector('.p-cena').value) || 0;
+        const popEl = tr.querySelector('.p-popust');
+        const popust = popEl ? (parseNumberJS(popEl.value)) : 0;
+        const ddvEl = tr.querySelector('.p-ddv');
+        const ddv = ddvEl ? (parseNumberJS(ddvEl.value)) : 0;
+        
+        const netoZnesek = (kol * cena) * (1 - popust / 100);
+        const brutoZnesek = netoZnesek * (1 + ddv / 100);
+        skupajValuta += brutoZnesek;
+    });
+
+    if (skupajValuta > 0) {
+        const izracunanTecaj = zeleniEur / skupajValuta;
+        tEl.value = formatNumberJS(izracunanTecaj, 6); // Uporabimo 6 decimalk za tečaj iz EUR
+        window.kalkulirajZneske();
     }
 };
 
@@ -2229,8 +2293,8 @@ async function showDodajDokument(tip, naslov, editData = null) {
                 ` : ''}
 
                 ${tip === 'prejeti_racuni' ? `
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #dee2e6; display: flex; gap: 15px; align-items: flex-end;">
-                    <div class="form-group" style="flex: 1; margin-bottom:0;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #dee2e6; display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom:0;">
                         <label>Valuta računa</label>
                         <select id="d_valuta" onchange="window.osveziTecaj()" style="width:100%">
                             <option value="EUR" ${editData?.valuta === 'EUR' ? 'selected' : ''}>EUR (€)</option>
@@ -2238,13 +2302,17 @@ async function showDodajDokument(tip, naslov, editData = null) {
                             <option value="GBP" ${editData?.valuta === 'GBP' ? 'selected' : ''}>GBP (£)</option>
                         </select>
                     </div>
-                    <div class="form-group" style="flex: 1; margin-bottom:0;">
+                    <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom:0;">
                         <label>Tečaj <a href="#" onclick="event.preventDefault(); window.osveziTecaj()" style="font-size:1.1em; margin-left:5px; text-decoration:none;" title="Osveži tečaj">🔄</a></label>
                         <input type="text" id="d_tecaj" value="${editData ? formatNumberJS(editData.tecaj, 4) : '1,0000'}" oninput="window.kalkulirajZneske()" style="width:100%">
                     </div>
-                    <div class="form-group" style="flex: 1; margin-bottom:0;">
+                    <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom:0;">
                         <label>Datum plačila (za tečaj)</label>
                         <input type="text" id="d_datum_placila" value="${editData ? formatDateJS(editData.datum_placila) : ''}" placeholder="DD.MM.YYYY" onchange="window.osveziTecaj()" style="width:100%">
+                    </div>
+                    <div class="form-group" id="d_znesek_eur_container" style="flex: 1; min-width: 120px; margin-bottom:0; display: ${editData?.valuta && editData.valuta !== 'EUR' ? 'block' : 'none'};">
+                        <label>Znesek v EUR</label>
+                        <input type="text" id="d_znesek_eur" value="" placeholder="Znesek v EUR" oninput="window.kalkulirajTecajIzEur()" style="width:100%">
                     </div>
                 </div>
                 ` : ''}
@@ -2351,9 +2419,13 @@ async function showDodajDokument(tip, naslov, editData = null) {
                 </div>
                 ` : ''}
 
-                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <button type="submit" class="btn btn-blue">${btnText}</button>
-                    <button type="button" class="btn" onclick="window.zapriDokumentPopup()" style="color: var(--text-main); background: #eee; margin-left: 10px;">Prekliči</button>
+                    ${isActuallyEdit && tip === 'izdani_racuni' ? `
+                        <button type="button" class="btn btn-orange" onclick="window.izvoziEslogXml(${editData.id})">Prenesi e-SLOG XML</button>
+                        <button type="button" class="btn btn-green" onclick="prenesiPDF(${editData.id})">Prenesi PDF</button>
+                    ` : ''}
+                    <button type="button" class="btn" onclick="window.zapriDokumentPopup()" style="color: var(--text-main); background: #eee;">Prekliči</button>
                 </div>
             </form>
         </div>
@@ -4117,10 +4189,21 @@ async function shraniIzpisek(e, id = null) {
     if (res.ok) {
         const result = await res.json();
         const newId = id || result.id;
-        window.zapriGlavniPopup();
         if (window._pendingIzpisekFile && newId) {
             await window.PrilogeUI._uploadRaw(window._pendingIzpisekFile, 'izpiski', newId);
             window._pendingIzpisekFile = null;
+        }
+        if (window.refreshCurrentModule) window.refreshCurrentModule();
+        try {
+            const detajlRes = await fetch(`/api/izpiski/detajl/${newId}`);
+            if (detajlRes.ok) {
+                const detajl = await detajlRes.json();
+                await showDodajIzpisek(detajl);
+            } else {
+                window.zapriGlavniPopup();
+            }
+        } catch (e) {
+            window.zapriGlavniPopup();
         }
     } else {
         const err = await res.json();
@@ -4250,6 +4333,8 @@ async function renderNastavitve(tab = 'podjetje', isNew = false) {
             <a href="#" onclick="renderNastavitve('konti')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'konti' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'konti' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'konti' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">Kontni načrt</a>
             <a href="#" onclick="renderNastavitve('eposta')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'eposta' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'eposta' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'eposta' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">E-pošta</a>
             <a href="#" onclick="renderNastavitve('odhodna_posta')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'odhodna_posta' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'odhodna_posta' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'odhodna_posta' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">Odhodna pošta</a>
+            <a href="#" onclick="renderNastavitve('ujp')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'ujp' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'ujp' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'ujp' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">UJP e-Račun</a>
+            <a href="#" onclick="renderNastavitve('ai')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'ai' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'ai' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'ai' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">Umetna inteligenca</a>
             <a href="#" onclick="renderNastavitve('nadzorna_plosca')" style="text-decoration: none; padding: 10px 15px; color: ${tab === 'nadzorna_plosca' ? 'var(--primary-blue)' : '#888'}; font-weight: ${tab === 'nadzorna_plosca' ? 'bold' : 'normal'}; border-bottom: 3px solid ${tab === 'nadzorna_plosca' ? 'var(--primary-blue)' : 'transparent'}; transition: 0.2s;">Nadzorna plošča</a>
             ` : ''}
         </div>
@@ -4497,6 +4582,114 @@ async function renderNastavitve(tab = 'podjetje', isNew = false) {
             } catch(e) {
                 tabContent.innerHTML = '<p style="color:red">Napaka pri pridobivanju dnevnika.</p>';
             }
+        } else if (tab === 'ujp') {
+            const ujpStatus = await (await fetch('/api/nastavitve/ujp_status')).json();
+            const ujpLogs = await (await fetch('/api/ujp_log')).json();
+
+            const logRows = ujpLogs.length ? ujpLogs.map(l => `
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:8px;">${l.poslano_at ? l.poslano_at.substring(0,16) : '-'}</td>
+                    <td style="padding:8px; font-weight:600;">${l.stevilka || '-'}</td>
+                    <td style="padding:8px;">${l.status === 'success' ? '<span style="color:#2b8a3e; font-weight:bold;">✔ Uspešno</span>' : '<span style="color:#e03131; font-weight:bold;">✘ Napaka</span>'}</td>
+                    <td style="padding:8px; font-size:0.8em; color:#666; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${(l.odgovor||'').replace(/"/g, '&quot;')}">${(l.odgovor||'').substring(0,80)}</td>
+                </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;padding:20px;color:#888;">Ni zgodovine pošiljanj.</td></tr>';
+
+            tabContent.innerHTML = `
+                <div style="max-width:800px;">
+                    <div style="background:white; padding:25px; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.05); border-top:4px solid #1864ab; margin-bottom:20px;">
+                        <h3 style="margin-bottom:5px; color:#1864ab;">🏛️ UJP e-Račun – Neposredno pošiljanje B2B</h3>
+                        <p style="color:#666; font-size:0.9em; margin-bottom:20px;">Pošiljajte e-račune neposredno na UJP brez ročnega vnosa. Potrebujete sistemsko digitalno potrdilo (.p12 / .pfx) od overitelja SIGEN-CA, Halcom ali Pošta®CA.</p>
+
+                        <div style="background:${ujpStatus.cert_loaded ? '#ebfbee' : '#fff9db'}; border:1px solid ${ujpStatus.cert_loaded ? '#69db7c' : '#ffd43b'}; border-radius:8px; padding:15px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+                            <span style="font-size:2em;">${ujpStatus.cert_loaded ? '✅' : '⚠️'}</span>
+                            <div>
+                                <strong>${ujpStatus.cert_loaded ? 'Potrdilo naloženo: ' + ujpStatus.cert_filename : 'Potrdilo ni naloženo'}</strong><br>
+                                <span style="font-size:0.85em; color:#555;">${ujpStatus.cert_loaded ? 'Sistem je pripravljen za pošiljanje na UJP.' : 'Naložite sistemsko digitalno potrdilo (.p12 ali .pfx).'}</span>
+                            </div>
+                            ${ujpStatus.cert_loaded ? '<button class="btn" style="margin-left:auto; background:#e03131; color:white; font-size:0.8em;" onclick="window.izbrisiUjpCert()">Izbriši potrdilo</button>' : ''}
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:15px;">
+                            <div class="form-group">
+                                <label><strong>Naloži sistemsko digitalno potrdilo (.p12 / .pfx)</strong></label>
+                                <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
+                                    <input type="file" id="ujp-cert-file" accept=".p12,.pfx" style="flex:1;">
+                                    <button class="btn btn-blue" onclick="window.naloziUjpCert()" style="white-space:nowrap;">Naloži potrdilo</button>
+                                </div>
+                                <p style="font-size:0.8em; color:#888; margin-top:5px;">Potrdilo se varno shrani na vaš strežnik in se nikoli ne pošlje tretjim osebam.</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label><strong>Geslo potrdila</strong></label>
+                                <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
+                                    <input type="password" id="ujp-cert-password" placeholder="Vnesite geslo za .p12 datoteko" style="flex:1;">
+                                    <button class="btn" style="background:#555; color:white; white-space:nowrap;" onclick="window.shraniUjpGeslo()">Shrani geslo</button>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:10px; padding:12px; background:#f8f9fa; border-radius:6px; border:1px solid #dee2e6;">
+                                <input type="checkbox" id="ujp-test-mode" ${ujpStatus.test_mode !== false ? 'checked' : ''} style="width:auto; margin:0;">
+                                <div>
+                                    <label for="ujp-test-mode" style="margin:0; font-weight:600; cursor:pointer;">Testno okolje (BETA UJPnet)</label>
+                                    <p style="margin:2px 0 0 0; font-size:0.8em; color:#666;">Ko je označeno, se računi pošljejo na testni strežnik betaujpnet.ujp.gov.si. Odkljukajte šele ko je testiranje uspešno zaključeno.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
+                            <a href="https://www.sigen-ca.si" target="_blank" class="btn" style="background:#e9ecef; color:#333; font-size:0.85em; margin-right:8px;">🔒 SIGEN-CA (brezplačno)</a>
+                            <a href="https://ujpnet.ujp.gov.si" target="_blank" class="btn" style="background:#e9ecef; color:#333; font-size:0.85em;">🏛️ UJPnet Portal</a>
+                        </div>
+                    </div>
+
+                    <div style="background:white; padding:25px; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
+                        <h4 style="margin-bottom:15px; color:#1864ab;">Dnevnik pošiljanj na UJP</h4>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
+                                <thead>
+                                    <tr style="background:#f8f9fa;">
+                                        <th style="text-align:left; padding:8px; border-bottom:2px solid #eee;">Datum</th>
+                                        <th style="text-align:left; padding:8px; border-bottom:2px solid #eee;">Številka</th>
+                                        <th style="text-align:left; padding:8px; border-bottom:2px solid #eee;">Status</th>
+                                        <th style="text-align:left; padding:8px; border-bottom:2px solid #eee;">Odgovor UJP</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${logRows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (tab === 'ai') {
+            const res = await fetch('/api/settings/llama');
+            const data = await res.json();
+            const checked = !!data.learning_mode;
+            tabContent.innerHTML = `
+                <div style="max-width: 800px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
+                    <h3 style="margin-bottom: 20px; color: var(--primary-blue);">Umetna inteligenca (Llama)</h3>
+                    <p style="margin-bottom: 25px; color: var(--text-muted); font-size: 0.9em;">Upravljanje nastavitev učenja Llama modela za samodejno ekstrakcijo podatkov iz PDF računov in drugih dokumentov.</p>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <strong style="display: block; font-size: 1.05em; color: #212529; margin-bottom: 5px;">Način učenja Llama modela</strong>
+                            <span style="color: #6c757d; font-size: 0.85em;">Ko je vklopljeno, si sistem zapomni vaše popravke pri uvozu dokumentov za izboljšanje prihodnjih prepoznavanj.</span>
+                        </div>
+                        <label class="switch" style="position: relative; display: inline-block; width: 60px; height: 34px;">
+                            <input type="checkbox" id="ai-learning-toggle-settings" ${checked ? 'checked' : ''} onchange="window.toggleLlamaLearningMode(this.checked)" style="opacity: 0; width: 0; height: 0;">
+                            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: ${checked ? '#1c7ed6' : '#ccc'}; transition: .4s; border-radius: 34px;"></span>
+                        </label>
+                    </div>
+                </div>
+                <style>
+                    .switch input:checked + .slider { background-color: #2196F3; }
+                    .slider:before {
+                        position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px;
+                        background-color: white; transition: .4s; border-radius: 50%;
+                        transform: ${checked ? 'translateX(26px)' : 'translateX(0)'};
+                    }
+                    .switch input:checked + .slider:before { transform: translateX(26px); }
+                </style>
+            `;
         } else if (tab === 'nadzorna_plosca') {
             const res = await fetch('/api/nastavitve');
             const data = await res.json();
@@ -4849,6 +5042,10 @@ window.testirajSMTP = async () => {
 function prenesiPDF(id) {
     window.open(`/api/dokumenti/pdf/${id}`, '_blank');
 }
+
+window.izvoziEslogXml = function(id) {
+    window.open(`/api/dokumenti/eslog/${id}`, '_blank');
+};
 
 async function posljiEmail(id) {
     let allPriloge = [];
@@ -5322,10 +5519,14 @@ window.showDodajZaposleni = function(editData = null) {
     const innerHtml = `
             <form onsubmit="window.shraniZaposleni(event, ${isEdit ? editData.id : 'null'})">
                 <div class="form-group"><label>Ime in priimek *</label><input type="text" id="z_ime" value="${editData?.ime_priimek || ''}" required></div>
-                <div class="form-group"><label>Naslov</label><input type="text" id="z_naslov" value="${editData?.naslov || ''}"></div>
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:2"><label>Naslov (Ulica in hišna št.)</label><input type="text" id="z_naslov" value="${editData?.naslov || ''}"></div>
+                    <div class="form-group" style="flex:1"><label>Pošta in kraj</label><input type="text" id="z_posta_kraj" value="${editData?.posta_kraj || ''}" placeholder="npr. 2392 Mežica"></div>
+                </div>
                 <div style="display:flex; gap:10px;">
                     <div class="form-group" style="flex:1"><label>Davčna številka</label><input type="text" id="z_davcna" value="${editData?.davcna_stevilka || ''}"></div>
                     <div class="form-group" style="flex:1"><label>Delovno mesto</label><input type="text" id="z_delovno" value="${editData?.delovno_mesto || ''}"></div>
+                    <div class="form-group" style="flex:1"><label>Razdalja do podjetja (km)</label><input type="number" step="0.1" id="z_razdalja" value="${editData?.razdalja_do_podjetja !== undefined ? editData.razdalja_do_podjetja : 0.0}"></div>
                 </div>
                 <div class="form-group"><label>TRR / IBAN</label><input type="text" id="z_iban" value="${editData?.iban || ''}"></div>
                 
@@ -5421,8 +5622,10 @@ window.shraniZaposleni = async function(e, id) {
     const pay = {
         ime_priimek: document.getElementById('z_ime').value,
         naslov: document.getElementById('z_naslov').value,
+        posta_kraj: document.getElementById('z_posta_kraj').value,
         davcna_stevilka: document.getElementById('z_davcna').value,
         delovno_mesto: document.getElementById('z_delovno').value,
+        razdalja_do_podjetja: parseFloat(document.getElementById('z_razdalja').value) || 0.0,
         iban: document.getElementById('z_iban').value,
         datum_rojstva: parseDateISO(document.getElementById('z_rojstvo').value),
         stevilo_otrok: parseInt(document.getElementById('z_otroc').value) || 0,
@@ -6367,8 +6570,7 @@ async function renderPlace() {
         window.loadedZaposleni = zaposleni;
 
         const sortFields = [
-            {key: 'leto', label: 'Leto'},
-            {key: 'mesec', label: 'Mesec'},
+            {key: 'leto_mesec', label: 'Mesec / Leto'},
             {key: 'zaposleni_ime', label: 'Zaposleni'},
             {key: 'bruto_placa', label: 'Bruto'},
             {key: 'znesek_skupaj', label: 'Skupaj'}
@@ -6386,6 +6588,7 @@ async function renderPlace() {
                 <thead>
                     <tr>
                         <th width="40"><input type="checkbox" onclick="window.toggleAllSelection(this.checked, 'place')"></th>
+                        <th width="50">Št.</th>
                         <th>Mesec / Leto</th>
                         <th>Zaposleni</th>
                         <th>Vrsta</th>
@@ -6402,12 +6605,14 @@ async function renderPlace() {
             html += `<tr><td colspan="7" style="text-align:center">Ni zapisov</td></tr>`;
         } else {
             let sortirano = window.sortAppData(data, 'prispevki');
+            let zaporedna = 1;
             sortirano.forEach(p => {
                 const statusColor = p.placan ? '#2b8a3e' : '#e03131';
                 const isChecked = window.appSelection.ids.includes(p.id) ? 'checked' : '';
                 html += `
                     <tr>
                         <td><input type="checkbox" class="row-checkbox" data-id="${p.id}" ${isChecked} onclick="window.toggleItemSelection(${p.id}, 'place')"></td>
+                        <td>${zaporedna}.</td>
                         <td style="${!p.knjizeno ? 'cursor:pointer; color:var(--primary-blue); text-decoration:underline; font-weight:600;' : ''}" 
                             onclick='${!p.knjizeno ? `window.showDodajPlaco(${JSON.stringify(p).replace(/'/g,"&apos;")})` : ""}'>
                             ${p.mesec} / ${p.leto}
@@ -6432,6 +6637,7 @@ async function renderPlace() {
                         </td>
                     </tr>
                 `;
+                zaporedna++;
             });
         }
         html += '</tbody></table>';
@@ -6450,11 +6656,11 @@ window.showDodajPlaco = function(editData = null) {
                 <form id="placa-form" onsubmit="window.shraniPlaco(event, ${isEdit ? editData.id : 'null'})">
                     <div style="display:flex; gap:10px;">
                         <div class="form-group" style="flex:2"><label>Zaposleni / Nosilec *</label>
-                            <select id="p_zap" required onchange="window.preracunajPlaco()">${zapOpts}</select>
+                            <select id="p_zap" required onchange="window.posodobiPredlaganeVrednostiPlac()">${zapOpts}</select>
                         </div>
-                        <div class="form-group" style="flex:1"><label>Leto</label><input type="number" id="p_leto" value="${editData?.leto || getLeto()}" required onchange="window.preracunajPlaco()"></div>
+                        <div class="form-group" style="flex:1"><label>Leto</label><input type="number" id="p_leto" value="${editData?.leto || getLeto()}" required onchange="window.posodobiPredlaganeVrednostiPlac()"></div>
                         <div class="form-group" style="flex:1"><label>Mesec</label>
-                            <select id="p_mesec" onchange="window.preracunajPlaco()">
+                            <select id="p_mesec" onchange="window.posodobiPredlaganeVrednostiPlac()">
                                 ${['Januar','Februar','Marec','April','Maj','Junij','Julij','Avgust','September','Oktober','November','December'].map(m => `<option value="${m}" ${editData?.mesec===m ? 'selected':''}>${m}</option>`).join('')}
                             </select>
                         </div>
@@ -6490,6 +6696,21 @@ window.showDodajPlaco = function(editData = null) {
                         <div class="form-group" id="akontacija_box" style="display:none;"><label>Akontacija doh.</label><input type="text" id="p_doh" value="${editData ? formatNumberJS(editData.znesek_akontacija_doh) : '0,00'}"></div>
                     </div>
 
+                    <div style="background:#e8f4fd; padding:15px; border-radius:6px; margin-top:15px; border:1px solid #b3d7ff;">
+                        <h4 style="margin:0 0 10px 0; color:#0056b3;">Povračila stroškov (prevoz in prehrana)</h4>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                            <div class="form-group"><label>Št. dni prehrane</label><input type="number" id="p_st_malic" value="${editData?.st_malic !== null && editData?.st_malic !== undefined ? editData.st_malic : ''}" placeholder="Dnevi" oninput="window.preracunajPovracila()"></div>
+                            <div class="form-group"><label>Cena malice (€)</label><input type="text" id="p_cena_malice" value="${editData?.cena_malice !== null && editData?.cena_malice !== undefined ? formatNumberJS(editData.cena_malice) : '7,96'}" oninput="window.preracunajPovracila()"></div>
+                            <div class="form-group"><label>Skupaj prehrana (€)</label><input type="text" id="p_znesek_malica" value="${editData?.malica !== undefined ? formatNumberJS(editData.malica) : '0,00'}" readonly style="background:#f1f3f5;"></div>
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:10px; margin-top:10px;">
+                            <div class="form-group"><label>Št. dni prevoza</label><input type="number" id="p_st_dni_pot" value="${editData?.st_dni_pot !== null && editData?.st_dni_pot !== undefined ? editData.st_dni_pot : ''}" placeholder="Dnevi" oninput="window.preracunajPovracila()"></div>
+                            <div class="form-group"><label>Km v eno smer</label><input type="text" id="p_km_enosmerno" value="${editData?.km_enosmerno !== null && editData?.km_enosmerno !== undefined ? formatNumberJS(editData.km_enosmerno) : '0,0'}" placeholder="km" oninput="window.preracunajPovracila()"></div>
+                            <div class="form-group"><label>Tarifa (€/km)</label><input type="text" id="p_cena_km" value="${editData?.cena_km !== null && editData?.cena_km !== undefined ? formatNumberJS(editData.cena_km) : '0,21'}" oninput="window.preracunajPovracila()"></div>
+                            <div class="form-group"><label>Skupaj prevoz (€)</label><input type="text" id="p_znesek_prevoz" value="${editData?.potni_stroski !== undefined ? formatNumberJS(editData.potni_stroski) : '0,00'}" readonly style="background:#f1f3f5;"></div>
+                        </div>
+                    </div>
+
                     <div style="margin-top:20px; padding-top:15px; border-top:2px solid var(--primary-blue); display:flex; justify-content:space-between; align-items:center;">
                         <div style="font-weight:bold; color:var(--primary-blue); font-size:1.2em;">SKUPAJ: <span id="p_skupaj_text">${formatMoneyJS(editData?.znesek_skupaj || 0)}</span></div>
                         <div style="display:flex; gap:10px;">
@@ -6510,11 +6731,31 @@ window.showDodajPlaco = function(editData = null) {
                     <p><strong>Namen:</strong> <span id="p_qr_namen">Prispevki za socialno varnost</span></p>
                     <p style="color:#868e96; font-style:italic; margin-top:10px;">QR koda se osveži ob vsaki spremembi zneska.</p>
                 </div>
+                
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6; font-size: 0.85em; color: #495057;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 1.1em; color: #212529;">Razmejitev zneskov</h4>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span>Skupaj prispevki in davki:</span>
+                        <strong id="p_skupaj_prispevki">0,00 €</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span>Skupaj povračila:</span>
+                        <strong id="p_skupaj_povracila">0,00 €</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #dee2e6; font-weight: bold; font-size: 1.05em; color: var(--primary-blue);">
+                        <span>SKUPAJ:</span>
+                        <span id="p_skupaj_desno">0,00 €</span>
+                    </div>
+                </div>
             </div>
         </div>
     `;
     window.odpriGlavniPopup(title, innerHtml, "", true);
-    window.preracunajPlaco();
+    if (!isEdit) {
+        window.posodobiPredlaganeVrednostiPlac();
+    } else {
+        window.preracunajPlaco();
+    }
 };
 
 window.uvodFURS = function() {
@@ -6592,10 +6833,89 @@ window.preracunajPlaco = function() {
     document.getElementById('p_ozp').value = formatNumberJS(ozp);
     document.getElementById('p_do').value = formatNumberJS(do_z);
 
-    const skupaj = piz + zz + zap + star + ozp + doh + do_z;
+    const malicaVal = parseNumberJS(document.getElementById('p_znesek_malica').value) || 0;
+    const prevozVal = parseNumberJS(document.getElementById('p_znesek_prevoz').value) || 0;
+
+    const skupaj = piz + zz + zap + star + ozp + doh + do_z + malicaVal + prevozVal;
     document.getElementById('p_skupaj_text').textContent = formatMoneyJS(skupaj);
     
-    window.osveziUPNQR(skupaj);
+    // Posodobi razmejitev zneskov na desni strani pod QR kodo
+    const skupajPrispevki = piz + zz + zap + star + ozp + doh + do_z;
+    const skupajPovracila = malicaVal + prevozVal;
+    const elPrispevki = document.getElementById('p_skupaj_prispevki');
+    const elPovracila = document.getElementById('p_skupaj_povracila');
+    const elSkupajDesno = document.getElementById('p_skupaj_desno');
+    if (elPrispevki) elPrispevki.textContent = formatMoneyJS(skupajPrispevki);
+    if (elPovracila) elPovracila.textContent = formatMoneyJS(skupajPovracila);
+    if (elSkupajDesno) elSkupajDesno.textContent = formatMoneyJS(skupaj);
+
+    // UPN-QR je namenjen plačilu prispevkov in davkov FURS-u, zato ne sme vsebovati potnih stroškov in malice!
+    const fursZnesek = piz + zz + zap + star + ozp + doh + do_z;
+    window.osveziUPNQR(fursZnesek);
+};
+
+window.preracunajPovracila = function(prepreciZanko = false) {
+    const stMalic = parseInt(document.getElementById('p_st_malic').value) || 0;
+    const cenaMalice = parseNumberJS(document.getElementById('p_cena_malice').value) || 0;
+    const malicaSkupaj = stMalic * cenaMalice;
+    document.getElementById('p_znesek_malica').value = formatNumberJS(malicaSkupaj);
+
+    const stDniPot = parseInt(document.getElementById('p_st_dni_pot').value) || 0;
+    const kmEnosmerno = parseNumberJS(document.getElementById('p_km_enosmerno').value) || 0;
+    const cenaKm = parseNumberJS(document.getElementById('p_cena_km').value) || 0;
+    const prevozSkupaj = stDniPot * kmEnosmerno * 2 * cenaKm;
+    document.getElementById('p_znesek_prevoz').value = formatNumberJS(prevozSkupaj);
+
+    if (!prepreciZanko) {
+        // Ponovno poženi preračun celotne plače da se posodobi skupni znesek
+        const bruto = parseNumberJS(document.getElementById('p_bruto').value);
+        const piz = parseNumberJS(document.getElementById('p_piz').value) || 0;
+        const zz = parseNumberJS(document.getElementById('p_zz').value) || 0;
+        const zap = parseNumberJS(document.getElementById('p_zap_v').value) || 0;
+        const star = parseNumberJS(document.getElementById('p_star').value) || 0;
+        const ozp = parseNumberJS(document.getElementById('p_ozp').value) || 0;
+        const doh = parseNumberJS(document.getElementById('p_doh').value) || 0;
+        const do_z = parseNumberJS(document.getElementById('p_do').value) || 0;
+
+        const skupaj = piz + zz + zap + star + ozp + doh + do_z + malicaSkupaj + prevozSkupaj;
+        document.getElementById('p_skupaj_text').textContent = formatMoneyJS(skupaj);
+        
+        // Posodobi razmejitev zneskov na desni strani pod QR kodo
+        const skupajPrispevki = piz + zz + zap + star + ozp + doh + do_z;
+        const skupajPovracila = malicaSkupaj + prevozSkupaj;
+        const elPrispevki = document.getElementById('p_skupaj_prispevki');
+        const elPovracila = document.getElementById('p_skupaj_povracila');
+        const elSkupajDesno = document.getElementById('p_skupaj_desno');
+        if (elPrispevki) elPrispevki.textContent = formatMoneyJS(skupajPrispevki);
+        if (elPovracila) elPovracila.textContent = formatMoneyJS(skupajPovracila);
+        if (elSkupajDesno) elSkupajDesno.textContent = formatMoneyJS(skupaj);
+
+        // UPN-QR je namenjen plačilu prispevkov in davkov FURS-u, zato ne sme vsebovati potnih stroškov in malice!
+        const fursZnesek = piz + zz + zap + star + ozp + doh + do_z;
+        window.osveziUPNQR(fursZnesek);
+    }
+};
+
+window.posodobiPredlaganeVrednostiPlac = async function() {
+    const zapId = document.getElementById('p_zap').value;
+    const leto = document.getElementById('p_leto').value;
+    const mesec = document.getElementById('p_mesec').value;
+    if (!zapId) return;
+
+    try {
+        const res = await fetch(`/api/place/predlagaj_vrednosti?zaposleni_id=${zapId}&leto=${leto}&mesec=${encodeURIComponent(mesec)}`);
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('p_st_malic').value = data.delovni_dni;
+            document.getElementById('p_st_dni_pot').value = data.delovni_dni;
+            document.getElementById('p_km_enosmerno').value = formatNumberJS(data.razdalja);
+            // Izračunaj in posodobi povračila (prehrana in prevoz)
+            window.preracunajPovracila(true);
+        }
+    } catch (e) {
+        console.error("Napaka pri pridobivanju predlaganih vrednosti:", e);
+    }
+    window.preracunajPlaco();
 };
 
 window.osveziUPNQR = function(znesek) {
@@ -6624,7 +6944,7 @@ window.osveziUPNQR = function(znesek) {
             "",                       // 5. Znesek (prazno, ker je v 9)
             (zap ? zap.ime_priimek.substring(0, 40) : "Zavezanc"), // 6. Ime plačnika
             (zap ? (zap.naslov || "").substring(0, 40) : "Naslov"), // 7. Naslov plačnika
-            (zap ? (zap.postna_stevilka + " " + zap.kraj).substring(0, 40) : "Kraj"), // 8. Kraj plačnika
+            (zap ? (zap.postna_stevilka + " " + (zap.posta_kraj || zap.kraj || "")).substring(0, 40) : "Kraj"), // 8. Kraj plačnika
             amountStr,                // 9. Znesek
             "",                       // 10. Datum plačila
             "",                       // 11. Nujno
@@ -6691,6 +7011,16 @@ window.shraniPlaco = async function(e, id) {
         znesek_ozp: parseNumberJS(document.getElementById('p_ozp').value),
         znesek_do: parseNumberJS(document.getElementById('p_do').value),
         znesek_akontacija_doh: parseNumberJS(document.getElementById('p_doh').value),
+        
+        st_malic: parseInt(document.getElementById('p_st_malic').value) || 0,
+        cena_malice: parseNumberJS(document.getElementById('p_cena_malice').value) || 0,
+        malica: parseNumberJS(document.getElementById('p_znesek_malica').value) || 0,
+        
+        st_dni_pot: parseInt(document.getElementById('p_st_dni_pot').value) || 0,
+        km_enosmerno: parseNumberJS(document.getElementById('p_km_enosmerno').value) || 0,
+        cena_km: parseNumberJS(document.getElementById('p_cena_km').value) || 0,
+        potni_stroski: parseNumberJS(document.getElementById('p_znesek_prevoz').value) || 0,
+
         znesek_skupaj: parseNumberJS(document.getElementById('p_skupaj_text').textContent),
         sklic: document.getElementById('p_qr_sklic').textContent,
         konto_prispevkov: document.getElementById('p_konto_pris').value.trim(),
@@ -6726,20 +7056,20 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
     if (!modal) {
         modal = document.createElement('div');
         modal.id = modalId;
-        modal.className = 'modal-overlay'; // Predvideno da obstaja v styles.css ali uiStyles
+        modal.className = 'modal-overlay';
         document.body.appendChild(modal);
     }
     
     modal.style.display = 'flex';
     modal.innerHTML = `
-        <div class="modal-content" style="width:700px; max-width:90vw; background:white; padding:25px; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+        <div class="modal-content" style="width:750px; max-width:95vw; background:white; padding:25px; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h3 style="margin:0; color:var(--primary-blue);">Likvidacija plačila</h3>
                 <button onclick="document.getElementById('likvidacija-modal-overlay').style.display='none'" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
             </div>
             
             <div style="background:#f8f9fa; padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid #dee2e6;">
-                <div style="display:flex; justify-content:space-between;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <span style="color:#666; font-size:0.9em;">Namen:</span><br>
                         <strong>${namen}</strong>
@@ -6749,6 +7079,12 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
                         <strong style="font-size:1.2em; color:var(--primary-blue);">${formatMoneyJS(skupniZnesek)}</strong>
                     </div>
                 </div>
+            </div>
+
+            <!-- SEARCH BAR -->
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; background: #e7f5ff; padding: 12px; border-radius: 6px; border: 1px solid #a5d8ff;">
+                <input type="text" id="likv-search-input" placeholder="Ročno iskanje računa (št. računa ali partner)..." style="flex:1; padding:8px 12px; border:1px solid #ced4da; border-radius:4px; height: 38px;">
+                <button type="button" class="btn btn-blue" id="likv-search-btn" style="padding:0 15px; height: 38px; display: flex; align-items: center; justify-content: center;">Išči</button>
             </div>
 
             <div id="likv-vsebina">Nalagam odprte postavke...</div>
@@ -6775,36 +7111,15 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
         const povRes = await fetch(`/api/likvidacija/povezave/${postavkaId}`);
         const obstojecePov = await povRes.json();
         
-        // 2. Pridobimo vse odprte postavke
+        // 2. Pridobimo vse odprte postavke za partnerja
         const res = await fetch(`/api/likvidacija/odprte_postavke/${partnerId}`);
         const odprte = await res.json();
         
-        const vsebina = document.getElementById('likv-vsebina');
-        if (odprte.length === 0 && obstojecePov.length === 0) {
-            vsebina.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">Ta partner nima odprtih računov.</p>';
-            // Ne onemogočimo gumba, da lahko uporabnik še vedno klikne Potrdi (za zaprtje/shranjevanje praznega stanja)
-        }
-
-        let html = `
-            <table style="width:100%; font-size:0.9em;">
-                <thead>
-                    <tr>
-                        <th style="text-align:left; padding:8px;">Dokument</th>
-                        <th style="text-align:left; padding:8px;">Datum</th>
-                        <th style="text-align:right; padding:8px;">Znesek</th>
-                        <th style="text-align:right; padding:8px;">Odprto</th>
-                        <th style="text-align:right; padding:8px; width:120px;">Plačilo</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        // Združimo sezname (prikazujemo vse odprte + tiste, ki so že povezani s to postavko)
-        const vsiPrikazani = odprte.map(x => ({...x, shranjeno_v_bazi: 0}));
+        // Združimo sezname
+        let vsiPrikazani = odprte.map(x => ({...x, shranjeno_v_bazi: 0}));
         obstojecePov.forEach(op => {
             const f = vsiPrikazani.find(x => x.id === op.dokument_id);
             if (!f) {
-                // Če dokument ni več "odprt" (ker je npr. že zaprt ravno s to postavko), ga dodamo ročno
                 vsiPrikazani.push({
                     id: op.dokument_id,
                     stevilka: op.stevilka,
@@ -6813,10 +7128,10 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
                     preostanek: 0,
                     tip: op.tip,
                     ze_povezano_to: op.znesek,
-                    shranjeno_v_bazi: op.znesek
+                    shranjeno_v_bazi: op.znesek,
+                    partner_naziv: op.partner_naziv
                 });
             } else {
-                // Če je že na seznamu, mu le pripišemo koliko je že shranjeno v DB
                 f.ze_povezano_to = op.znesek;
                 f.shranjeno_v_bazi = op.znesek;
             }
@@ -6828,10 +7143,10 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
         if (obstojecePov.length === 0) {
             const statementDateStr = document.getElementById('i_datum')?.value;
             if (statementDateStr) {
-                const statementDate = parseDateISO(statementDateStr); // YYYY-MM-DD
+                const statementDate = parseDateISO(statementDateStr);
                 let remaining = skupniZnesek;
                 vsiPrikazani.forEach(d => {
-                    const docDate = d.datum_izdaje; // YYYY-MM-DD
+                    const docDate = d.datum_izdaje;
                     if (docDate <= statementDate && remaining > 0) {
                         const amount = Math.min(d.preostanek, remaining);
                         d.ze_povezano_to = amount;
@@ -6841,29 +7156,126 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
             }
         }
 
-        vsiPrikazani.forEach(d => {
-            const zePovezano = d.ze_povezano_to || 0;
-            const zeShranjeno = d.shranjeno_v_bazi || 0;
-            const maxMozno = d.preostanek + zeShranjeno;
-            html += `
-                <tr>
-                    <td style="padding:8px;">${d.tip === 'izdani_racuni' ? 'IR' : 'PR'} ${d.stevilka}</td>
-                    <td style="padding:8px; color:#666;">${formatDateJS(d.datum_izdaje)}</td>
-                    <td style="padding:8px; text-align:right;">${formatMoneyJS(d.znesek_skupaj)}</td>
-                    <td style="padding:8px; text-align:right; color:var(--primary-red); font-weight:bold;">${formatMoneyJS(maxMozno)}</td>
-                    <td style="padding:8px; text-align:right;">
-                        <input type="text" class="likv-input" data-doc-id="${d.id}" data-max="${maxMozno}" 
-                               value="${formatNumberJS(zePovezano)}" 
-                               style="width:100%; text-align:right; padding:4px; border:1px solid #ccc; border-radius:4px;"
-                               oninput="window.preracunajLikvidacijo(${skupniZnesek})">
-                    </td>
-                </tr>
-            `;
-        });
-        html += '</tbody></table>';
-        vsebina.innerHTML = html;
-        window.preracunajLikvidacijo(skupniZnesek);
+        // Shranjevanje trenutnih ročnih vnosov
+        const enteredAmounts = {};
+        const saveEnteredAmounts = () => {
+            document.querySelectorAll('.likv-input').forEach(inp => {
+                const docId = parseInt(inp.dataset.docId);
+                enteredAmounts[docId] = parseNumberJS(inp.value) || 0;
+            });
+        };
 
+        // Izris tabele
+        const renderTableHTML = () => {
+            const vsebina = document.getElementById('likv-vsebina');
+            if (vsiPrikazani.length === 0) {
+                vsebina.innerHTML = '<p style="text-align:center; padding:20px; color:#888;">Ni najdenih računov.</p>';
+                return;
+            }
+
+            let html = `
+                <table style="width:100%; font-size:0.9em; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #dee2e6; background: #f8f9fa;">
+                            <th style="text-align:left; padding:10px;">Dokument</th>
+                            <th style="text-align:left; padding:10px;">Partner</th>
+                            <th style="text-align:left; padding:10px;">Datum</th>
+                            <th style="text-align:right; padding:10px;">Znesek</th>
+                            <th style="text-align:right; padding:10px;">Odprto</th>
+                            <th style="text-align:right; padding:10px; width:120px;">Plačilo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            vsiPrikazani.forEach(d => {
+                const zePovezano = d.ze_povezano_to || 0;
+                const zeShranjeno = d.shranjeno_v_bazi || 0;
+                const maxMozno = d.preostanek + zeShranjeno;
+                html += `
+                    <tr style="border-bottom: 1px solid #dee2e6;">
+                        <td style="padding:10px; font-weight: 500;">${d.tip === 'izdani_racuni' ? 'IR' : d.tip === 'prejeti_racuni' ? 'PR' : d.tip === 'dobropisi' ? 'DP' : 'PD'} ${d.stevilka}</td>
+                        <td style="padding:10px; color:#555;">${d.partner_naziv || '/'}</td>
+                        <td style="padding:10px; color:#666;">${formatDateJS(d.datum_izdaje)}</td>
+                        <td style="padding:10px; text-align:right;">${formatMoneyJS(d.znesek_skupaj)}</td>
+                        <td style="padding:10px; text-align:right; color:var(--primary-red); font-weight:bold;">${formatMoneyJS(maxMozno)}</td>
+                        <td style="padding:10px; text-align:right;">
+                            <input type="text" class="likv-input" data-doc-id="${d.id}" data-max="${maxMozno}" 
+                                   value="${formatNumberJS(zePovezano)}" 
+                                   style="width:100%; text-align:right; padding:6px; border:1px solid #ccc; border-radius:4px;"
+                                   oninput="window.preracunajLikvidacijo(${skupniZnesek})">
+                        </td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table>';
+            vsebina.innerHTML = html;
+            window.preracunajLikvidacijo(skupniZnesek);
+        };
+
+        // Prvotni izris
+        renderTableHTML();
+
+        // Funkcionalnost iskanja
+        const performSearch = async () => {
+            saveEnteredAmounts();
+            const query = document.getElementById('likv-search-input').value.trim();
+            document.getElementById('likv-vsebina').innerHTML = 'Iščem odprte račune...';
+            
+            let searchResults = [];
+            if (query) {
+                const searchRes = await fetch(`/api/likvidacija/iskanje_racunov?q=${encodeURIComponent(query)}`);
+                searchResults = await searchRes.json();
+            } else {
+                const res = await fetch(`/api/likvidacija/odprte_postavke/${partnerId}`);
+                searchResults = await res.json();
+            }
+            
+            const noviPrikazani = [];
+            
+            // 1. Dodamo rezultate iskanja
+            searchResults.forEach(sr => {
+                const obstojeci = vsiPrikazani.find(x => x.id === sr.id);
+                if (obstojeci) {
+                    noviPrikazani.push(obstojeci);
+                } else {
+                    noviPrikazani.push({
+                        ...sr,
+                        shranjeno_v_bazi: 0,
+                        ze_povezano_to: enteredAmounts[sr.id] || 0
+                    });
+                }
+            });
+            
+            // 2. Ohranimo vse dokumente, ki imajo trenutno vnesen znesek > 0, da se ne izgubijo ob iskanju
+            vsiPrikazani.forEach(d => {
+                const vnos = enteredAmounts[d.id] || 0;
+                if (vnos > 0 && !noviPrikazani.some(x => x.id === d.id)) {
+                    noviPrikazani.push(d);
+                }
+            });
+            
+            vsiPrikazani = noviPrikazani;
+            // Prenesemo posodobljene vnose
+            vsiPrikazani.forEach(d => {
+                if (enteredAmounts[d.id] !== undefined) {
+                    d.ze_povezano_to = enteredAmounts[d.id];
+                }
+            });
+            
+            vsiPrikazani.sort((a,b) => a.datum_izdaje.localeCompare(b.datum_izdaje));
+            renderTableHTML();
+        };
+
+        document.getElementById('likv-search-btn').onclick = performSearch;
+        document.getElementById('likv-search-input').onkeydown = (ev) => {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                performSearch();
+            }
+        };
+
+        // Gumb Potrdi
         document.getElementById('btn-potrdi-likvidacijo').onclick = async () => {
             const povezi = [];
             document.querySelectorAll('.likv-input').forEach(inp => {
@@ -6887,7 +7299,6 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
 
             if (res.ok) {
                 document.getElementById('likvidacija-modal-overlay').style.display = 'none';
-                // Osvežimo izpisek in ostanemo na njem
                 const izpId = document.getElementById('izpisek_id_skrito')?.value;
                 if (izpId) window.showUrediIzpisek(izpId);
                 else renderIzpiski();
@@ -6896,6 +7307,7 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
             }
         };
 
+        // Gumbi za ročno likvidacijo
         const btnManual = document.getElementById('btn-manualna-likvidacija');
         if (btnManual) {
             btnManual.onclick = async () => {
@@ -6946,8 +7358,11 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
             };
         }
 
-    } catch(e) { vsebina.innerHTML = 'Napaka pri nalaganju podatkov.'; }
-};
+    } catch(e) { 
+        console.error(e);
+        document.getElementById('likv-vsebina').innerHTML = 'Napaka pri nalaganju podatkov.'; 
+    }
+};;
 
 window.preracunajLikvidacijo = function(skupniZnesek) {
     let porabljeno = 0;
@@ -7101,7 +7516,15 @@ try {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ learning_mode: checked })
             });
-            renderDokumenti('prejeti_racuni', 'Prejeti računi');
+            // Osveži prikaz glede na to kje smo
+            const activeTab = window.appTabs.find(t => t.id === window.activeTabId);
+            if (activeTab) {
+                if (activeTab.module === 'nastavitve') {
+                    renderNastavitve('ai');
+                } else if (activeTab.module === 'prejeti_racuni') {
+                    renderDokumenti('prejeti_racuni', 'Prejeti računi');
+                }
+            }
         } catch (err) {
             console.error("Napaka pri shranjevanju Llama nastavitve", err);
         }
@@ -7472,8 +7895,19 @@ async function renderHelp() {
                 <div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">10. 06. 2026</span>
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">16. 06. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li><strong>Razmejitev zneskov:</strong> Razmejitev zneskov v obračunu na "Skupaj prispevki" (davki in socialni prispevki) in "Skupaj povračila" (prehrana in prevoz) na desni strani pod QR kodo.</li>
+                            <li><strong>Popravek prevoza:</strong> Odpravljena napaka napačnega prištevanja službenih potnih nalogov k standardnemu prevozu na delo (popravek za mesece od Aprila naprej).</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">10. 06. 2026</span>
+                            
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>CRM Modul:</strong> Celovit sistem za upravljanje strank, kontaktov, interakcij (klici, sestanki) in opravil s kanban pogledom prodajnega kanala.</li>
@@ -8775,4 +9209,90 @@ window.odstraniKompenzacijaDok = function() {
 };
 
 window._appLoaded = true;
+
+// =============================================
+// UJP B2B POMOŽNE FUNKCIJE
+// =============================================
+
+window.posljiNaUjp = async (id, stevilka) => {
+    const testMsg = '⚠️ POZOR: Ali ste prepričani, da želite poslati račun ' + stevilka + ' na UJP?\n\n' +
+        'Preverite, da je:\n• Digitalno potrdilo pravilno naloženo\n• Testni način izklopljen (za produkcijsko pošiljanje)\n• Partner pravilno določen z davčno številko\n\nNadaljujete?';
+    if (!confirm(testMsg)) return;
+
+    // Pokažemo loading stanje
+    const btn = event && event.target ? event.target : null;
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+
+    try {
+        const res = await fetch(`/api/dokumenti/posji_ujp/${id}`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            alert('✅ ' + (data.message || 'Račun uspešno poslan na UJP!'));
+        } else {
+            alert('❌ Napaka: ' + (data.detail || 'Neznana napaka'));
+        }
+    } catch (e) {
+        alert('❌ Napaka pri komunikaciji s strežnikom: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🏛️'; }
+    }
+};
+
+window.naloziUjpCert = async () => {
+    const fileInput = document.getElementById('ujp-cert-file');
+    if (!fileInput || !fileInput.files[0]) {
+        alert('Najprej izberite datoteko (.p12 ali .pfx).');
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    try {
+        const res = await fetch('/api/nastavitve/ujp_cert', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+            alert('✅ Potrdilo ' + data.filename + ' je bilo uspešno naloženo!');
+            renderNastavitve('ujp');
+        } else {
+            alert('❌ Napaka: ' + (data.detail || 'Neznana napaka'));
+        }
+    } catch (e) {
+        alert('❌ Napaka: ' + e.message);
+    }
+};
+
+window.shraniUjpGeslo = async () => {
+    const password = document.getElementById('ujp-cert-password')?.value || '';
+    const testMode = document.getElementById('ujp-test-mode')?.checked !== false;
+    try {
+        const res = await fetch('/api/nastavitve/ujp_settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ujp_cert_password: password, ujp_test_mode: testMode })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert('✅ Nastavitve UJP shranjene.');
+        } else {
+            alert('❌ Napaka: ' + (data.detail || 'Neznana napaka'));
+        }
+    } catch (e) {
+        alert('❌ Napaka: ' + e.message);
+    }
+};
+
+window.izbrisiUjpCert = async () => {
+    if (!confirm('Ali res želite izbrisati naloženo digitalno potrdilo?')) return;
+    try {
+        const res = await fetch('/api/nastavitve/ujp_cert', { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+            alert('✅ Potrdilo je bilo izbrisano.');
+            renderNastavitve('ujp');
+        } else {
+            alert('❌ Napaka: ' + (data.detail || 'Neznana napaka'));
+        }
+    } catch (e) {
+        alert('❌ Napaka: ' + e.message);
+    }
+};
 

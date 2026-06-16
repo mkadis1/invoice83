@@ -23,8 +23,8 @@ def extract_data_from_pdf(pdf_path):
     text_layout = ""
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            text_standard += page.extract_text() + "\n"
-            text_layout += page.extract_text(layout=True) + "\n"
+            text_standard += (page.extract_text() or "") + "\n"
+            text_layout += (page.extract_text(layout=True) or "") + "\n"
             
     try:
         with open("pdf_debug.txt", "w", encoding="utf-8") as f:
