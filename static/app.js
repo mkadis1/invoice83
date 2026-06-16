@@ -237,7 +237,7 @@ window.renderModuleToContainer = async function(moduleName, container, title, da
         else if (moduleName === 'konto_kartica') await renderKontoKartica();
         else if (moduleName === 'nastavitve') await renderNastavitve();
         else if (moduleName === 'help') await renderHelp();
-        else if (moduleName === 'zgodovina') { await renderHelp(); await window.renderHelpDetail('zgodovina'); }
+        else if (moduleName === 'zgodovina') await renderZgodovina();
         else if (moduleName === 'financna_porocila') await renderFinancnaPorocila();
         else if (moduleName === 'crm_dashboard') await renderCRM_Dashboard();
         else if (moduleName === 'crm_kanal') await renderCRM_Kanal();
@@ -7883,27 +7883,138 @@ async function renderHelp() {
                 </ul>
                 <p>To omogoča hitro prehajanje med povezanimi računi in dobropisi brez iskanja po seznamih.</p>
             `
-        },
-        {
-            id: 'zgodovina',
+        }
+    ];
 
-            title: 'Zgodovina sprememb',
-            icon: '🕒',
-            content: 'Pregled vseh posodobitev in novosti v programu od začetka do danes.',
-            details: `
-                <h4>Zgodovina sprememb</h4>
-                <div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+    window.renderHelpDetail = function(topicId) {
+        const topic = helpTopics.find(t => t.id === topicId);
+        if (!topic) return;
+
+        const mainContent = document.getElementById('help-main-area');
+        mainContent.innerHTML = `
+            <div style="animation: fadeIn 0.3s forwards;">
+                <button class="btn" style="background:#eee; color:#333; margin-bottom:20px;" onclick="window.renderHelpList()">← Nazaj na seznam</button>
+                <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
+                    <span style="font-size:2.5rem;">${topic.icon}</span>
+                    <h2 style="margin:0; color:var(--primary-blue);">${topic.title}</h2>
+                </div>
+                <div class="help-details-body" style="font-size:1.1rem; line-height:1.6; color:#333;">
+                    ${topic.details}
+                </div>
+                <div style="margin-top:40px; padding:20px; background:var(--bg-sidebar); border-radius:12px; display:flex; align-items:center; gap:15px;">
+                    <div style="font-size:2rem;">💡</div>
+                    <div>
+                        <strong>Potrebujete več informacij?</strong><br>
+                        Pišite nam na <a href="mailto:invoice@83.si">invoice@83.si</a> in z veseljem vam bomo pomagali.
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
+    window.renderHelpList = function() {
+        const mainContent = document.getElementById('help-main-area');
+        mainContent.innerHTML = `
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 style="color: var(--primary-blue); font-size: 1.8rem; margin-bottom: 10px;">Kako vam lahko pomagamo?</h2>
+                <p style="color: #666;">Prebrskajte med navodili ali uporabite iskalnik spodaj.</p>
+                <div style="position: relative; max-width: 500px; margin: 20px auto;">
+                    <input type="text" id="help-search" placeholder="Išči po navodilih (npr. uvoz, qr koda, potni nalog)..." 
+                           style="width: 100%; padding: 12px 40px 12px 15px; border: 2px solid #e9ecef; border-radius: 30px; font-size: 1rem; outline: none; transition: border-color 0.2s;">
+                    <span style="position: absolute; right: 15px; top: 12px; font-size: 1.2rem;">🔍</span>
+                </div>
+            </div>
+
+            <div id="help-content-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                ${helpTopics.map(topic => `
+                    <div class="help-card" data-id="${topic.id}" data-title="${topic.title.toLowerCase()}" data-content="${topic.content.toLowerCase()}"
+                         onclick="window.renderHelpDetail('${topic.id}')"
+                         style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 20px; transition: all 0.2s; cursor: pointer; position:relative; overflow:hidden;">
+                        <div style="font-size:2rem; margin-bottom:10px;">${topic.icon}</div>
+                        <h4 style="color: var(--primary-blue); margin-top: 0; margin-bottom: 10px;">${topic.title}</h4>
+                        <p style="font-size: 0.9rem; color: #444; line-height: 1.5; margin-bottom: 0;">${topic.content}</p>
+                        <div style="position:absolute; bottom:0; right:0; padding:10px; opacity:0.1; font-size:4rem; transform:translate(20%, 20%);">${topic.icon}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div id="help-no-results" style="display: none; text-align: center; padding: 40px; color: #888;">
+                <p style="font-size: 3rem; margin-bottom: 10px;">🤔</p>
+                <p>Nismo našli navodil za vaš iskalni niz. Poskusite z drugimi besedami.</p>
+            </div>
+        `;
+
+        // Iskanje v realnem času
+        const searchInput = document.getElementById('help-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                const cards = document.querySelectorAll('.help-card');
+                let visibleCount = 0;
+                cards.forEach(card => {
+                    const title = card.getAttribute('data-title');
+                    const content = card.getAttribute('data-content');
+                    if (title.includes(query) || content.includes(query)) {
+                        card.style.display = 'block';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                document.getElementById('help-no-results').style.display = visibleCount === 0 ? 'block' : 'none';
+            });
+        }
+    };
+
+    contentDiv.innerHTML = `
+        <div id="help-wrapper" style="max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+            <div id="help-main-area"></div>
+            
+            <div style="margin-top: 50px; padding-top: 30px; border-top: 1px solid #eee; text-align: center;">
+                <h4 style="margin-bottom: 10px;">Še vedno potrebujete pomoč?</h4>
+                <p style="color: #666; font-size: 0.9rem;">Če niste našli odgovora, nas lahko kontaktirate na <a href="mailto:invoice@83.si" style="color: var(--primary-blue); font-weight: bold;">invoice@83.si</a>.</p>
+            </div>
+        </div>
+        <style>
+            .help-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+                border-color: var(--primary-blue);
+                background: white;
+            }
+            .help-card:hover h4 { color: var(--primary-red); }
+            @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+            .help-details-body h4 { color: var(--primary-blue); margin-top:25px; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; }
+            .help-details-body ul, .help-details-body ol { padding-left:20px; }
+            .help-details-body li { margin-bottom:8px; }
+        </style>
+    `;
+
+    window.renderHelpList();
+}
+
+
+async function renderZgodovina() {
+    titleEl.textContent = "Zgodovina sprememb";
+    contentDiv.innerHTML = `
+        <div id="zgodovina-wrapper" style="max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+            <div style="display:flex; align-items:center; gap:15px; margin-bottom:30px; border-bottom: 2px solid var(--bg-sidebar); padding-bottom: 15px;">
+                <span style="font-size:2.5rem;">🕒</span>
+                <h2 style="margin:0; color:var(--primary-blue);">Zgodovina sprememb in novosti</h2>
+            </div>
+            <div id="zgodovina-marker" style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">16. 06. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
-                            <li><strong>Razmejitev zneskov:</strong> Razmejitev zneskov v obračunu na "Skupaj prispevki" (davki in socialni prispevki) in "Skupaj povračila" (prehrana in prevoz) na desni strani pod QR kodo.</li>
-                            <li><strong>Popravek prevoza:</strong> Odpravljena napaka napačnega prištevanja službenih potnih nalogov k standardnemu prevozu na delo (popravek za mesece od Aprila naprej).</li>
+                            <li><strong>Test:</strong> Prva uspešna osvežitev zgodovine sprememb kot samostojnega modula.</li>
                         </ul>
                     </div>
 
+                <h4>Zgodovina sprememb</h4>
+                <div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">10. 06. 2026</span>
@@ -8065,116 +8176,11 @@ async function renderHelp() {
                     </div>
 
                 </div>
-            `
-        }
-    ];
-
-    window.renderHelpDetail = function(topicId) {
-        const topic = helpTopics.find(t => t.id === topicId);
-        if (!topic) return;
-
-        const mainContent = document.getElementById('help-main-area');
-        mainContent.innerHTML = `
-            <div style="animation: fadeIn 0.3s forwards;">
-                <button class="btn" style="background:#eee; color:#333; margin-bottom:20px;" onclick="window.renderHelpList()">← Nazaj na seznam</button>
-                <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
-                    <span style="font-size:2.5rem;">${topic.icon}</span>
-                    <h2 style="margin:0; color:var(--primary-blue);">${topic.title}</h2>
-                </div>
-                <div class="help-details-body" style="font-size:1.1rem; line-height:1.6; color:#333;">
-                    ${topic.details}
-                </div>
-                <div style="margin-top:40px; padding:20px; background:var(--bg-sidebar); border-radius:12px; display:flex; align-items:center; gap:15px;">
-                    <div style="font-size:2rem;">💡</div>
-                    <div>
-                        <strong>Potrebujete več informacij?</strong><br>
-                        Pišite nam na <a href="mailto:invoice@83.si">invoice@83.si</a> in z veseljem vam bomo pomagali.
-                    </div>
-                </div>
-            </div>
-        `;
-    };
-
-    window.renderHelpList = function() {
-        const mainContent = document.getElementById('help-main-area');
-        mainContent.innerHTML = `
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h2 style="color: var(--primary-blue); font-size: 1.8rem; margin-bottom: 10px;">Kako vam lahko pomagamo?</h2>
-                <p style="color: #666;">Prebrskajte med navodili ali uporabite iskalnik spodaj.</p>
-                <div style="position: relative; max-width: 500px; margin: 20px auto;">
-                    <input type="text" id="help-search" placeholder="Išči po navodilih (npr. uvoz, qr koda, potni nalog)..." 
-                           style="width: 100%; padding: 12px 40px 12px 15px; border: 2px solid #e9ecef; border-radius: 30px; font-size: 1rem; outline: none; transition: border-color 0.2s;">
-                    <span style="position: absolute; right: 15px; top: 12px; font-size: 1.2rem;">🔍</span>
-                </div>
-            </div>
-
-            <div id="help-content-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
-                ${helpTopics.filter(t => t.id !== 'zgodovina').map(topic => `
-                    <div class="help-card" data-id="${topic.id}" data-title="${topic.title.toLowerCase()}" data-content="${topic.content.toLowerCase()}"
-                         onclick="window.renderHelpDetail('${topic.id}')"
-                         style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 20px; transition: all 0.2s; cursor: pointer; position:relative; overflow:hidden;">
-                        <div style="font-size:2rem; margin-bottom:10px;">${topic.icon}</div>
-                        <h4 style="color: var(--primary-blue); margin-top: 0; margin-bottom: 10px;">${topic.title}</h4>
-                        <p style="font-size: 0.9rem; color: #444; line-height: 1.5; margin-bottom: 0;">${topic.content}</p>
-                        <div style="position:absolute; bottom:0; right:0; padding:10px; opacity:0.1; font-size:4rem; transform:translate(20%, 20%);">${topic.icon}</div>
-                    </div>
-                `).join('')}
-            </div>
-
-            <div id="help-no-results" style="display: none; text-align: center; padding: 40px; color: #888;">
-                <p style="font-size: 3rem; margin-bottom: 10px;">🤔</p>
-                <p>Nismo našli navodil za vaš iskalni niz. Poskusite z drugimi besedami.</p>
-            </div>
-        `;
-
-        // Iskanje v realnem času
-        const searchInput = document.getElementById('help-search');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase().trim();
-                const cards = document.querySelectorAll('.help-card');
-                let visibleCount = 0;
-                cards.forEach(card => {
-                    const title = card.getAttribute('data-title');
-                    const content = card.getAttribute('data-content');
-                    if (title.includes(query) || content.includes(query)) {
-                        card.style.display = 'block';
-                        visibleCount++;
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-                document.getElementById('help-no-results').style.display = visibleCount === 0 ? 'block' : 'none';
-            });
-        }
-    };
-
-    contentDiv.innerHTML = `
-        <div id="help-wrapper" style="max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
-            <div id="help-main-area"></div>
-            
-            <div style="margin-top: 50px; padding-top: 30px; border-top: 1px solid #eee; text-align: center;">
-                <h4 style="margin-bottom: 10px;">Še vedno potrebujete pomoč?</h4>
-                <p style="color: #666; font-size: 0.9rem;">Če niste našli odgovora, nas lahko kontaktirate na <a href="mailto:invoice@83.si" style="color: var(--primary-blue); font-weight: bold;">invoice@83.si</a>.</p>
             </div>
         </div>
-        <style>
-            .help-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-                border-color: var(--primary-blue);
-                background: white;
-            }
-            .help-card:hover h4 { color: var(--primary-red); }
-            @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-            .help-details-body h4 { color: var(--primary-blue); margin-top:25px; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; }
-            .help-details-body ul, .help-details-body ol { padding-left:20px; }
-            .help-details-body li { margin-bottom:8px; }
-        </style>
     `;
-
-    window.renderHelpList();
 }
+
 
 window.knjiziAmortizacijo = async function() {
     const leto = getLeto();

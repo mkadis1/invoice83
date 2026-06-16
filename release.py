@@ -193,7 +193,7 @@ def update_changelog():
     content = content.replace('<span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>', '')
     
     # Dodamo ločilno črto prejšnjemu vnosu - bolj robustno iskanje prvega vnosa po markerju
-    marker = '<div style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">'
+    marker = '<div id="zgodovina-marker" style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">'
     
     if marker not in content:
         print("[ERR] Napaka: Marker za zgodovino v app.js ni bil najden!")
