@@ -8079,15 +8079,6 @@ async function renderZgodovina() {
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Oblikovanje:</strong> Gumbi za prenos dokumentov imajo sedaj boljšo vidnost ter enak, prefinjen bel slog s svetlo obrobo in prehodom ob preletu, kot gumb "Pošlji po e-pošti".</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">16. 06. 2026</span>
-                            
-                        </div>
-                        <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Obračun plač in prispevkov:</strong> Razmejitev na "Skupaj prispevki" in "Skupaj povračila" v desnem delu obračunskega lista (pod QR kodo). Prehrana (malica) in potni stroški se ne vštevata več v prispevke in se ne seštevata skupaj.</li>
                             <li><strong>Potni nalogi:</strong> Izboljšana logika — zaposlenim se ne izpolnijo vnaprej dnevi in kilometri v potnih nalogih (ko gre za potne stroške), temveč se to vpisuje/izračunava dinamično.</li>
                             <li><strong>Popravek prevoza:</strong> Odpravljena napaka pri preračunavanju "Skupaj prevoz" (narobe preračunano od aprila naprej).</li>

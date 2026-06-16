@@ -186,32 +186,56 @@ def update_changelog():
     with open(APP_JS, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # 1. Najprej demoviramo trenutno "Zadnjo posodobitev" v navadno (siva značka)
-    # Iščemo modro značko in napis "Zadnja posodobitev"
-    content = content.replace('background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;', 
-                             'background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;')
-    content = content.replace('<span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>', '')
-    
-    # Dodamo ločilno črto prejšnjemu vnosu - bolj robustno iskanje prvega vnosa po markerju
     marker = '<div id="zgodovina-marker" style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">'
     
     if marker not in content:
         print("[ERR] Napaka: Marker za zgodovino v app.js ni bil najden!")
         return
 
-    # Najdemo prvi <div style="margin-bottom:25px;"> po markerju
     marker_pos = content.find(marker)
-    first_div_pos = content.find('<div style="margin-bottom:25px;">', marker_pos)
+    # Preveri, če je na vrhu zgodovine (v prvih 500 znakih po markerju) že današnji datum
+    first_few_chars = content[marker_pos : marker_pos + 500]
     
-    if first_div_pos != -1:
-        # Repliciramo replace(..., 1) ampak samo po markerju
-        before = content[:first_div_pos]
-        after = content[first_div_pos:]
-        after = after.replace('<div style="margin-bottom:25px;">', '<div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">', 1)
-        content = before + after
+    if today_str in first_few_chars:
+        print(f"[*] Najden obstojeci vnos za danes ({today_str}). Zdrzujem spremembe...")
+        # Poišči prvi <ul style="margin-top:5px; padding-left:20px;"> po marker_pos
+        ul_marker = '<ul style="margin-top:5px; padding-left:20px;">'
+        ul_pos = content.find(ul_marker, marker_pos)
+        if ul_pos != -1:
+            before = content[:ul_pos + len(ul_marker)]
+            after = content[ul_pos + len(ul_marker):]
+            new_content = before + "\n" + li_items + after
+        else:
+            print("[ERR] Napaka: Seznam <ul> za danes ni bil najden!")
+            return
+    else:
+        print(f"[*] Danasnji datum ({today_str}) se ne obstaja. Ustvarjam nov vnos...")
+        new_entry = f"""
+                    <div style="margin-bottom:25px;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">{today_str}</span>
+                            <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+{li_items}                        </ul>
+                    </div>
+"""
+        # 1. Najprej demoviramo trenutno "Zadnjo posodobitev" v navadno (siva značka)
+        content = content.replace('background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;', 
+                                 'background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;')
+        content = content.replace('<span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>', '')
+        
+        # Najdemo prvi <div style="margin-bottom:25px;"> po markerju in dodamo dashed border
+        first_div_pos = content.find('<div style="margin-bottom:25px;">', marker_pos)
+        if first_div_pos != -1:
+            before = content[:first_div_pos]
+            after = content[first_div_pos:]
+            after = after.replace('<div style="margin-bottom:25px;">', '<div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">', 1)
+            content = before + after
 
-    # 2. Vstavimo nov vnos na vrh
-    new_content = content.replace(marker, marker + new_entry)
+        # 2. Vstavimo nov vnos na vrh
+        new_content = content.replace(marker, marker + new_entry)
+
     with open(APP_JS, 'w', encoding='utf-8') as f:
         f.write(new_content)
     print(f"[OK] Zgodovina sprememb posodobljena v {APP_JS}.")
