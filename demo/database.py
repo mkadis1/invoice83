@@ -544,6 +544,17 @@ def init_db():
     """)
 
     try:
+        cursor.execute("ALTER TABLE dokumenti ADD COLUMN delno_placano_znesek REAL DEFAULT 0")
+    except:
+        pass
+
+    # Migracija: delna plačila v dokumentih
+    try:
+        cursor.execute("ALTER TABLE dokumenti ADD COLUMN delna_placila TEXT DEFAULT '[]'")
+    except:
+        pass
+
+    try:
         cursor.execute("SELECT 1 FROM llama_settings WHERE kljuc = 'learning_mode'")
         if not cursor.fetchone():
             cursor.execute("INSERT INTO llama_settings (kljuc, vrednost) VALUES ('learning_mode', '1')")

@@ -897,6 +897,18 @@ def update_konto(id: int, k: Konto):
     return {"status": "success"}
 
 # --- LIKVIDACIJA (Povezovanje plačil) ---
+def get_sum_delna_placila(delna_placila_str):
+    if not delna_placila_str:
+        return 0.0
+    try:
+        import json
+        data = json.loads(delna_placila_str)
+        if isinstance(data, list):
+            return sum(float(item.get('znesek', 0.0) or 0.0) for item in data)
+    except:
+        pass
+    return 0.0
+
 @app.get("/api/likvidacija/odprte_postavke/{partner_id}")
 def get_odprte_postavke(partner_id: int):
     conn = database.get_db()
@@ -904,10 +916,10 @@ def get_odprte_postavke(partner_id: int):
     # Poiščemo vse račune (izdane in prejete), ki niso popolnoma plačani
     # Računamo preostanek: znesek_skupaj - vsota vseh povezav v placila_povezave
     cursor.execute("""
-        SELECT d.id, d.tip, d.stevilka, d.datum_izdaje, d.datum_zapadlosti, d.znesek_skupaj, d.status,
+        SELECT d.id, d.tip, d.stevilka, d.datum_izdaje, d.datum_zapadlosti, d.znesek_skupaj, d.status, d.delna_placila, d.delno_placano_znesek,
                p.naziv as partner_naziv,
                IFNULL((SELECT SUM(znesek) FROM placila_povezave WHERE dokument_id = d.id), 0) as placano_znesek
-        FROM dokumenti d
+         FROM dokumenti d
         LEFT JOIN partnerji p ON d.partner_id = p.id
         WHERE d.partner_id = ? AND d.tip IN ('izdani_racuni', 'prejeti_racuni', 'dobropisi', 'prejeti_dobropisi')
           AND (d.status != 'plačano' OR d.status IS NULL)
@@ -919,6 +931,8 @@ def get_odprte_postavke(partner_id: int):
     result = []
     for r in rows:
         d = dict(r)
+        manual_sum = get_sum_delna_placila(d.get('delna_placila'))
+        d['placano_znesek'] = round(max(d['placano_znesek'] or 0.0, d.get('delno_placano_znesek') or 0.0) + manual_sum, 2)
         d['preostanek'] = round(d['znesek_skupaj'] - d['placano_znesek'], 2)
         if d['preostanek'] > 0:
             result.append(d)
@@ -929,7 +943,7 @@ def iskanje_racunov(q: str):
     conn = database.get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT d.id, d.tip, d.stevilka, d.datum_izdaje, d.datum_zapadlosti, d.znesek_skupaj, d.status,
+        SELECT d.id, d.tip, d.stevilka, d.datum_izdaje, d.datum_zapadlosti, d.znesek_skupaj, d.status, d.delna_placila, d.delno_placano_znesek,
                p.naziv as partner_naziv,
                IFNULL((SELECT SUM(znesek) FROM placila_povezave WHERE dokument_id = d.id), 0) as placano_znesek
         FROM dokumenti d
@@ -944,6 +958,8 @@ def iskanje_racunov(q: str):
     result = []
     for r in rows:
         d = dict(r)
+        manual_sum = get_sum_delna_placila(d.get('delna_placila'))
+        d['placano_znesek'] = round(max(d['placano_znesek'] or 0.0, d.get('delno_placano_znesek') or 0.0) + manual_sum, 2)
         d['preostanek'] = round(d['znesek_skupaj'] - d['placano_znesek'], 2)
         # Pri ročnem iskanju vrnemo vse ujemajoče se račune, tudi že plačane, da jih je mogoče povezati
         result.append(d)
@@ -963,6 +979,24 @@ def get_povezave_postavke(izpisek_postavka_id: int):
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+def extract_sklic_from_namen(namen: str) -> str:
+    if not namen:
+        return ""
+    import re
+    # Match standard SIXX sklic formats, e.g. SI12 2602011739412 or SI00-12345 or RF12 12345
+    match = re.search(r'\b(SI\d{2}[-\s]?\d+([-\s]\d+)*)\b', namen, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    match = re.search(r'\b(RF\d{2}[-\s]?\d+([-\s]\d+)*)\b', namen, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    
+    # Check for any other string starting with "SI" or "RF" and numbers
+    match = re.search(r'\b(SI\d{2,12})\b', namen, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return ""
 
 @app.post("/api/likvidacija/povezi")
 def povezi_placilo(req: LikvidacijaRequest):
@@ -990,22 +1024,79 @@ def povezi_placilo(req: LikvidacijaRequest):
                 new_doc_ids.append(p.dokument_id)
         
         # 3. Posodobitev statusov vseh vpletenih dokumentov (starih in novih)
+        statement_date = None
+        cursor.execute("""
+            SELECT ig.datum 
+            FROM izpiski_postavke ip
+            JOIN izpiski_glava ig ON ip.izpisek_id = ig.id
+            WHERE ip.id = ?
+        """, (req.izpisek_postavka_id,))
+        s_row = cursor.fetchone()
+        if s_row:
+            statement_date = s_row['datum']
+
         all_affected = list(set(old_doc_ids + new_doc_ids))
         for doc_id in all_affected:
             # Izračunamo skupno plačano vrednost za ta dokument
             cursor.execute("SELECT SUM(znesek) as skupaj_placano FROM placila_povezave WHERE dokument_id = ?", (doc_id,))
             placano = cursor.fetchone()['skupaj_placano'] or 0
             
-            cursor.execute("SELECT znesek_skupaj FROM dokumenti WHERE id = ?", (doc_id,))
-            skupaj = cursor.fetchone()['znesek_skupaj']
+            # Pridobimo znesek prvega plačila, ostala delna plačila in trenutni sklic
+            cursor.execute("SELECT znesek_skupaj, delno_placano_znesek, delna_placila, datum_placila, nacin_placila, sklic FROM dokumenti WHERE id = ?", (doc_id,))
+            doc_row = cursor.fetchone()
+            if not doc_row:
+                continue
+            skupaj = doc_row['znesek_skupaj'] or 0.0
+            delno_placano_znesek = doc_row['delno_placano_znesek'] or 0.0
+            manual_sum = get_sum_delna_placila(doc_row['delna_placila'])
+            doc_sklic = doc_row['sklic'] or ''
+            
+            vse_skupaj_placano = max(placano, delno_placano_znesek) + manual_sum
             
             status = 'neplačano'
-            if placano >= skupaj - 0.001: # Toleranca za decimalke
-                status = 'plačano'
-            elif placano > 0:
-                status = 'delno plačano'
+            doc_datum_placila = doc_row['datum_placila']
+            doc_nacin_placila = doc_row['nacin_placila']
             
-            cursor.execute("UPDATE dokumenti SET status = ? WHERE id = ?", (status, doc_id))
+            if vse_skupaj_placano >= skupaj - 0.001: # Toleranca za decimalke
+                status = 'plačano'
+                if statement_date:
+                    doc_datum_placila = statement_date
+                    doc_nacin_placila = 'TRR'
+                    delno_placano_znesek = placano
+            elif vse_skupaj_placano > 0:
+                status = 'delno plačano'
+                if statement_date:
+                    doc_datum_placila = statement_date
+                    doc_nacin_placila = 'TRR'
+                    delno_placano_znesek = placano
+            else:
+                status = 'neplačano'
+                doc_datum_placila = None
+                doc_nacin_placila = None
+                delno_placano_znesek = 0.0
+
+            # Poskusimo razbrati sklic iz namen postavke banke
+            cursor.execute("""
+                SELECT ip.namen 
+                FROM placila_povezave pp
+                JOIN izpiski_postavke ip ON pp.izpisek_postavka_id = ip.id
+                WHERE pp.dokument_id = ?
+            """, (doc_id,))
+            p_rows = cursor.fetchall()
+            extracted_sklic = ""
+            for pr in p_rows:
+                sk = extract_sklic_from_namen(pr['namen'])
+                if sk:
+                    extracted_sklic = sk
+                    break
+            if extracted_sklic:
+                doc_sklic = extracted_sklic
+            
+            cursor.execute("""
+                UPDATE dokumenti 
+                SET status = ?, datum_placila = ?, nacin_placila = ?, delno_placano_znesek = ?, sklic = ? 
+                WHERE id = ?
+            """, (status, doc_datum_placila, doc_nacin_placila, delno_placano_znesek, doc_sklic, doc_id))
             
         conn.commit()
         conn.close()
@@ -3187,6 +3278,8 @@ class Dokument(BaseModel):
     odstotek_placila: Optional[float] = 100.0
     sklic: Optional[str] = ""
     kompenzacija_doc_id: Optional[int] = None
+    delno_placano_znesek: Optional[float] = 0.0
+    delna_placila: Optional[str] = "[]"
     postavke: List[DokumentPostavka]
 
 @app.delete("/api/dokumenti/{id}")
@@ -3527,13 +3620,25 @@ def get_dokumenti(tip: str):
     """, (tip,))
     rows = cursor.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    
+    result = []
+    for r in rows:
+        d = dict(r)
+        manual_sum = get_sum_delna_placila(d.get('delna_placila'))
+        d['placano_znesek'] = round(max(d['placano_znesek'] or 0.0, d.get('delno_placano_znesek') or 0.0) + manual_sum, 2)
+        result.append(d)
+    return result
 
 @app.get("/api/dokumenti/detajl/{id}")
 def get_dokument_detajl(id: int):
     conn = database.get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM dokumenti WHERE id = ?", (id,))
+    cursor.execute("""
+        SELECT d.*, p.naziv as partner_naziv
+        FROM dokumenti d
+        LEFT JOIN partnerji p ON d.partner_id = p.id
+        WHERE d.id = ?
+    """, (id,))
     doc = cursor.fetchone()
     if not doc:
         conn.close()
@@ -3910,9 +4015,9 @@ def create_dokument(doc: Dokument):
         interna_st = stevilka
     
     cursor.execute("""
-        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila, interna_stevilka, sklic, kompenzacija_doc_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, interna_st, doc.sklic, doc.kompenzacija_doc_id))
+        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila, interna_stevilka, sklic, kompenzacija_doc_id, delno_placano_znesek, delna_placila)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, interna_st, doc.sklic, doc.kompenzacija_doc_id, doc.delno_placano_znesek, doc.delna_placila))
     
     doc_id = cursor.lastrowid
     for p in doc.postavke:
@@ -3955,13 +4060,13 @@ def update_dokument(id: int, doc: Dokument):
             znesek_brez_ddv=?, znesek_ddv=?, znesek_skupaj=?, datum_storitve_od=?, datum_storitve_do=?, 
             status=?, datum_placila=?, nacin_placila=?, zakljucno_besedilo=?, noga_dokumenta=?, opombe=?,
             valuta=?, tecaj=?, znesek_v_valuti=?, vkljuci_placilo=?, odstotek_placila=?, interna_stevilka=?, sklic=?,
-            kompenzacija_doc_id=?
+            kompenzacija_doc_id=?, delno_placano_znesek=?, delna_placila=?
         WHERE id = ?
     """, (doc.poslovno_leto, doc.tip, doc.stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, 
           doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, 
           doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe,
           doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, doc.interna_stevilka, doc.sklic,
-          doc.kompenzacija_doc_id, id))
+          doc.kompenzacija_doc_id, doc.delno_placano_znesek, doc.delna_placila, id))
     
     # Vstavljanje novih postavk
     for p in doc.postavke:
@@ -4253,10 +4358,10 @@ def _enrich_izpisek_data(raw_data):
                 break
         
         # Predlagaj konto glede na tip
-        konto = "1100" # Privzeto
+        konto = "" # Prazno, da prepustimo izbiro pametni logiki (220/221 za dobavitelje, 120/121 za kupce)
         if tx['type'] == 'breme':
-            if "PROVIZIJA" in search_text or "NADOMESTILO" in search_text:
-                konto = "4150"
+            if "PROVIZIJA" in search_text or "NADOMESTILO" in search_text or "NLB" in search_text or "NOVA LJUBLJANSKA BANKA" in search_text:
+                konto = "416"
         
         postavke.append({
             "tip_prometa": tx['type'],

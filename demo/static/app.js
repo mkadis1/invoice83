@@ -2362,7 +2362,7 @@ async function showDodajDokument(tip, naslov, editData = null) {
                 <div style="margin-top: 20px; padding: 15px; background: #eef7ff; border-radius: 4px; border: 1px solid #cce5ff;">
                     <h4 style="margin:0 0 10px 0; color:var(--primary-blue);">Status plačila</h4>
                     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <div class="form-group" style="flex: 1; min-width: 120px;">
                             <label>Status</label>
                             <select id="d_status">
                                 <option value="neplačano" ${editData && editData.status === 'neplačano' ? 'selected' : ''}>Neplačano</option>
@@ -2370,11 +2370,11 @@ async function showDodajDokument(tip, naslov, editData = null) {
                                 <option value="delno plačano" ${editData && editData.status === 'delno plačano' ? 'selected' : ''}>Delno plačano</option>
                             </select>
                         </div>
-                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <div class="form-group" style="flex: 1; min-width: 120px;">
                             <label>Datum plačila</label>
                             <input type="text" id="d_datum_placila" value="${editData ? formatDateJS(editData.datum_placila) : ''}" placeholder="DD.MM.YYYY">
                         </div>
-                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <div class="form-group" style="flex: 1; min-width: 120px;">
                             <label>Način plačila</label>
                             <select id="d_nacin_placila">
                                 <option value="" ${!editData || !editData.nacin_placila ? 'selected' : ''}>--- Izberi ---</option>
@@ -2385,14 +2385,36 @@ async function showDodajDokument(tip, naslov, editData = null) {
                                 <option value="Kompenzacija" ${editData && editData.nacin_placila === 'Kompenzacija' ? 'selected' : ''}>Kompenzacija</option>
                             </select>
                         </div>
+                        <div class="form-group" id="d_delno_placano_box" style="flex: 1; min-width: 120px; display: ${(() => {
+                            if (!editData) return 'none';
+                            if (editData.status === 'delno plačano') return 'block';
+                            if (editData.delno_placano_znesek > 0) return 'block';
+                            let dp = [];
+                            try {
+                                dp = typeof editData.delna_placila === 'string' ? JSON.parse(editData.delna_placila || '[]') : (editData.delna_placila || []);
+                            } catch(e) {}
+                            return dp.length > 0 ? 'block' : 'none';
+                        })()};">
+                            <label>Znesek (€)</label>
+                            <input type="text" id="d_delno_placano_znesek" value="${editData ? formatNumberJS(editData.delno_placano_znesek || 0) : '0,00'}" placeholder="0,00" oninput="window.osveziStatusPlacilaAuto()">
+                        </div>
                         ${tip === 'prejeti_racuni' ? `
-                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <div class="form-group" style="flex: 1; min-width: 120px;">
                             <label>Sklic za plačilo</label>
                             <input type="text" id="d_sklic" value="${editData ? (editData.sklic || '') : ''}" placeholder="npr. SI12 123-456" oninput="if(window.updateDQR) window.updateDQR();">
                         </div>
                         ` : `<input type="hidden" id="d_sklic" value="">`}
                     </div>
                     <div id="kompenzacija_container" style="display: ${editData && editData.nacin_placila === 'Kompenzacija' ? 'block' : 'none'}; margin-top: 15px; border-top: 1px dashed #ced4da; padding-top: 15px;"></div>
+                    <div id="delna_placila_container" style="display: ${(() => {
+                        if (!editData) return 'none';
+                        if (editData.status === 'delno plačano') return 'block';
+                        let dp = [];
+                        try {
+                            dp = typeof editData.delna_placila === 'string' ? JSON.parse(editData.delna_placila || '[]') : (editData.delna_placila || []);
+                        } catch(e) {}
+                        return dp.length > 0 ? 'block' : 'none';
+                    })()}; margin-top: 15px; border-top: 1px dashed #ced4da; padding-top: 15px;"></div>
                 </div>
 
                 ${tip === 'prejeti_racuni' ? `
@@ -2602,6 +2624,273 @@ async function showDodajDokument(tip, naslov, editData = null) {
     
     if (editData && editData.nacin_placila === 'Kompenzacija') {
         window.osveziKompenzacijaUI();
+    }
+
+    // Pomožne funkcije za iskanje in povezovanje dokumentov znotraj delnih plačil
+    window.osveziDpLinkUI = async function(row, povezanDocId = null, nacin = '') {
+        const linkSection = row.querySelector('.dp-link-section');
+        const hiddenInp = row.querySelector('.dp-povezan-doc-id');
+        if (!linkSection || !hiddenInp) return;
+
+        hiddenInp.value = povezanDocId || '';
+
+        if (povezanDocId) {
+            linkSection.innerHTML = `<p style="font-size:0.85em; color:#666; margin:0 0-5px 0;">Nalagam podatke o povezanem dokumentu...</p>`;
+            try {
+                const res = await fetch(`/api/dokumenti/detajl/${povezanDocId}`);
+                if (!res.ok) throw new Error("Dokument ni najden");
+                const doc = await res.json();
+                
+                linkSection.innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:space-between; background:#f1f3f5; border:1px solid #ced4da; padding:6px 12px; border-radius:4px; font-size:0.85em; width:100%; box-sizing: border-box;">
+                        <div>
+                            <span style="font-weight:600; color:var(--primary-blue); cursor:pointer; text-decoration:underline;" onclick="window.odpriKompenzacijskiDokument(${doc.id}, '${doc.tip}')" title="Kliknite za ogled dokumenta">${doc.stevilka}</span>
+                            <span style="color:#666; margin-left:10px;">${doc.partner_naziv} | ${formatMoneyJS(doc.znesek_skupaj)} €</span>
+                        </div>
+                        <button type="button" class="btn" style="padding:2px 8px; font-size:0.8em; background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; height:24px; cursor:pointer;" onclick="window.odstraniDpLink(this)">Odstrani ✕</button>
+                    </div>
+                `;
+            } catch(e) {
+                linkSection.innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:space-between; width:100%; box-sizing: border-box;">
+                        <p style="color:red; font-size:0.85em; margin:0;">Napaka: povezanega dokumenta ni bilo mogoče najti.</p>
+                        <button type="button" class="btn btn-blue" style="padding:2px 8px; font-size:0.8em; height:24px; cursor:pointer;" onclick="window.odstraniDpLink(this)">Išči znova</button>
+                    </div>
+                `;
+            }
+        } else {
+            const labelText = nacin === 'Dobropis' ? 'Išči dobropis (št. ali partner)' : 'Išči dokument za kompenzacijo (št. ali partner)';
+            linkSection.innerHTML = `
+                <div style="position:relative; width:100%; box-sizing: border-box;">
+                    <label style="font-size: 0.8em; margin-bottom: 2px; display: block; font-weight: bold; color: #495057;">${labelText}</label>
+                    <input type="text" class="dp-search-input" placeholder="Vpišite vsaj 3 znake..." style="width: 100%; padding: 4px 8px; font-size: 0.9em; height: 30px; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box;" oninput="window.iskiDpLinkDok(this)">
+                    <div class="dp-search-results" style="position:absolute; left:0; right:0; z-index:99; margin-top:2px; border:1px solid #ced4da; border-radius:4px; max-height:180px; overflow-y:auto; background:#fff; display:none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                </div>
+            `;
+        }
+    };
+
+    window.iskiDpLinkDok = async function(inputEl) {
+        const row = inputEl.closest('.delno-placilo-row');
+        const resultsDiv = row.querySelector('.dp-search-results');
+        if (!resultsDiv) return;
+        
+        const query = inputEl.value;
+        if (query.length < 3) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        const nacin = row.querySelector('.dp-nacin').value;
+
+        try {
+            const tipi = ['izdani_racuni', 'prejeti_racuni', 'dobropisi', 'prejeti_dobropisi'];
+            let vsi = [];
+            for (const t of tipi) {
+                const res = await fetch(`/api/dokumenti/${t}`);
+                const data = await res.json();
+                vsi = vsi.concat(data);
+            }
+
+            const filtrirano = vsi.filter(d => {
+                const matchesQuery = d.stevilka.toLowerCase().includes(query.toLowerCase()) || 
+                                     (d.partner_naziv && d.partner_naziv.toLowerCase().includes(query.toLowerCase()));
+                const notSelf = d.id !== window._currentEditId;
+                
+                if (nacin === 'Dobropis') {
+                    // Za dobropis iščemo dobropise in prejete dobropise
+                    return matchesQuery && notSelf && (d.tip === 'dobropisi' || d.tip === 'prejeti_dobropisi');
+                }
+                
+                return matchesQuery && notSelf;
+            });
+
+            if (filtrirano.length === 0) {
+                resultsDiv.innerHTML = `<div style="padding:8px 12px; color:#999; font-size:0.85em;">Ni rezultatov</div>`;
+            } else {
+                resultsDiv.innerHTML = filtrirano.map(d => {
+                    const tipNaziv = d.tip === 'dobropisi' ? 'Dobropis' : d.tip === 'prejeti_dobropisi' ? 'Prejeti dobropis' : d.tip === 'izdani_racuni' ? 'Izdani račun' : 'Prejeti račun';
+                    return `
+                        <div style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-size:0.85em; text-align: left;" 
+                             onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'"
+                             onclick="window.izberiDpLinkDok(this, ${d.id}, '${d.stevilka}', ${d.znesek_skupaj}, '${formatDateJS(d.datum_izdaje)}')">
+                            <div style="font-weight:600; display:flex; justify-content:space-between;">
+                                <span>${d.stevilka}</span>
+                                <span style="font-size:0.85em; color:var(--primary-blue); font-weight:normal;">${tipNaziv}</span>
+                            </div>
+                            <div style="color:#666; font-size:0.9em; margin-top:2px;">${d.partner_naziv} | ${formatMoneyJS(d.znesek_skupaj)} €</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            resultsDiv.style.display = 'block';
+
+        } catch(e) {
+            resultsDiv.innerHTML = `<div style="padding:8px 12px; color:red; font-size:0.85em;">Napaka pri iskanju</div>`;
+            resultsDiv.style.display = 'block';
+        }
+    };
+
+    window.izberiDpLinkDok = function(element, docId, stevilka, znesekSkupaj, datumIzdaje = '') {
+        const row = element.closest('.delno-placilo-row');
+        const nacin = row.querySelector('.dp-nacin').value;
+        
+        window.osveziDpLinkUI(row, docId, nacin);
+
+        const znesekInp = row.querySelector('.dp-znesek');
+        const sklicInp = row.querySelector('.dp-sklic');
+        const datumInp = row.querySelector('.dp-datum');
+        
+        if (znesekInp && (!znesekInp.value || parseNumberJS(znesekInp.value) === 0)) {
+            znesekInp.value = formatNumberJS(znesekSkupaj);
+        }
+        if (sklicInp) {
+            sklicInp.value = `${nacin}: ${stevilka}`;
+        }
+        if (datumInp && datumIzdaje) {
+            datumInp.value = datumIzdaje;
+        }
+        window.osveziStatusPlacilaAuto();
+    };
+
+    window.odstraniDpLink = function(buttonEl) {
+        const row = buttonEl.closest('.delno-placilo-row');
+        const nacin = row.querySelector('.dp-nacin').value;
+        window.osveziDpLinkUI(row, null, nacin);
+        window.osveziStatusPlacilaAuto();
+    };
+
+    // Delna plačila UI logika
+    window.dodajDelnoPlaciloRow = function(data = null) {
+        const list = document.getElementById('delna_placila_list');
+        if (!list) return;
+
+        const row = document.createElement('div');
+        row.className = 'delno-placilo-row';
+        row.style = 'display: flex; gap: 10px; align-items: center; background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; flex-wrap: wrap; margin-bottom: 8px; box-sizing: border-box;';
+
+        const datumVal = data ? formatDateJS(data.datum) : '';
+        const nacinVal = data ? data.nacin : 'TRR';
+        const znesekVal = data ? formatNumberJS(data.znesek) : '';
+        const sklicVal = data ? (data.sklic || '') : '';
+        const povezanDocId = data ? (data.povezan_doc_id || null) : null;
+
+        row.innerHTML = `
+            <input type="hidden" class="dp-povezan-doc-id" value="${povezanDocId || ''}">
+            <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                <label style="font-size: 0.8em; margin-bottom: 2px; display: block; font-weight: bold; color: #495057;">Datum</label>
+                <input type="text" class="dp-datum" value="${datumVal}" placeholder="DD.MM.YYYY" style="width: 100%; padding: 4px 8px; font-size: 0.9em; height: 30px; border: 1px solid #ced4da; border-radius: 4px;">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                <label style="font-size: 0.8em; margin-bottom: 2px; display: block; font-weight: bold; color: #495057;">Način</label>
+                <select class="dp-nacin" style="width: 100%; padding: 4px 8px; font-size: 0.9em; height: 30px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                    <option value="TRR" ${nacinVal === 'TRR' ? 'selected' : ''}>TRR</option>
+                    <option value="Poslovna kartica" ${nacinVal === 'Poslovna kartica' ? 'selected' : ''}>Poslovna kartica</option>
+                    <option value="Paypal" ${nacinVal === 'Paypal' ? 'selected' : ''}>Paypal</option>
+                    <option value="Gotovina" ${nacinVal === 'Gotovina' ? 'selected' : ''}>Gotovina</option>
+                    <option value="Kompenzacija" ${nacinVal === 'Kompenzacija' ? 'selected' : ''}>Kompenzacija</option>
+                    <option value="Dobropis" ${nacinVal === 'Dobropis' ? 'selected' : ''}>Dobropis</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 100px; margin-bottom: 0;">
+                <label style="font-size: 0.8em; margin-bottom: 2px; display: block; font-weight: bold; color: #495057;">Znesek (€)</label>
+                <input type="text" class="dp-znesek" value="${znesekVal}" placeholder="0,00" style="width: 100%; padding: 4px 8px; font-size: 0.9em; height: 30px; border: 1px solid #ced4da; border-radius: 4px; text-align: right;" oninput="window.osveziStatusPlacilaAuto()">
+            </div>
+            <div class="form-group" style="flex: 2; min-width: 150px; margin-bottom: 0;">
+                <label style="font-size: 0.8em; margin-bottom: 2px; display: block; font-weight: bold; color: #495057;">Sklic / Opomba</label>
+                <input type="text" class="dp-sklic" value="${sklicVal}" placeholder="npr. SI12..." style="width: 100%; padding: 4px 8px; font-size: 0.9em; height: 30px; border: 1px solid #ced4da; border-radius: 4px;">
+            </div>
+            <button type="button" class="btn btn-red" style="padding: 4px 8px; margin-top: 15px; height: 30px; display: flex; align-items: center; justify-content: center; background: #e03131; color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="this.closest('.delno-placilo-row').remove(); window.osveziStatusPlacilaAuto();">Odstrani</button>
+            <div class="dp-link-section" style="width: 100%; margin-top: 8px; display: ${nacinVal === 'Kompenzacija' || nacinVal === 'Dobropis' ? 'block' : 'none'}; box-sizing: border-box;"></div>
+        `;
+
+        list.appendChild(row);
+
+        const nacinSel = row.querySelector('.dp-nacin');
+        nacinSel.addEventListener('change', () => {
+            const val = nacinSel.value;
+            const linkSec = row.querySelector('.dp-link-section');
+            if (val === 'Kompenzacija' || val === 'Dobropis') {
+                linkSec.style.display = 'block';
+                window.osveziDpLinkUI(row, null, val);
+            } else {
+                linkSec.style.display = 'none';
+                row.querySelector('.dp-povezan-doc-id').value = '';
+            }
+        });
+
+        if (povezanDocId || nacinVal === 'Kompenzacija' || nacinVal === 'Dobropis') {
+            window.osveziDpLinkUI(row, povezanDocId, nacinVal);
+        }
+
+        window.initDatePickers();
+    };
+
+    const dStatusSel = document.getElementById('d_status');
+    if (dStatusSel) {
+        dStatusSel.addEventListener('change', () => {
+            const dpBox = document.getElementById('delna_placila_container');
+            const delnoPlacanoBox = document.getElementById('d_delno_placano_box');
+            
+            // Preverimo, če imamo kakšna obstoječa delna plačila
+            let imaPlacila = false;
+            const delnoPlacanoInp = document.getElementById('d_delno_placano_znesek');
+            const delnoPlacanoVal = delnoPlacanoInp ? (parseNumberJS(delnoPlacanoInp.value) || 0) : 0;
+            let delnaSum = 0;
+            const listEl = document.getElementById('delna_placila_list');
+            if (listEl) {
+                listEl.querySelectorAll('.dp-znesek').forEach(inp => {
+                    delnaSum += parseNumberJS(inp.value) || 0;
+                });
+            }
+            if (delnoPlacanoVal > 0 || delnaSum > 0 || (listEl && listEl.children.length > 0)) {
+                imaPlacila = true;
+            }
+
+            if (delnoPlacanoBox) {
+                delnoPlacanoBox.style.display = (dStatusSel.value === 'delno plačano' || imaPlacila) ? 'block' : 'none';
+            }
+            if (dpBox) {
+                if (dStatusSel.value === 'delno plačano' || imaPlacila) {
+                    dpBox.style.display = 'block';
+                    const list = document.getElementById('delna_placila_list');
+                    if (list && list.children.length === 0 && dStatusSel.value === 'delno plačano') {
+                        window.dodajDelnoPlaciloRow();
+                    }
+                } else {
+                    dpBox.style.display = 'none';
+                }
+            }
+            window.osveziStatusPlacilaAuto();
+        });
+    }
+
+    const dpContainer = document.getElementById('delna_placila_container');
+    if (dpContainer) {
+        dpContainer.innerHTML = `
+            <h5 style="margin: 0 0 10px 0; color: var(--primary-blue); display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.95em;">
+                <span>Seznam delnih plačil</span>
+                <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.85em; background: var(--primary-blue); color: white; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; gap: 5px;" onclick="window.dodajDelnoPlaciloRow()">+ Dodaj vrstico za plačilo</button>
+            </h5>
+            <div id="delna_placila_list" style="display: flex; flex-direction: column;"></div>
+        `;
+
+        let existingDP = [];
+        if (editData && editData.delna_placila) {
+            try {
+                if (typeof editData.delna_placila === 'string') {
+                    existingDP = JSON.parse(editData.delna_placila || '[]');
+                } else {
+                    existingDP = editData.delna_placila || [];
+                }
+            } catch(e) {
+                existingDP = [];
+            }
+        }
+
+        if (existingDP.length > 0) {
+            existingDP.forEach(dp => window.dodajDelnoPlaciloRow(dp));
+        }
     }
 
     // UPN-QR Code generator za urejanje dokumentov
@@ -2898,6 +3187,19 @@ async function shraniDokument(e, tip, naslov, id = null) {
     const sumBrezDDVEUR = sumBrezDDV * tecaj;
     const sumDDVEUR = sumEUR - sumBrezDDVEUR;
 
+    const delnaPlacilaArray = [];
+    const listEl = document.getElementById('delna_placila_list');
+    if (listEl) {
+        listEl.querySelectorAll('.delno-placilo-row').forEach(row => {
+            const datum = parseDateISO(row.querySelector('.dp-datum').value);
+            const nacin = row.querySelector('.dp-nacin').value;
+            const znesek = parseNumberJS(row.querySelector('.dp-znesek').value) || 0;
+            const sklic = row.querySelector('.dp-sklic').value.trim();
+            const povezan_doc_id = parseInt(row.querySelector('.dp-povezan-doc-id')?.value) || null;
+            delnaPlacilaArray.push({ datum, nacin, znesek, sklic, povezan_doc_id });
+        });
+    }
+
     const zakljucna_besedila = [];
     document.querySelectorAll('#d_zakljucno_container textarea').forEach(tx => {
         if(tx.value.trim()) zakljucna_besedila.push(tx.value.trim());
@@ -2927,7 +3229,9 @@ async function shraniDokument(e, tip, naslov, id = null) {
         noga_dokumenta: document.getElementById('d_noga') ? document.getElementById('d_noga').value : "",
         vkljuci_placilo: document.getElementById('d_vkljuci_placilo') ? document.getElementById('d_vkljuci_placilo').checked : true,
         odstotek_placila: document.getElementById('d_odstotek_placila') ? parseFloat(document.getElementById('d_odstotek_placila').value) : 100,
-        kompenzacija_doc_id: document.getElementById('d_nacin_placila')?.value === 'Kompenzacija' ? (window._selectedKompenzacijaDocId || null) : null,
+        kompenzacija_doc_id: window._selectedKompenzacijaDocId || null,
+        delno_placano_znesek: parseNumberJS(document.getElementById('d_delno_placano_znesek')?.value || "0"),
+        delna_placila: JSON.stringify(delnaPlacilaArray),
         postavke: postavke
     };
 
@@ -4294,7 +4598,7 @@ window.uvoziIzpisek = async function(input) {
                 let kontoVal = p.konto || "";
                 if (!kontoVal) {
                     if (isNLB) {
-                        kontoVal = "419000";
+                        kontoVal = "416";
                     } else if (p.tip_prometa === "dobro") {
                         kontoVal = isTujina ? "121" : "120";
                     } else if (p.tip_prometa === "breme") {
@@ -7372,7 +7676,8 @@ window.odpriLikvidacijo = async function(postavkaId, partnerId, skupniZnesek, na
                 if (izpId) window.showUrediIzpisek(izpId);
                 else renderIzpiski();
             } else {
-                alert("Napaka pri shranjevanju likvidacije.");
+                const errData = await res.json().catch(() => ({}));
+                alert("Napaka pri shranjevanju likvidacije:\n" + (errData.detail || errData.message || res.statusText || "Neznana napaka"));
             }
         };
 
@@ -9138,6 +9443,19 @@ window.serializeCurrentFormState = function() {
         zakljucna.push(tx.value);
     });
 
+    const stateDelnaPlacila = [];
+    const listEl = document.getElementById('delna_placila_list');
+    if (listEl) {
+        listEl.querySelectorAll('.delno-placilo-row').forEach(row => {
+            const datum = parseDateISO(row.querySelector('.dp-datum').value);
+            const nacin = row.querySelector('.dp-nacin').value;
+            const znesek = parseNumberJS(row.querySelector('.dp-znesek').value) || 0;
+            const sklic = row.querySelector('.dp-sklic').value.trim();
+            const povezan_doc_id = parseInt(row.querySelector('.dp-povezan-doc-id')?.value) || null;
+            stateDelnaPlacila.push({ datum, nacin, znesek, sklic, povezan_doc_id });
+        });
+    }
+
     return {
         context: { tip, naslov },
         data: {
@@ -9159,7 +9477,9 @@ window.serializeCurrentFormState = function() {
             vkljuci_placilo: document.getElementById('d_vkljuci_placilo') ? document.getElementById('d_vkljuci_placilo').checked : true,
             odstotek_placila: document.getElementById('d_odstotek_placila') ? parseFloat(document.getElementById('d_odstotek_placila').value) : 100,
             kompenzacija_doc_id: window._selectedKompenzacijaDocId,
+            delno_placano_znesek: parseNumberJS(document.getElementById('d_delno_placano_znesek')?.value || "0"),
             zakljucno_besedilo: zakljucna.join('\n\n'),
+            delna_placila: JSON.stringify(stateDelnaPlacila),
             postavke: postavke
         }
     };
@@ -9274,14 +9594,83 @@ window.iskiKompenzacijaDok = async function(query) {
     }
 };
 
-window.izberiKompenzacijaDok = function(id) {
+window.izberiKompenzacijaDok = async function(id) {
     window._selectedKompenzacijaDocId = id;
     window.osveziKompenzacijaUI();
+    try {
+        const res = await fetch(`/api/dokumenti/detajl/${id}`);
+        if (res.ok) {
+            const doc = await res.json();
+            const datumInp = document.getElementById('d_datum_placila');
+            if (datumInp && doc.datum_izdaje) {
+                datumInp.value = formatDateJS(doc.datum_izdaje);
+            }
+        }
+    } catch (e) {
+        console.error("Napaka pri branju datuma kompenzacije:", e);
+    }
 };
 
 window.odstraniKompenzacijaDok = function() {
     window._selectedKompenzacijaDocId = null;
     window.osveziKompenzacijaUI();
+};
+
+window.osveziStatusPlacilaAuto = function() {
+    const dStatusSel = document.getElementById('d_status');
+    if (!dStatusSel) return;
+    
+    // Če je izbrano "neplačano" ali "plačano", ne spreminjamo samodejno, razen če uporabnik vnaša delna plačila
+    if (dStatusSel.value !== 'delno plačano') return;
+
+    // Pridobimo skupni znesek računa
+    const skupajZnesekEl = document.getElementById('skupaj-znesek');
+    if (!skupajZnesekEl) return;
+    let rawText = skupajZnesekEl.textContent || "";
+    let cleanText = rawText;
+    if (rawText.includes('Skupaj:')) {
+        cleanText = rawText.split('Skupaj:')[1] || rawText;
+    }
+    if (cleanText.includes('(') && cleanText.includes('EUR)')) {
+        const match = cleanText.match(/\(([^)]+)\s*EUR\)/);
+        if (match) {
+            cleanText = match[1];
+        }
+    } else {
+        cleanText = cleanText.replace(/[a-zA-Z€]/g, '').trim();
+    }
+    const skupajZnesek = parseNumberJS(cleanText) || 0;
+    if (skupajZnesek === 0) return;
+
+    // Pridobimo znesek prvega plačila
+    const delnoPlacanoInp = document.getElementById('d_delno_placano_znesek');
+    const delnoPlacanoVal = delnoPlacanoInp ? (parseNumberJS(delnoPlacanoInp.value) || 0) : 0;
+
+    // Pridobimo vsoto ostalih delnih plačil
+    let delnaSum = 0;
+    const listEl = document.getElementById('delna_placila_list');
+    if (listEl) {
+        listEl.querySelectorAll('.dp-znesek').forEach(inp => {
+            delnaSum += parseNumberJS(inp.value) || 0;
+        });
+    }
+
+    const skupnoPlacano = delnoPlacanoVal + delnaSum;
+
+    // Če je celoten račun pokrit (z toleranco), status spremenimo v Plačano
+    if (skupnoPlacano >= skupajZnesek - 0.01) {
+        dStatusSel.value = 'plačano';
+        // NE skrijemo polj za delno plačilo, če so dejansko vneseni zneski (da uporabnik vidi ločitev plačil)
+        const dpBox = document.getElementById('delna_placila_container');
+        const delnoPlacanoBox = document.getElementById('d_delno_placano_box');
+        if (skupnoPlacano > 0) {
+            if (dpBox) dpBox.style.display = 'block';
+            if (delnoPlacanoBox) delnoPlacanoBox.style.display = 'block';
+        } else {
+            if (dpBox) dpBox.style.display = 'none';
+            if (delnoPlacanoBox) delnoPlacanoBox.style.display = 'none';
+        }
+    }
 };
 
 window._appLoaded = true;
