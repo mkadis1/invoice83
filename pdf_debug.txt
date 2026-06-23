@@ -1,5 +1,5 @@
 === STANDARD ===
-PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 23.04.2026
+PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 29.05.2026
 IBAN: SI56 0245 3026 4377 270
 SIM 83 - SIMULATORJI VO®NJE, MIHA KADI© S.P.
 DOBJA VAS 253
@@ -23,22 +23,21 @@ ZSJV). V primeru NLB Poslovnega raèuna za stranke notarja/odvetnika/izvr¹itelj
 upo¹tevajo kot zajamèena vloga dejanskega lastnika, èe imetnik raèuna banki sporoèi podatke o dejanskem lastniku. Veè informacij o za¹èiti vlog je na voljo
 na naslovu https://www.bsi.si/.'
 1/1
-PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 23.04.2026
+PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 29.05.2026
 DATUM Opis spremembe Promet v breme / dobro
-IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 61 Datum predhodnega izpiska: 21.04.2026
+IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 78 Datum predhodnega izpiska: 27.05.2026
 PROMET V BREME RAÈUNA
-21.04.2026 NAM: FINANCNA UPRAVA REPUBL Ljubljana SVN 4466173510263639 * ©TN: FT26113557693260 491,15
-23.04.2026 KNP: GDSV-Nakup/prodaja blaga ali storitve * NAM: PLACILO RACUNA ST. 319002103013 * NAZP: PETROL D.D., LJUBLJANA * RPPL: 290000101824249 * REFP: 12 13,37
-3190021030131 * DPKP: 2026-04-24 * ZPN: EUR 1,05 * ©TN: FT26113639120902
-PROMET V DOBRO RAÈUNA
-23.04.2026 KNP: GDSV-Nakup/prodaja blaga ali storitve * NAM: PRENOS * REFPL: NOTPROVIDED * NAZPL: BENDE SASO * RPPL: 041070247943188 * ©TN: FT26113506054570 90,00
-ZAÈETNO STANJE...................................: 2.418,42
+27.05.2026 NAM: INTER DISKONT TRGOVINA RAVNE NA KORO SVN 4466173510263639 * ©TN: FT26149879325089 27,25
+27.05.2026 NAM: GOMBAC Izola Izola SVN 4466173510263639 * ©TN: FT26149879325159 26,43
+27.05.2026 NAM: WWW.KAMM.SI 04132388 041323880 SVN 4466173510263639 * ©TN: FT26149879325164 33,15
+31.05.2026 NAM: POSLOVNI PAKET OSNOVNI 2 * ©TN: 2763261 7,00
+ZAÈETNO STANJE...................................: 3.663,25
 NADOMESTILO ZA MNO®IÈNA PLAÈILA SEPA.............: 0,00
 NADOMESTILO ZA ZBIRNI NALOG MNO®IÈNA PLAÈILA SEPA: 0,00
-OSTALA NADOMESTILA ZA PLAÈILNE TRANSAKCIJE.......: 1,05
-SKUPAJ PROMET V BREME............................: 505,57
-SKUPAJ PROMET V DOBRO............................: 90,00
-KONÈNO STANJE....................................: 2.002,85
+OSTALA NADOMESTILA ZA PLAÈILNE TRANSAKCIJE.......: 0,00
+SKUPAJ PROMET V BREME............................: 93,83
+SKUPAJ PROMET V DOBRO............................: 0,00
+KONÈNO STANJE....................................: 3.569,42
 ZNESEK LIMITA....................................: 0,00
 
 === LAYOUT ===
@@ -49,7 +48,7 @@ ZNESEK LIMITA....................................: 0,00
                                                                                                                     
                                                                                                                     
                                                                                                                     
-          PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 23.04.2026                                                    
+          PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 29.05.2026                                                    
           IBAN: SI56 0245 3026 4377 270                                                                             
           SIM 83 - SIMULATORJI VO®NJE, MIHA KADI© S.P.                                                              
           DOBJA VAS 253                                                                                             
@@ -95,25 +94,25 @@ ZNESEK LIMITA....................................: 0,00
                                                                                                                     
                                                                                                                     
                                                                                                               1/1   
-                            PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 23.04.2026                                  
+                            PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 29.05.2026                                  
                                                                                                                     
           DATUM  Opis spremembe                                                                    Promet v breme / dobro
                                                                                                                     
-          IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 61 Datum predhodnega izpiska: 21.04.2026
+          IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 78 Datum predhodnega izpiska: 27.05.2026
           PROMET V BREME RAÈUNA                                                                                     
-          21.04.2026 NAM: FINANCNA UPRAVA REPUBL Ljubljana SVN 4466173510263639 * ©TN: FT26113557693260      491,15 
-          23.04.2026 KNP: GDSV-Nakup/prodaja blaga ali storitve * NAM: PLACILO RACUNA ST. 319002103013 * NAZP: PETROL D.D., LJUBLJANA * RPPL: 290000101824249 * REFP: 12 13,37
-                 3190021030131 * DPKP: 2026-04-24 * ZPN: EUR 1,05 * ©TN: FT26113639120902                           
-          PROMET V DOBRO RAÈUNA                                                                                     
-          23.04.2026 KNP: GDSV-Nakup/prodaja blaga ali storitve * NAM: PRENOS * REFPL: NOTPROVIDED * NAZPL: BENDE SASO * RPPL: 041070247943188 * ©TN: FT26113506054570 90,00
-          ZAÈETNO STANJE...................................: 2.418,42                                               
+          27.05.2026 NAM: INTER DISKONT TRGOVINA RAVNE NA KORO SVN 4466173510263639 * ©TN: FT26149879325089  27,25  
+          27.05.2026 NAM: GOMBAC Izola Izola SVN 4466173510263639 * ©TN: FT26149879325159                    26,43  
+          27.05.2026 NAM: WWW.KAMM.SI 04132388 041323880 SVN 4466173510263639 * ©TN: FT26149879325164        33,15  
+          31.05.2026 NAM: POSLOVNI PAKET OSNOVNI 2 * ©TN: 2763261                                             7,00  
+          ZAÈETNO STANJE...................................: 3.663,25                                               
           NADOMESTILO ZA MNO®IÈNA PLAÈILA SEPA.............: 0,00                                                   
           NADOMESTILO ZA ZBIRNI NALOG MNO®IÈNA PLAÈILA SEPA: 0,00                                                   
-          OSTALA NADOMESTILA ZA PLAÈILNE TRANSAKCIJE.......: 1,05                                                   
-          SKUPAJ PROMET V BREME............................: 505,57                                                 
-          SKUPAJ PROMET V DOBRO............................: 90,00                                                  
-          KONÈNO STANJE....................................: 2.002,85                                               
+          OSTALA NADOMESTILA ZA PLAÈILNE TRANSAKCIJE.......: 0,00                                                   
+          SKUPAJ PROMET V BREME............................: 93,83                                                  
+          SKUPAJ PROMET V DOBRO............................: 0,00                                                   
+          KONÈNO STANJE....................................: 3.569,42                                               
           ZNESEK LIMITA....................................: 0,00                                                   
+                                                                                                                    
                                                                                                                     
                                                                                                                     
                                                                                                                     

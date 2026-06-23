@@ -554,6 +554,12 @@ def init_db():
     except:
         pass
 
+    # Migracija: stotinska izravnava v dokumentih
+    try:
+        cursor.execute("ALTER TABLE dokumenti ADD COLUMN stotinska_izravnava REAL DEFAULT 0")
+    except:
+        pass
+
     try:
         cursor.execute("SELECT 1 FROM llama_settings WHERE kljuc = 'learning_mode'")
         if not cursor.fetchone():

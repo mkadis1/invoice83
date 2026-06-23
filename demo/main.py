@@ -883,7 +883,6 @@ def get_odprte_postavke(partner_id: int):
          FROM dokumenti d
         LEFT JOIN partnerji p ON d.partner_id = p.id
         WHERE d.partner_id = ? AND d.tip IN ('izdani_racuni', 'prejeti_racuni', 'dobropisi', 'prejeti_dobropisi')
-          AND (d.status != 'plačano' OR d.status IS NULL)
         ORDER BY d.datum_zapadlosti ASC
     """, (partner_id,))
     rows = cursor.fetchall()
@@ -1845,7 +1844,7 @@ def get_pdf_invoice(id: int):
     elif inv['tip'] == 'dobropisi':
         doc_title = "Dobropis"
         
-    return Response(content=pdf_content, media_type="application/pdf", headers={
+    return Response(content=bytes(pdf_content), media_type="application/pdf", headers={
         "Content-Disposition": f"attachment; filename={doc_title}_{inv['stevilka']}.pdf"
     })
 
@@ -3241,6 +3240,7 @@ class Dokument(BaseModel):
     kompenzacija_doc_id: Optional[int] = None
     delno_placano_znesek: Optional[float] = 0.0
     delna_placila: Optional[str] = "[]"
+    stotinska_izravnava: Optional[float] = 0.0
     postavke: List[DokumentPostavka]
 
 @app.delete("/api/dokumenti/{id}")
@@ -3976,9 +3976,9 @@ def create_dokument(doc: Dokument):
         interna_st = stevilka
     
     cursor.execute("""
-        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila, interna_stevilka, sklic, kompenzacija_doc_id, delno_placano_znesek, delna_placila)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, interna_st, doc.sklic, doc.kompenzacija_doc_id, doc.delno_placano_znesek, doc.delna_placila))
+        INSERT INTO dokumenti (poslovno_leto, tip, stevilka, partner_id, datum_izdaje, datum_zapadlosti, znesek_brez_ddv, znesek_ddv, znesek_skupaj, datum_storitve_od, datum_storitve_do, status, datum_placila, nacin_placila, zakljucno_besedilo, noga_dokumenta, opombe, valuta, tecaj, znesek_v_valuti, vkljuci_placilo, odstotek_placila, interna_stevilka, sklic, kompenzacija_doc_id, delno_placano_znesek, delna_placila, stotinska_izravnava)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (doc.poslovno_leto, doc.tip, stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe, doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, interna_st, doc.sklic, doc.kompenzacija_doc_id, doc.delno_placano_znesek, doc.delna_placila, doc.stotinska_izravnava))
     
     doc_id = cursor.lastrowid
     for p in doc.postavke:
@@ -4021,13 +4021,13 @@ def update_dokument(id: int, doc: Dokument):
             znesek_brez_ddv=?, znesek_ddv=?, znesek_skupaj=?, datum_storitve_od=?, datum_storitve_do=?, 
             status=?, datum_placila=?, nacin_placila=?, zakljucno_besedilo=?, noga_dokumenta=?, opombe=?,
             valuta=?, tecaj=?, znesek_v_valuti=?, vkljuci_placilo=?, odstotek_placila=?, interna_stevilka=?, sklic=?,
-            kompenzacija_doc_id=?, delno_placano_znesek=?, delna_placila=?
+            kompenzacija_doc_id=?, delno_placano_znesek=?, delna_placila=?, stotinska_izravnava=?
         WHERE id = ?
     """, (doc.poslovno_leto, doc.tip, doc.stevilka, doc.partner_id, doc.datum_izdaje, doc.datum_zapadlosti, 
           doc.znesek_brez_ddv, doc.znesek_ddv, doc.znesek_skupaj, doc.datum_storitve_od, doc.datum_storitve_do, 
           doc.status, doc.datum_placila, doc.nacin_placila, doc.zakljucno_besedilo, doc.noga_dokumenta, doc.opombe,
           doc.valuta, doc.tecaj, doc.znesek_v_valuti, 1 if doc.vkljuci_placilo else 0, doc.odstotek_placila, doc.interna_stevilka, doc.sklic,
-          doc.kompenzacija_doc_id, doc.delno_placano_znesek, doc.delna_placila, id))
+          doc.kompenzacija_doc_id, doc.delno_placano_znesek, doc.delna_placila, doc.stotinska_izravnava, id))
     
     # Vstavljanje novih postavk
     for p in doc.postavke:
@@ -4319,10 +4319,23 @@ def _enrich_izpisek_data(raw_data):
                 break
         
         # Predlagaj konto glede na tip
-        konto = "" # Prazno, da prepustimo izbiro pametni logiki (220/221 za dobavitelje, 120/121 za kupce)
-        if tx['type'] == 'breme':
-            if "PROVIZIJA" in search_text or "NADOMESTILO" in search_text or "NLB" in search_text or "NOVA LJUBLJANSKA BANKA" in search_text:
-                konto = "416"
+        partner_name = tx.get('partner') or ''
+        partner_upper = partner_name.upper()
+        
+        # Check if NLB / bank fee
+        is_nlb = "NOVA LJUBLJANSKA BANKA" in partner_upper or "NLB" in partner_upper or "PROVIZIJA" in search_text or "NADOMESTILO" in search_text
+        
+        # Check if foreign (Tujina)
+        import re
+        is_tujina = bool(re.search(r'\b(GMBH|INC|LTD|LIMITED|LLC|AG|SA|SPA|BV|NV|SRL|PLC|AB|OY|AS|APS)\b', partner_upper))
+        
+        konto = ""
+        if is_nlb:
+            konto = "419"
+        elif tx['type'] == 'dobro':
+            konto = "121" if is_tujina else "120"
+        elif tx['type'] == 'breme':
+            konto = "221" if is_tujina else "220"
         
         postavke.append({
             "tip_prometa": tx['type'],

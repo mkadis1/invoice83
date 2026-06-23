@@ -237,6 +237,15 @@ tr:hover {
     background-color: #f1f5f9;
 }
 
+.row-overdue {
+    background-color: #fff5f5 !important;
+    color: #c92a2a;
+}
+
+.row-overdue:hover {
+    background-color: #ffe3e3 !important;
+}
+
 .form-group {
     margin-bottom: 15px;
 }

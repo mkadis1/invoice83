@@ -2002,10 +2002,16 @@ async function renderDokumenti(tip, naslov) {
         if (sortirano.length === 0) {
             html += `<tr><td colspan="7" style="text-align:center">Ni dokumentov v letu ${leto}</td></tr>`;
         } else {
+            const todayStr = new Date().toLocaleDateString('sv').substring(0, 10);
             sortirano.forEach(d => {
                 const isChecked = window.appSelection.ids.includes(d.id) ? 'checked' : '';
+                const isOverdue = (tip === 'izdani_racuni' || tip === 'prejeti_racuni') && 
+                                  d.datum_zapadlosti && 
+                                  d.datum_zapadlosti <= todayStr && 
+                                  d.status !== 'plačano';
+                const rowClass = isOverdue ? 'class="row-overdue"' : '';
                 html += `
-                    <tr>
+                    <tr ${rowClass}>
                         <td><input type="checkbox" class="row-checkbox" data-id="${d.id}" ${isChecked} onclick="window.toggleItemSelection(${d.id}, '${tip}')"></td>
                         <td style="white-space: nowrap;">
                             <span style="color:var(--primary-blue); font-weight:bold; cursor:pointer; text-decoration:underline;" onclick="showUrediDokument(${d.id}, '${tip}', '${naslov}')">${d.interna_stevilka || d.stevilka}</span>
@@ -2312,7 +2318,15 @@ async function showDodajDokument(tip, naslov, editData = null) {
                 <div id="postavke-container" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
                 </div>
                 <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
-                    <button type="button" class="btn" style="background:var(--bg-sidebar); color:var(--text-main); font-size: 0.8em;" onclick="dodajPostavkoR()">+ Dodaj vrstico</button>
+                    <div style="display:flex; gap:15px; align-items:center;">
+                        <button type="button" class="btn" style="background:var(--bg-sidebar); color:var(--text-main); font-size: 0.8em;" onclick="dodajPostavkoR()">+ Dodaj vrstico</button>
+                        ${['prejeti_racuni', 'dobropisi', 'prejeti_dobropisi'].includes(tip) ? `
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <label for="d_stotinska_izravnava" style="font-size:0.85em; font-weight:bold; color:var(--text-muted); margin:0;">Stotinska izravnava:</label>
+                                <input type="text" id="d_stotinska_izravnava" value="${editData ? formatNumberJS(editData.stotinska_izravnava || 0) : '0,00'}" oninput="window.kalkulirajZneske()" style="width:75px; padding:4px 8px; font-size:0.85em; border: 1px solid var(--border-color); border-radius:4px; text-align:right;">
+                            </div>
+                        ` : ''}
+                    </div>
                     <div style="font-size: 1.25em; font-weight: bold; color:var(--primary-blue);">SKUPAJ: <span id="skupaj-znesek">0.00</span> &euro;</div>
                 </div>
 
@@ -3136,6 +3150,9 @@ window.kalkulirajZneske = function() {
         sumBrezDDVValuta += netoZnesek;
     });
 
+    const stotinska = parseNumberJS(document.getElementById('d_stotinska_izravnava')?.value || '0');
+    skupajValuta -= stotinska;
+
     const skupajEUR = skupajValuta * tecaj;
     let text = formatNumberJS(skupajEUR);
     if (valuta !== 'EUR') {
@@ -3151,7 +3168,15 @@ window.kalkulirajZneske = function() {
     }
     
     document.getElementById('skupaj-znesek').innerText = text;
+
+    // Posodobimo tudi input polje "Znesek v EUR", če je vidno in ga uporabnik trenutno ne ureja
+    const eurEl = document.getElementById('d_znesek_eur');
+    if (eurEl && valuta !== 'EUR' && document.activeElement !== eurEl) {
+        eurEl.value = formatNumberJS(skupajEUR);
+    }
+
     if (window.updateDQR) window.updateDQR();
+    if (window.osveziStatusPlacilaAuto) window.osveziStatusPlacilaAuto();
 };
 
 async function shraniDokument(e, tip, naslov, id = null) {
@@ -3183,6 +3208,8 @@ async function shraniDokument(e, tip, naslov, id = null) {
         sumValuta += p.znesek_skupaj;
         sumBrezDDV += p.znesek_skupaj / (1 + p.stopnja_ddv / 100);
     });
+    const stotinskaValuta = parseNumberJS(document.getElementById('d_stotinska_izravnava')?.value || '0');
+    sumValuta -= stotinskaValuta;
     const sumEUR = sumValuta * tecaj;
     const sumBrezDDVEUR = sumBrezDDV * tecaj;
     const sumDDVEUR = sumEUR - sumBrezDDVEUR;
@@ -3232,6 +3259,7 @@ async function shraniDokument(e, tip, naslov, id = null) {
         kompenzacija_doc_id: window._selectedKompenzacijaDocId || null,
         delno_placano_znesek: parseNumberJS(document.getElementById('d_delno_placano_znesek')?.value || "0"),
         delna_placila: JSON.stringify(delnaPlacilaArray),
+        stotinska_izravnava: stotinskaValuta,
         postavke: postavke
     };
 
@@ -4592,13 +4620,14 @@ window.uvoziIzpisek = async function(input) {
                 lastBox.querySelector('.i-znesek').value = formatNumberJS(p.znesek);
                 
                 let partnerName = (data.partner_names[idx] || "").toUpperCase();
-                let isNLB = partnerName.includes("NOVA LJUBLJANSKA BANKA") || partnerName.includes("NLB");
-                let isTujina = partnerName.match(/\b(GMBH|INC|LTD|LLC|AG|SA|SPA|BV|NV)\b/);
+                let namenUpper = (p.namen || "").toUpperCase();
+                let isNLB = partnerName.includes("NOVA LJUBLJANSKA BANKA") || partnerName.includes("NLB") || namenUpper.includes("PROVIZIJA") || namenUpper.includes("NADOMESTILO");
+                let isTujina = partnerName.match(/\b(GMBH|INC|LTD|LIMITED|LLC|AG|SA|SPA|BV|NV|SRL|PLC|AB|OY|AS|APS)\b/);
 
                 let kontoVal = p.konto || "";
                 if (!kontoVal) {
                     if (isNLB) {
-                        kontoVal = "416";
+                        kontoVal = "419";
                     } else if (p.tip_prometa === "dobro") {
                         kontoVal = isTujina ? "121" : "120";
                     } else if (p.tip_prometa === "breme") {
@@ -6784,7 +6813,9 @@ window.checkPartnerSimilarity = function() {
 };
 
 window.odpriPartnerPopup = function(selectEl) {
-    window._partnerPopupTargetSelect = selectEl;
+    if (selectEl) {
+        window._partnerPopupTargetSelect = selectEl;
+    }
     
     // Clear similarity warn
     const warnEl = document.getElementById('pp_similarity_warn');
@@ -8379,8 +8410,18 @@ async function renderZgodovina() {
             <div id="zgodovina-marker" style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">16. 06. 2026</span>
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">23. 06. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li>Popravek napake pri shranjevanju likvidacij (varnostna varovalka za None vrstico)</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">16. 06. 2026</span>
+                            
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Oblikovanje:</strong> Gumbi za prenos dokumentov imajo sedaj boljšo vidnost ter enak, prefinjen bel slog s svetlo obrobo in prehodom ob preletu, kot gumb "Pošlji po e-pošti".</li>
@@ -9620,8 +9661,8 @@ window.osveziStatusPlacilaAuto = function() {
     const dStatusSel = document.getElementById('d_status');
     if (!dStatusSel) return;
     
-    // Če je izbrano "neplačano" ali "plačano", ne spreminjamo samodejno, razen če uporabnik vnaša delna plačila
-    if (dStatusSel.value !== 'delno plačano') return;
+    // Če je status že 'plačano', ni treba delati nič
+    if (dStatusSel.value === 'plačano') return;
 
     // Pridobimo skupni znesek računa
     const skupajZnesekEl = document.getElementById('skupaj-znesek');

@@ -33,7 +33,7 @@ def knjizi_dokument(dokument_id: int, temeljnica_id: int = None, novi_naziv: str
         znesek_skupaj = _get_znesek(dokument, 'znesek_skupaj')
         
         # Determine vrsta temeljnice
-        vrsta_temeljnice = 'IR' if tip == 'izdani_racuni' else 'PR' if tip == 'prejeti_racuni' else None
+        vrsta_temeljnice = 'IR' if tip in ['izdani_racuni', 'dobropisi'] else 'PR' if tip in ['prejeti_racuni', 'prejeti_dobropisi'] else None
         if not vrsta_temeljnice:
             raise HTTPException(status_code=400, detail=f"Tip dokumenta '{tip}' ni podprt za avtomatsko knjiženje.")
 
@@ -99,6 +99,74 @@ def knjizi_dokument(dokument_id: int, temeljnica_id: int = None, novi_naziv: str
                     INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
                     VALUES (?, '160', ?, ?, ?, 0, ?, 'dokumenti')
                 """, (temeljnica_id, partner_id, f"Vstopni DDV {stevilka}", znesek_ddv, dokument_id))
+
+        elif tip == 'dobropisi':
+            # V dobro: 120 (Terjatve do kupcev)
+            cursor.execute("""
+                INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                VALUES (?, '120', ?, ?, 0, ?, ?, 'dokumenti')
+            """, (temeljnica_id, partner_id, f"Dobropis terjatve {stevilka}", znesek_skupaj, dokument_id))
+            
+            # V breme: 760 (Prihodki) in 260 (DDV)
+            if znesek_brez_ddv > 0:
+                cursor.execute("""
+                    INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                    VALUES (?, '760', ?, ?, ?, 0, ?, 'dokumenti')
+                """, (temeljnica_id, partner_id, f"Storno prihodka {stevilka}", znesek_brez_ddv, dokument_id))
+            if znesek_ddv > 0:
+                cursor.execute("""
+                    INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                    VALUES (?, '260', ?, ?, ?, 0, ?, 'dokumenti')
+                """, (temeljnica_id, partner_id, f"Storno DDV {stevilka}", znesek_ddv, dokument_id))
+
+        elif tip == 'prejeti_dobropisi':
+            # V breme: 220 (Obveznosti do dobaviteljev)
+            cursor.execute("""
+                INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                VALUES (?, '220', ?, ?, ?, 0, ?, 'dokumenti')
+            """, (temeljnica_id, partner_id, f"Dobropis obveznost {stevilka}", znesek_skupaj, dokument_id))
+            
+            # V dobro: 410 (Stroški) in 160 (Vstopni DDV)
+            if znesek_brez_ddv > 0:
+                cursor.execute("""
+                    INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                    VALUES (?, '410', ?, ?, 0, ?, ?, 'dokumenti')
+                """, (temeljnica_id, partner_id, f"Storno stroška {stevilka}", znesek_brez_ddv, dokument_id))
+            if znesek_ddv > 0:
+                cursor.execute("""
+                    INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                    VALUES (?, '160', ?, ?, 0, ?, ?, 'dokumenti')
+                """, (temeljnica_id, partner_id, f"Storno vstopnega DDV {stevilka}", znesek_ddv, dokument_id))
+
+        # Stotinska izravnava (Slovenski računovodski standard - SRS 18 / SRS 15)
+        stotinska_izravnava = _get_znesek(dokument, 'stotinska_izravnava')
+        if stotinska_izravnava != 0:
+            if tip in ['prejeti_racuni', 'prejeti_dobropisi']:
+                if stotinska_izravnava > 0:
+                    # Breme 489 (Odhodki iz stotinske izravnave)
+                    cursor.execute("""
+                        INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                        VALUES (?, '489', ?, ?, ?, 0, ?, 'dokumenti')
+                    """, (temeljnica_id, partner_id, f"Stotinska izravnava {stevilka}", abs(stotinska_izravnava), dokument_id))
+                else:
+                    # Dobro 785 (Prihodki iz stotinske izravnave)
+                    cursor.execute("""
+                        INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                        VALUES (?, '785', ?, ?, 0, ?, ?, 'dokumenti')
+                    """, (temeljnica_id, partner_id, f"Stotinska izravnava {stevilka}", abs(stotinska_izravnava), dokument_id))
+            elif tip == 'dobropisi':
+                if stotinska_izravnava > 0:
+                    # Dobro 785 (Prihodki iz stotinske izravnave)
+                    cursor.execute("""
+                        INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                        VALUES (?, '785', ?, ?, 0, ?, ?, 'dokumenti')
+                    """, (temeljnica_id, partner_id, f"Stotinska izravnava {stevilka}", abs(stotinska_izravnava), dokument_id))
+                else:
+                    # Breme 489 (Odhodki iz stotinske izravnave)
+                    cursor.execute("""
+                        INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                        VALUES (?, '489', ?, ?, ?, 0, ?, 'dokumenti')
+                    """, (temeljnica_id, partner_id, f"Stotinska izravnava {stevilka}", abs(stotinska_izravnava), dokument_id))
 
         # Update dokument status
         cursor.execute("UPDATE dokumenti SET knjizeno = 1 WHERE id = ?", (dokument_id,))
