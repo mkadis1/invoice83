@@ -37,7 +37,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS dokumenti (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         poslovno_leto INTEGER NOT NULL,
-        tip TEXT NOT NULL, -- 'izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi'
+        tip TEXT NOT NULL, -- 'izdani_racuni', 'prejeti_racuni', 'ponudbe', 'prejete_ponudbe', 'dobropisi'
         stevilka TEXT NOT NULL,
         partner_id INTEGER,
         datum_izdaje DATE,
@@ -361,6 +361,8 @@ def init_db():
     try: cursor.execute("ALTER TABLE nastavitve ADD COLUMN email_template_ponudba TEXT")
     except: pass
     try: cursor.execute("ALTER TABLE nastavitve ADD COLUMN email_template_dobropis TEXT")
+    except: pass
+    try: cursor.execute("ALTER TABLE nastavitve ADD COLUMN email_template_opomin TEXT")
     except: pass
 
     # Migracija: Dodaj znesek_do (dolgotrajna oskrba) v place

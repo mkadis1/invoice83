@@ -2,6 +2,12 @@ import os
 import sys
 # Zagotovi, da je trenutna mapa v pathu za uvoze na Railwayu
 sys.path.append(os.getcwd())
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except AttributeError:
+    pass # In case stdout/stderr doesn't support reconfigure (e.g. non-standard file-like object)
+
 import base64
 import tempfile
 import zipfile
@@ -251,6 +257,7 @@ class Nastavitve(BaseModel):
     email_template_racun: Optional[str] = ""
     email_template_ponudba: Optional[str] = ""
     email_template_dobropis: Optional[str] = ""
+    email_template_opomin: Optional[str] = ""
     dashboard_config: Optional[str] = None
 
 class PlaciloPovezava(BaseModel):
@@ -821,13 +828,13 @@ def save_nastavitve(n: Nastavitve):
             naziv=?, ulica=?, posta_kraj=?, drzava=?, davcna_stevilka=?, 
             zavezanec_za_ddv=?, trr=?, banka=?, email_posiljatelja=?, telefon=?, spletna_stran=?,
             kratko_ime=?, dvostavno_knjigovodstvo=?, smtp_server=?, smtp_port=?, smtp_username=?,
-            smtp_password=?, smtp_use_tls=?, email_template_racun=?, email_template_ponudba=?, email_template_dobropis=?,
+            smtp_password=?, smtp_use_tls=?, email_template_racun=?, email_template_ponudba=?, email_template_dobropis=?, email_template_opomin=?,
             dashboard_config=?
         WHERE id = 1
     """, (n.naziv, n.ulica, n.posta_kraj, n.drzava, n.davcna_stevilka, 
           n.zavezanec_za_ddv, n.trr, n.banka, n.email_posiljatelja, n.telefon, n.spletna_stran,
           n.kratko_ime, n.dvostavno_knjigovodstvo, n.smtp_server, n.smtp_port, n.smtp_username,
-          n.smtp_password, n.smtp_use_tls, n.email_template_racun, n.email_template_ponudba, n.email_template_dobropis,
+          n.smtp_password, n.smtp_use_tls, n.email_template_racun, n.email_template_ponudba, n.email_template_dobropis, n.email_template_opomin,
           n.dashboard_config))
     conn.commit()
     conn.close()
@@ -2042,6 +2049,125 @@ def send_email_invoice(id: int, request: EmailRequest = None):
         except: pass
         raise HTTPException(status_code=500, detail=f"Napaka pri pošiljanju: {str(e)}")
 
+@app.post("/api/dokumenti/send_reminder/{id}")
+def send_reminder_invoice(id: int):
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM dokumenti WHERE id = ?", (id,))
+    inv = cursor.fetchone()
+    if not inv:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Dokument ne obstaja")
+    
+    cursor.execute("SELECT * FROM partnerji WHERE id = ?", (inv['partner_id'],))
+    partner_row = cursor.fetchone()
+    if not partner_row or not partner_row['email']:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Partner nima vnesenega e-naslova.")
+        
+    cursor.execute("SELECT * FROM dokumenti_postavke WHERE dokument_id = ?", (id,))
+    items = [dict(r) for r in cursor.fetchall()]
+    
+    cursor.execute("SELECT * FROM nastavitve WHERE id = 1")
+    company_row = cursor.fetchone()
+    conn.close()
+    
+    if not company_row:
+        raise HTTPException(status_code=500, detail="Nastavitve niso najdene v bazi.")
+    
+    company = dict(company_row)
+    partner = dict(partner_row)
+    
+    if not company.get('smtp_server') or not company.get('smtp_port') or not company.get('smtp_username') or not company.get('smtp_password'):
+        raise HTTPException(status_code=400, detail="SMTP nastavitve niso izpolnjene v Nastavitvah.")
+        
+    try:
+        pdf_content = generate_pdf_invoice(dict(inv), company, partner, items)
+        
+        doc_title = "Opomin za racun"
+        filename = f"Opomin_{inv['stevilka']}.pdf"
+        
+        msg = MIMEMultipart()
+        msg['From'] = company.get('email_posiljatelja') or company['smtp_username']
+        msg['To'] = partner['email']
+        msg['Subject'] = f"Opomin za račun št. {inv['stevilka']} - {company.get('naziv', '')}"
+        
+        # Format due date for placeholders
+        zapadlost_str = inv['datum_zapadlosti'] or ""
+        if zapadlost_str:
+            try:
+                from datetime import datetime
+                dt = datetime.strptime(zapadlost_str, "%Y-%m-%d")
+                zapadlost_str = dt.strftime("%d.%m.%Y")
+            except Exception:
+                pass
+                
+        znesek_str = f"{inv['znesek_skupaj']:.2f}"
+        
+        # Uporaba predloge besedila za opomine
+        template = company.get('email_template_opomin')
+            
+        if not template:
+            body = (
+                f"Spoštovani,\n\n"
+                f"ugotavljamo, da račun št. {inv['stevilka']} z zapadlostjo {zapadlost_str} še ni poravnan. "
+                f"Prosimo vas, da znesek {znesek_str} € čim prej nakažete na naš TRR.\n\n"
+                f"Če ste račun medtem že plačali, se vam zahvaljujemo in ta opomin štejte za brezpredmeten.\n\n"
+                f"Lep pozdrav,\n{company.get('naziv', '')}"
+            )
+        else:
+            # Osnovna zamenjava placeholderjev
+            body = template.replace("{stevilka}", str(inv['stevilka']))
+            body = body.replace("{tip}", doc_title)
+            body = body.replace("{podjetje}", company.get('naziv', ''))
+            body = body.replace("{zapadlost}", zapadlost_str)
+            body = body.replace("{znesek}", znesek_str)
+            
+        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        
+        part = MIMEApplication(pdf_content, Name=filename)
+        part['Content-Disposition'] = f'attachment; filename="{filename}"'
+        msg.attach(part)
+        
+        if company['smtp_use_tls']:
+            server = smtplib.SMTP(company['smtp_server'], int(company['smtp_port']), timeout=10)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(company['smtp_username'], company['smtp_password'])
+            server.send_message(msg)
+            server.quit()
+        else:
+            server = smtplib.SMTP_SSL(company['smtp_server'], int(company['smtp_port']), timeout=10)
+            server.login(company['smtp_username'], company['smtp_password'])
+            server.send_message(msg)
+            server.quit()
+            
+        # Logiranje uspešnega pošiljanja
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO email_log (dokument_id, tip_dokumenta, stevilka_dokumenta, prejemnik, zadeva, status, poslano_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (id, 'opomin', inv['stevilka'], partner['email'], msg['Subject'], 'success', get_now_slo()))
+        conn.commit()
+        conn.close()
+            
+        return {"status": "success", "message": "Opomin je bil uspešno poslan."}
+    except Exception as e:
+        # Logiranje napake
+        try:
+            conn = database.get_db()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO email_log (dokument_id, tip_dokumenta, stevilka_dokumenta, prejemnik, zadeva, status, napaka, poslano_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (id, 'opomin', inv['stevilka'], partner['email'], f"Opomin št. {inv['stevilka']}", 'error', str(e), get_now_slo()))
+            conn.commit()
+            conn.close()
+        except: pass
+        raise HTTPException(status_code=500, detail=f"Napaka pri pošiljanju opomina: {str(e)}")
+
 def parse_eslog_xml(xml_data):
     """
     Parsira e-SLOG XML na način, ki ignorira namespace (Namespace-Agnostic).
@@ -2317,9 +2443,11 @@ async def import_eslog_pregled(file: UploadFile = File(...)):
                 enriched = _enrich_eslog_data(parsed)
                 results.append(enriched)
             elif file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                parsed = extract_aliexpress_png(content)
+                # Najprej poskusi z Llama AI (ki se uči iz primerov)
+                parsed = invoice_ocr.process_invoice_data(content, file.filename)
+                # Fallback: če Llama ni na voljo, uporabi regex parser za AliExpress
                 if not parsed:
-                    parsed = invoice_ocr.process_invoice_data(content, file.filename)
+                    parsed = extract_aliexpress_png(content)
                 
                 if parsed:
                     enriched = _enrich_eslog_data(parsed)
@@ -2503,10 +2631,10 @@ async def _save_imported_eslog(data):
         datum_placila = None
         nacin_placila = None
         
-        if data.get('placan'):
+        if data.get('placan') or data.get('placano'):
             status = 'plačano'
-            datum_placila = data['datum_izdaje']
-            nacin_placila = 'Poslovna kartica'
+            datum_placila = data.get('datum_placila') or data['datum_izdaje']
+            nacin_placila = data.get('nacin_placila') or 'Poslovna kartica'
 
         doc_tip = data.get('tip', 'prejeti_racuni')
 
@@ -2673,23 +2801,31 @@ def _add_attachment(parent_type, parent_id, filename, content):
     conn.close()
 
 def extract_aliexpress_png(content):
+    """Izboljšan parser za AliExpress PNG račune.
+    - Prebere posamezne artikle iz 'Item detail' sekcije
+    - Loči Shipping fee kot ločeno postavko
+    - Pravilno izračuna cene brez DDV (ker je VAT vključen)
+    - Nastavi status Plačano + Poslovna kartica (plačilo z Visa kartico)
+    """
     try:
         img = Image.open(io.BytesIO(content))
-        # Izboljšava slike za OCR
-        img = img.convert('L') # Grayscale
+        # Izboljšava slike za OCR: povečanje kontrasta + grayscale
+        img = img.convert('L')
         ocr_text = pytesseract.image_to_string(img, lang='eng')
     except Exception as e:
         print(f"OCR Error: {e}")
         ocr_text = ""
+
+    print(f"[AliExpress OCR] Prebrano besedilo:\n{ocr_text[:500]}")
 
     m_map = {'Jan':'01','Feb':'02','Mar':'03','Apr':'04','May':'05','Jun':'06','Jul':'07','Aug':'08','Sep':'09','Oct':'10','Nov':'11','Dec':'12'}
     order_date = datetime.now().strftime("%Y-%m-%d")
     
     pats = [
         r'(?:Order time|Paid on|Date)[^\w]*([A-Za-z]{3})\s+(\d{1,2})[,\.\s]+(\d{4})',
-        r'([A-Za-z]{3})\s+(\d{1,2})[,\.\s]+(\d{4})', 
+        r'([A-Za-z]{3})\s+(\d{1,2})[,\.\s]+(\d{4})',
         r'(\d{1,2})\s+([A-Za-z]{3})[,\.\s]+(\d{4})',
-        r'([A-Za-z]{3,10})\s+(\d{1,2})[,\.\s]+(\d{4})', # Celotna imena mesecev
+        r'([A-Za-z]{3,10})\s+(\d{1,2})[,\.\s]+(\d{4})',
         r'(\d{4})-(\d{2})-(\d{2})'
     ]
     for pat in pats:
@@ -2697,8 +2833,6 @@ def extract_aliexpress_png(content):
         if m:
             try:
                 g = m.groups()
-                # Če imamo 4 grupe (npr. z "Order time" prefixom), zamaknemo indekse? 
-                # Ne, (?:...) je non-capturing, tako da so grupe še vedno 3.
                 if '([A-Za-z]' in pat:
                     mm, d, y = g[0][:3].capitalize(), g[1].zfill(2), g[2]
                     if mm in m_map: order_date = f"{y}-{m_map[mm]}-{d}"
@@ -2713,29 +2847,88 @@ def extract_aliexpress_png(content):
     order_id_match = re.search(r'\b(\d{15,18})\b', ocr_text)
     order_id = order_id_match.group(1) if order_id_match else "Neznano"
         
+    # --- Skupni znesek (Total) ---
     total_val = 0.00
-    # Iskanje "Total" zneska IZKLJUČNO v isti vrstici (preprečimo prehod v vrstico z VAT)
     total_match = re.search(r'Total[^\d\n\r]*([\d]+[\.,][\d]{2})', ocr_text, re.IGNORECASE)
     eur_match = re.search(r'EUR[^\d\n\r]*([\d]+[\.,][\d]{2})', ocr_text, re.IGNORECASE)
-    
-    # Najdi vse zneske, ki niso "VAT included"
     all_potential = []
-    # Regex, ki najde zneske in preveri okolico (negativni lookahead za VAT ni podprt v re, zato bomo filtrirali ročno)
-    for m in re.finditer(r'([\d]+[\.,][\d]{2})', ocr_text):
-        val = float(m.group(1).replace(',', '.'))
-        # Preveri če je v bližini beseda VAT
-        start = max(0, m.start() - 20)
-        end = min(len(ocr_text), m.end() + 20)
+    for m2 in re.finditer(r'([\d]+[\.,][\d]{2})', ocr_text):
+        val = float(m2.group(1).replace(',', '.'))
+        start = max(0, m2.start() - 20)
+        end = min(len(ocr_text), m2.end() + 20)
         context = ocr_text[start:end].lower()
         if 'vat' not in context:
             all_potential.append(val)
-    
     if total_match: total_val = float(total_match.group(1).replace(',', '.'))
     elif eur_match: total_val = float(eur_match.group(1).replace(',', '.'))
     elif all_potential: total_val = max(all_potential)
 
-    base_val = total_val / 1.22
-    vat_val = total_val - base_val
+    # --- Shipping fee ---
+    shipping_val = 0.0
+    ship_match = re.search(r'Shipping\s*(?:fee)?[^\d\n\r]*([\d]+[\.,][\d]{2})', ocr_text, re.IGNORECASE)
+    if ship_match:
+        shipping_val = float(ship_match.group(1).replace(',', '.'))
+
+    # DDV faktor (AliExpress racuni imajo DDV vkljucen v skupni znesek, 22%)
+    VAT_RATE = 22.0
+    vat_factor = 1 + VAT_RATE / 100.0
+
+    # --- Postavke: izvleci artikle iz "Item detail" sekcije ---
+    postavke = []
+
+    # Iskanje artiklov v "Item detail" bloku (format: ime, cena in kolicina "€X.XX x1")
+    item_section_match = re.search(r'Item\s+detail(.+?)(?:Things to note|$)', ocr_text, re.IGNORECASE | re.DOTALL)
+    if item_section_match:
+        item_section = item_section_match.group(1)
+        # Vsaka vrstica z oznako cene in kolicine
+        item_pattern = list(re.finditer(r'(.*?)[€\$]\s*([\d]+[\.,][\d]{2})\s*x\s*(\d+)', item_section, re.IGNORECASE | re.DOTALL))
+        for im in item_pattern:
+            raw_desc = im.group(1).strip()
+            item_price_gross = float(im.group(2).replace(',', '.'))
+            item_qty = float(im.group(3))
+            # Vzamemo zadnjo neprazno vrstico opisa (OCR pogosto doda store info pred imenom)
+            desc_lines = [l.strip() for l in raw_desc.splitlines() if l.strip() and not re.match(r'^\d+$', l.strip())]
+            item_desc = desc_lines[-1] if desc_lines else f"Nakup Aliexpress {order_id}"
+            item_price_net = round(item_price_gross / vat_factor, 4)
+            item_total_gross = round(item_price_gross * item_qty, 2)
+            postavke.append({
+                "opis": item_desc,
+                "kolicina": item_qty,
+                "enota_mere": "kos",
+                "cena_enote": item_price_net,
+                "popust": 0.0,
+                "stopnja_ddv": VAT_RATE,
+                "znesek_skupaj": item_total_gross
+            })
+
+    # Shipping fee kot locena postavka
+    if shipping_val > 0:
+        ship_net = round(shipping_val / vat_factor, 4)
+        postavke.append({
+            "opis": "Shipping fee",
+            "kolicina": 1.0,
+            "enota_mere": "kos",
+            "cena_enote": ship_net,
+            "popust": 0.0,
+            "stopnja_ddv": VAT_RATE,
+            "znesek_skupaj": shipping_val
+        })
+
+    # Ce ni nobene postavke, dodaj genericno
+    if not postavke:
+        base_val_gen = round(total_val / vat_factor, 4)
+        postavke.append({
+            "opis": f"Nakup Aliexpress {order_id}",
+            "kolicina": 1.0,
+            "enota_mere": "kos",
+            "cena_enote": base_val_gen,
+            "popust": 0.0,
+            "stopnja_ddv": VAT_RATE,
+            "znesek_skupaj": total_val
+        })
+
+    base_val = round(total_val / vat_factor, 2)
+    vat_val = round(total_val - base_val, 2)
     
     return {
         "stevilka": order_id,
@@ -2743,24 +2936,23 @@ def extract_aliexpress_png(content):
         "datum_zapadlosti": order_date,
         "datum_storitve_od": order_date,
         "datum_storitve_do": order_date,
+        # AliExpress racuni so vedno placani z Visa poslovno kartico
+        "placano": True,
+        "nacin_placila": "Poslovna kartica",
+        "datum_placila": order_date,
         "partner": {
             "naziv": "Aliexpress",
-            "davcna_stevilka": "",
+            "davcna_stevilka": "NL826439810B01",
             "ulica": "", "postna_stevilka": "", "kraj": "", "drzava": "Kitajska",
-            "zavezanec_za_ddv": False
+            "zavezanec_za_ddv": False,
+            "tuji_partner_neprebran": False
         },
         "znesek_skupaj": total_val,
-        "znesek_brez_ddv": round(base_val, 2),
-        "znesek_ddv": round(vat_val, 2),
+        "znesek_brez_ddv": base_val,
+        "znesek_ddv": vat_val,
         "valuta": "EUR",
         "tecaj": 1.0,
-        "postavke": [{
-            "opis": f"Nakup Aliexpress {order_id}",
-            "kolicina": 1,
-            "cena_enote": total_val,
-            "stopnja_ddv": 22,
-            "znesek_skupaj": total_val
-        }]
+        "postavke": postavke
     }
 
 def extract_generic_pdf(content):
@@ -3995,9 +4187,9 @@ def create_dokument(doc: Dokument):
         next_num = max_num + 1
         stevilka = f"{next_num:03d}-{doc.poslovno_leto}"
 
-    # Posebna logika za interna_stevilka pri prejetih računih
-    if doc.tip == 'prejeti_racuni' and (not interna_st or interna_st == ""):
-        cursor.execute("SELECT interna_stevilka FROM dokumenti WHERE tip = 'prejeti_racuni' AND poslovno_leto = ? AND interna_stevilka LIKE '%-%'", (doc.poslovno_leto,))
+    # Posebna logika za interna_stevilka pri prejetih računih in prejetih ponudbah
+    if doc.tip in ['prejeti_racuni', 'prejete_ponudbe'] and (not interna_st or interna_st == ""):
+        cursor.execute("SELECT interna_stevilka FROM dokumenti WHERE tip = ? AND poslovno_leto = ? AND interna_stevilka LIKE '%-%'", (doc.tip, doc.poslovno_leto))
         rows = cursor.fetchall()
         max_int = 0
         for r in rows:
@@ -5018,10 +5210,8 @@ async def bulk_delete(request_data: dict):
     conn = database.get_db()
     cursor = conn.cursor()
     try:
-        # Mapiranje tipov dokumentov na skupni modul 'dokumenti'
-        if module in ['izdani_racuni', 'prejeti_racuni', 'ponudbe', 'dobropisi']:
+        if module in ['izdani_racuni', 'prejeti_racuni', 'prejete_ponudbe', 'ponudbe', 'dobropisi', 'prejeti_dobropisi', 'delovni_nalogi']:
             module = 'dokumenti'
-
         if module == 'partnerji':
             for id in ids:
                 cursor.execute("SELECT COUNT(*) as cnt FROM dokumenti WHERE partner_id = ?", (id,))

@@ -1,5 +1,11 @@
 import re
 import os
+import sys
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except AttributeError:
+    pass
 import pdfplumber
 import pytesseract
 from PIL import Image
@@ -1394,6 +1400,31 @@ If the text contains "Dobropis" or "credit note":
 5. Line items have format: "Description  NotoAmount  DDVAmount  TotalAmount" (e.g. "Storno računa  107,59  23,67  131,26").
 6. Include "vezni_racun" as an extra field in the returned JSON.
 
+SPECIFIC RULES FOR ALIEXPRESS ORDERS:
+If the text contains "AliExpress" or "Order ID" or "Alibaba" or "Order time" or "Item detail":
+1. The supplier/partner name MUST be "Aliexpress" and the tax ID is "NL826439810B01", country is "Kitajska". The BUYER is Miha Kadiš.
+2. The "stevilka" (invoice/order number) is the long numeric Order ID (15-18 digits), e.g. "3068081298166667".
+3. "datum_izdaje" and "datum_zapadlosti" are the order/payment date (e.g. "Feb 2, 2026" → "2026-02-02").
+4. "znesek_skupaj" is the "Total" amount (e.g. "€5.14" → 5.14). This is the GROSS amount WITH VAT.
+5. ALL prices on AliExpress receipts are GROSS (WITH VAT included at 22%). You MUST calculate net unit prices by dividing the gross price by 1.22: cena_enote = gross_price / 1.22.
+6. Look for "Subtotal" (e.g. €4.49) and "All discount" (e.g. €0.04).
+7. Calculate the discount percentage: discount_pct = (All discount / Subtotal) * 100 (e.g., (0.04 / 4.49) * 100 = 0.89%).
+8. For each product in the "Item detail" section:
+   - Use the product name as "opis" (concat any sub-lines or model specifications like "ESP32-C3").
+   - Set "kolicina" to the quantity specified after 'x' in the Item detail section (e.g., 'x2' means kolicina = 2.0). Do NOT just default to 1.0.
+   - Calculate "cena_enote" (unit price without VAT) using the single unit's gross price: cena_enote = unit_gross_price / 1.22 (e.g., if listed as €2.32 x2, the unit gross price is 2.32, so cena_enote = 2.32 / 1.22 = 1.9016).
+   - Set "popust" to the calculated discount_pct (e.g. 0.89 or 1.0).
+   - Set "stopnja_ddv" to 22.0.
+   - Calculate "znesek_skupaj" for the line item as: (unit_gross_price * kolicina) - ((unit_gross_price * kolicina) * discount_pct / 100) (e.g. (2.32 * 2) - 0 = 4.64).
+9. The "Shipping fee" (e.g. "€0.69") is ALWAYS a separate line item:
+   - "opis": "Shipping fee".
+   - "kolicina": 1.0.
+   - "cena_enote": gross_shipping / 1.22 (e.g. 0.69 / 1.22 = 0.5656).
+   - "popust": 0.0 (no discount applies to shipping fee).
+   - "stopnja_ddv": 22.0.
+   - "znesek_skupaj": gross_shipping (e.g. 0.69).
+10. "tuji_partner_neprebran" MUST be false for AliExpress.
+
 Return ONLY a valid JSON object matching this schema:
 {{
   "stevilka": "Invoice number (string, e.g. '26-0B42-0000110'). DO NOT use '2602011739412' unless it is actually in the text.",
@@ -1440,7 +1471,7 @@ Here is the invoice text:
     messages = [
         {
             "role": "system",
-            "content": "You are a precise accounting extraction assistant. Your job is to extract the SUPPLIER and NOT the BUYER. Under NO circumstances should you extract 'Miha Kadiš s.p.' or 'SIM 83' as the supplier! Extract 'cena_enote' strictly as the unit price WITHOUT tax/VAT (cena brez DDV). Extract service start/end dates from mentioned service periods. Output ONLY a valid JSON object matching the requested schema. No conversational text."
+            "content": "You are a precise accounting extraction assistant. Your job is to extract the SUPPLIER and NOT the BUYER. Under NO circumstances should you extract 'Miha Kadiš s.p.' or 'SIM 83' as the supplier! Extract 'cena_enote' strictly as the unit price WITHOUT tax/VAT (cena brez DDV). Extract service start/end dates from mentioned service periods. For AliExpress, you MUST extract the correct quantity (e.g. from 'x2' as kolicina = 2.0), calculate unit price without VAT as unit_gross_price / 1.22, and separate the shipping fee into its own line item without any discount. Output ONLY a valid JSON object matching the requested schema. No conversational text."
         }
     ]
     
@@ -1586,22 +1617,21 @@ def post_process_invoice_data(data):
                     continue
                 
                 # Preveri če je popust podan kot znesek popusta (negativen ali enak razliki)
-                gross_before = cena * kol
-                gross_diff = gross_before - sk
+                # Ker je 'cena' neto (brez DDV), 'sk' pa bruto (z DDV), moramo ceno najprej pomnožiti z DDV stopnjo za bruto primerjavo.
+                gross_before_with_vat = cena * kol * (1 + ddv_p / 100)
+                gross_diff = gross_before_with_vat - sk
                 
                 # Če je popust v EUR (npr. -4.99 ali 4.99)
                 if pop < 0 or abs(pop - gross_diff) < 0.1:
                     pop_val = abs(pop) if pop < 0 else gross_diff
-                    if gross_before > 0:
-                        pop = round((pop_val / gross_before) * 100, 2)
+                    if gross_before_with_vat > 0:
+                        pop = round((pop_val / gross_before_with_vat) * 100, 2)
                         p["popust"] = pop
                 
                 # Zdaj preveri če je cena bruto (MPC) ali neto
-                calc_net = cena * kol * (1 - pop / 100)
-                calc_gross = calc_net * (1 + ddv_p / 100)
-                
-                # Če se ujema bruto izračun (skupaj = cena * kol * (1-pop/100))
-                if abs(calc_net - sk) < 0.05:
+                # Če se ujema bruto izračun (cena * kol * (1 - pop/100)) z znesek_skupaj (sk), je cena bila bruto.
+                calc_gross_if_unit_is_gross = (cena * kol) * (1 - pop / 100)
+                if abs(calc_gross_if_unit_is_gross - sk) < 0.05:
                     # Cena je bila bruto (MPC)!
                     # Cena brez DDV = cena / (1 + DDV/100)
                     cena_neto = round(cena / (1 + ddv_p / 100), 4)
@@ -1725,6 +1755,9 @@ def process_invoice_data(source, filename):
             parsed = parse_with_llama(text, filename, "llama3")
             if parsed:
                 parsed = post_process_invoice_data(parsed)
+                # Zagotovi, da je ocr_text vedno vključen (za shranjevanje učenja)
+                if 'ocr_text' not in parsed or not parsed['ocr_text']:
+                    parsed['ocr_text'] = text
                 partner_info = parsed.get("partner", {}) if isinstance(parsed.get("partner"), dict) else {}
                 partner_naziv = partner_info.get("naziv", "Neznan Partner")
                 partner_davcna = partner_info.get("davcna_stevilka", "")
