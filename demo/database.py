@@ -326,6 +326,15 @@ def init_db():
         corrected_json TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+    
+    CREATE TABLE IF NOT EXISTS llama_supplier_rules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        davcna_stevilka TEXT UNIQUE,
+        naziv TEXT,
+        extraction_rules TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
     """)
     # Migracija: Dodaj kratko_ime v nastavitve, če ne obstaja
     try:
@@ -566,6 +575,32 @@ def init_db():
         cursor.execute("SELECT 1 FROM llama_settings WHERE kljuc = 'learning_mode'")
         if not cursor.fetchone():
             cursor.execute("INSERT INTO llama_settings (kljuc, vrednost) VALUES ('learning_mode', '1')")
+    except:
+        pass
+
+    # Faza 2: Hramba listin (ZDDV-1, čl. 85) — označevanje arhiviranih / zaklenjenih listin
+    try:
+        cursor.execute("ALTER TABLE dokumenti ADD COLUMN hramba_zakljucena BOOLEAN DEFAULT 0")
+    except:
+        pass
+
+    # Faza 6: UJP preverjanje partnerjev — ali je partner UJP B2B subjekt
+    try:
+        cursor.execute("ALTER TABLE partnerji ADD COLUMN ujp_subjekt BOOLEAN DEFAULT NULL")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE partnerji ADD COLUMN ujp_zadnji_check DATE")
+    except:
+        pass
+
+    # K3: Samoobdavčitev (reverse charge) — ZDDV-1, čl. 76a
+    try:
+        cursor.execute("ALTER TABLE dokumenti ADD COLUMN samoobdavcitev BOOLEAN DEFAULT 0")
+    except:
+        pass
+    try:
+        cursor.execute("ALTER TABLE dokumenti ADD COLUMN stopnja_ddv_samo REAL DEFAULT 22")
     except:
         pass
 

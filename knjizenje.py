@@ -100,6 +100,28 @@ def knjizi_dokument(dokument_id: int, temeljnica_id: int = None, novi_naziv: str
                     VALUES (?, '160', ?, ?, ?, 0, ?, 'dokumenti')
                 """, (temeljnica_id, partner_id, f"Vstopni DDV {stevilka}", znesek_ddv, dokument_id))
 
+            # K3 — ZDDV-1, čl. 76a: Samoobdavčitev (reverse charge) za tuje storitve
+            # Kadar tuji ponudnik ne obračuna DDV, ga mora prejemnik sam obračunati:
+            # - V breme 160 (Vstopni DDV — samoobdavčitev): pravica do odbitka
+            # - V dobro 260 (Izstopni DDV — samoobdavčitev): obveznost plačila
+            cursor.execute("SELECT samoobdavcitev, stopnja_ddv_samo, znesek_brez_ddv FROM dokumenti WHERE id = ?", (dokument_id,))
+            doc_samo = cursor.fetchone()
+            if doc_samo and doc_samo['samoobdavcitev']:
+                stopnja_samo = float(doc_samo['stopnja_ddv_samo'] or 22)
+                osnova_samo = float(doc_samo['znesek_brez_ddv'] or 0)
+                ddv_samo = round(osnova_samo * stopnja_samo / 100, 2)
+                if ddv_samo > 0:
+                    # V breme: 160 — Vstopni DDV samoobdavčitev (odbiten)
+                    cursor.execute("""
+                        INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                        VALUES (?, '160', ?, ?, ?, 0, ?, 'dokumenti')
+                    """, (temeljnica_id, partner_id, f"Vstopni DDV samoobdavčitev {stevilka} ({stopnja_samo:.4g}%)", ddv_samo, dokument_id))
+                    # V dobro: 260 — Izstopni DDV samoobdavčitev (obveznost)
+                    cursor.execute("""
+                        INSERT INTO temeljnice_postavke (temeljnica_id, konto, partner_id, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
+                        VALUES (?, '260', ?, ?, 0, ?, ?, 'dokumenti')
+                    """, (temeljnica_id, partner_id, f"Izstopni DDV samoobdavčitev {stevilka} ({stopnja_samo:.4g}%)", ddv_samo, dokument_id))
+
         elif tip == 'dobropisi':
             # V dobro: 120 (Terjatve do kupcev)
             cursor.execute("""
@@ -305,21 +327,37 @@ def knjizi_amortizacija(leto: int, temeljnica_id: int = None, novi_naziv: str = 
             temeljnica_id = _ustvari_temeljnico_header(cursor, leto, 'AM', str(leto), novi_naziv, "Amortizacija")
             
         for s in sredstva:
-            nabavna = s['nabavna_vrednost']
-            stopnja = s['stopnja_amortizacije']
-            znesek_am = round(nabavna * (stopnja / 100.0), 2)
-            
+            nabavna = s['nabavna_vrednost'] or 0.0
+            stopnja = s['stopnja_amortizacije'] or 0.0
+
+            # Faza 3 — SRS 3.18: izračun akumulirane amortizacije za to OS
+            # dokument_id = s['id'] (ID OS), dokument_tip = 'amortizacija'
+            cursor.execute("""
+                SELECT COALESCE(SUM(znesek_v_dobro), 0) as akumulirana
+                FROM temeljnice_postavke
+                WHERE konto = '050' AND dokument_id = ? AND dokument_tip = 'amortizacija'
+            """, (s['id'],))
+            akumulirana = cursor.fetchone()['akumulirana'] or 0.0
+            preostala = max(0.0, nabavna - akumulirana)
+
+            if preostala <= 0:
+                # OS je popolnoma amortizirana — preskoči
+                continue
+
+            # Letni znesek ne sme preseči preostale vrednosti (SRS 3.18)
+            znesek_am = min(round(nabavna * (stopnja / 100.0), 2), preostala)
+
             if znesek_am > 0:
                 # V breme: 430 (Amortizacija)
                 cursor.execute("""
                     INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
                     VALUES (?, '430', ?, ?, 0, ?, 'amortizacija')
-                """, (temeljnica_id, f"Amortizacija {s['naziv']}", znesek_am, leto))
+                """, (temeljnica_id, f"Amortizacija {s['naziv']} {leto}", znesek_am, s['id']))
                 # V dobro: 050 (Popravek vrednosti)
                 cursor.execute("""
                     INSERT INTO temeljnice_postavke (temeljnica_id, konto, opis, znesek_v_breme, znesek_v_dobro, dokument_id, dokument_tip)
                     VALUES (?, '050', ?, 0, ?, ?, 'amortizacija')
-                """, (temeljnica_id, f"Amortizacija {s['naziv']}", znesek_am, leto))
+                """, (temeljnica_id, f"Amortizacija {s['naziv']} {leto}", znesek_am, s['id']))
                 
         conn.commit()
         return {"status": "success", "temeljnica_id": temeljnica_id}

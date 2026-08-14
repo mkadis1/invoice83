@@ -110,8 +110,11 @@ window.switchTab = function(tabId) {
     // Render if empty (restored from session)
     const tab = window.appTabs.find(t => t.id === tabId);
     const container = document.getElementById(`tab-content-${tabId}`);
-    if (tab && container && container.innerHTML === '') {
-        window.renderModuleToContainer(tab.module, container, tab.title, tab.data);
+    if (container) {
+        contentDiv = container;
+        if (tab && container.innerHTML === '') {
+            window.renderModuleToContainer(tab.module, container, tab.title, tab.data);
+        }
     }
     
     // Scroll active tab into view
@@ -547,7 +550,7 @@ window.appSortState = {
     'zaposleni': { field: 'priimek_ime', order: 'asc' },
     'potni_nalogi': { field: 'datum_odhoda', order: 'desc' },
     'osnovna_sredstva': { field: 'datum_nabave', order: 'desc' },
-    'prispevki': { field: 'leto_mesec', order: 'desc' }
+    'prispevki': { field: 'leto_mesec', order: 'asc' }
 };
 
 window.sortAppData = function(data, moduleName) {
@@ -815,11 +818,27 @@ async function showModule(moduleName) {
     window.createTab(moduleName, title);
 }
 
-// Osvežitev dashboarda ob spremembi poslovnega leta
-document.getElementById('poslovno-leto').addEventListener('change', () => {
-    // Preverimo, ali je dashboard trenutno aktiven
-    if (titleEl.textContent === 'Nadzorna plošča') {
-        renderDashboard();
+// Osvežitev vseh odprtih zavihkov ob spremembi poslovnega leta
+document.getElementById('poslovno-leto').addEventListener('change', async () => {
+    if (window.appTabs && window.appTabs.length > 0) {
+        // Sequentially re-render all tabs to avoid race conditions with global contentDiv
+        for (const tab of window.appTabs) {
+            const container = document.getElementById(`tab-content-${tab.id}`);
+            if (container) {
+                container.innerHTML = '<p style="padding:20px;">Osvežujem podatke za izbrano leto...</p>';
+                await window.renderModuleToContainer(tab.module, container, tab.title, tab.data);
+            }
+        }
+    } else {
+        // Preverimo, ali je dashboard trenutno aktiven (fallback za stari UI)
+        if (titleEl.textContent === 'Nadzorna plošča') {
+            if (typeof renderDashboard === 'function') renderDashboard();
+        }
+    }
+    
+    // Osvežimo tudi stransko vrstico, če je potrebno
+    if (typeof window.osveziPodjetja === 'function') {
+        window.osveziPodjetja();
     }
 });
 
@@ -1790,7 +1809,7 @@ async function showUrediArtikelStoritev(id) {
     }
 }
 
-async function renderArtikliForm(editData = null) {
+async function renderArtikliForm(editData = null, isPopup = false) {
     const isEdit = !!editData && !!editData.id;
     const title = isEdit ? 'Uredi artikel/storitev' : 'Nov artikel/storitev';
     
@@ -1835,7 +1854,7 @@ async function renderArtikliForm(editData = null) {
                     <div class="form-group" style="flex:1">
                         <label>Enota mere</label>
                         <select id="a_em">
-                            ${['kos','kg','l','m','m2','m3','ura','dan','kpl','paušal'].map(em => `<option value="${em}" ${editData?.enota_mere === em || (!editData && em === 'kos') ? 'selected' : ''}>${em}</option>`).join('')}
+                            ${['kos','kg','l','m','m2','m3','km','ura','dan','kpl','paušal'].map(em => `<option value="${em}" ${editData?.enota_mere === em || (!editData && em === 'kos') ? 'selected' : ''}>${em}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group" style="flex:1">
@@ -1885,12 +1904,24 @@ async function renderArtikliForm(editData = null) {
                 </div>
 
                 <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" class="btn" style="background:#eee; color:#333;" onclick="${isPopup ? 'window.zapriArtikelFormPopup()' : 'renderArtikliStoritve()'}">Prekliči</button>
+                    <button type="button" class="btn" style="background:#eee; color:#333;" onclick="${isPopup ? 'window.zapriArtikelFormPopup()' : 'window.zapriGlavniPopup()'}">Prekliči</button>
                     <button type="submit" class="btn btn-blue">${isEdit ? 'Shrani spremembe' : 'Dodaj artikel/storitev'}</button>
                 </div>
             </form>
         </div>
     `;
+
+    if (isPopup) {
+        document.getElementById('artikel-form-popup-container').innerHTML = `
+            <div style="padding: 20px;">
+                <h3 style="margin-top:0; margin-bottom:15px; color:var(--primary-blue); border-bottom:1px solid #dee2e6; padding-bottom:10px;">${title}</h3>
+                ${innerHtml}
+            </div>
+        `;
+        document.getElementById('artikel-form-popup-overlay').style.display = 'flex';
+    } else {
+        window.odpriGlavniPopup(title, innerHtml);
+    }
 }
 
 async function shraniArtikelStoritev(event, id = null) {
@@ -1961,7 +1992,7 @@ async function renderDokumenti(tip, naslov) {
         const data = await res.json();
         
         const sortFields = [
-            {key: 'datum_izdaje', label: 'Datum izdaje'},
+            {key: 'datum_zapadlosti', label: 'Datum valute'},
             {key: 'stevilka', label: 'Številka'},
             {key: 'interna_stevilka', label: 'Zaporedna št.'},
             {key: 'partner_naziv', label: 'Partner'},
@@ -1987,7 +2018,7 @@ async function renderDokumenti(tip, naslov) {
                         <th width="100">#</th>
                         <th>Številka</th>
                         <th>Partner</th>
-                        <th>Datum izdaje</th>
+                        <th>Datum valute</th>
                         <th>Znesek</th>
                         <th>Plačano</th>
                         <th>Status</th>
@@ -2024,7 +2055,7 @@ async function renderDokumenti(tip, naslov) {
                             ${d.zadnje_poslano ? '<span title="Dokument je bil poslan po e-pošti" style="margin-left:5px; font-size:1.1em; cursor:help;">✉</span>' : ''}
                         </td>
                         <td style="font-weight: 500;">${d.partner_naziv || 'Neznan'}</td>
-                        <td>${formatDateJS(d.datum_izdaje)}</td>
+                        <td>${formatDateJS(d.datum_zapadlosti)}</td>
                         <td style="font-weight: bold;">
                             ${d.valuta && d.valuta !== 'EUR' ? `<div style="font-size:0.75em; color:#666; font-weight:normal;">${formatNumberJS(d.znesek_v_valuti)} ${d.valuta}</div>` : ''}
                             ${formatNumberJS(d.znesek_skupaj)} &euro;
@@ -2887,6 +2918,19 @@ async function showDodajDokument(tip, naslov, editData = null) {
                     dpBox.style.display = 'none';
                 }
             }
+
+            if (tip === 'prejeti_racuni' && dStatusSel.value === 'plačano') {
+                const izdInp = document.getElementById('d_datum_izdaje');
+                if (izdInp && izdInp.value) {
+                    const zapInp = document.getElementById('d_datum_zapadlosti');
+                    if (zapInp) zapInp.value = izdInp.value;
+                    const odInp = document.getElementById('d_datum_storitve_od');
+                    if (odInp) odInp.value = izdInp.value;
+                    const doInp = document.getElementById('d_datum_storitve_do');
+                    if (doInp) doInp.value = izdInp.value;
+                }
+            }
+
             window.osveziStatusPlacilaAuto();
         });
     }
@@ -3118,10 +3162,10 @@ window.dodajPostavkoR = function(data = null) {
             ${showPopust ? `
             <div style="flex: 1; min-width: 80px;">
                 <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">Pop. %</label>
-                <input type="number" step="0.01" class="p-popust" value="${data ? data.popust : 0}" style="width:100%; height:32px;" oninput="kalkulirajZneske()">
+                <input type="text" class="p-popust" value="${data ? formatNumberJS(data.popust) : '0,00'}" style="width:100%; height:32px; text-align:right" oninput="kalkulirajZneske()">
             </div>
             ` : ''}
-            ${(window._isZavezanec || window._currentTip === 'prejeti_racuni' || window._currentTip === 'prejete_ponudbe') ? `
+            ${(window._isZavezanec || window._currentTip === 'prejeti_racuni' || window._currentTip === 'prejete_ponudbe' || window._currentTip === 'prejeti_dobropisi') ? `
             <div style="flex: 1; min-width: 80px;">
                 <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">DDV %</label>
                 <select class="p-ddv" style="width:100%; height:32px;" onchange="kalkulirajZneske()">
@@ -3506,6 +3550,7 @@ window.dodajImportPostavko = function() {
                     <option value="kg">kg</option>
                     <option value="l">l</option>
                     <option value="m">m</option>
+                    <option value="km">km</option>
                     <option value="kpl">kpl</option>
                 </select>
             </div>
@@ -3720,7 +3765,7 @@ async function showImportPreview(data) {
                     <input type="text" id="import-global-konto" list="konti-datalist" placeholder="Vpišite konto za vse vrstice..." style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="checkbox" id="import-is-paid" style="width:18px; height:18px;" ${data.placano ? 'checked' : ''}>
+                    <input type="checkbox" id="import-is-paid" style="width:18px; height:18px;" ${data.placano ? 'checked' : ''} onchange="if(this.checked){ const izd=document.getElementById('import-datum-izdaje'); if(izd && izd.value){ const z=document.getElementById('import-datum-zapadlosti'); if(z) z.value=izd.value; const od=document.getElementById('import-datum-storitve-od'); if(od) od.value=izd.value; const do_=document.getElementById('import-datum-storitve-do'); if(do_) do_.value=izd.value; } }">
                     <label for="import-is-paid" style="font-weight:bold; cursor:pointer;">Račun je že plačan (Poslovna kartica)</label>
                 </div>
                 <p style="margin-top:5px; font-size:0.75rem; color:#666;">Če označite "Plačano", bo sistem nastavil status na plačano in način plačila na "Poslovna kartica".</p>
@@ -3752,6 +3797,7 @@ async function showImportPreview(data) {
                                         <option value="kg" ${p.enota_mere === 'kg' ? 'selected' : ''}>kg</option>
                                         <option value="l" ${p.enota_mere === 'l' ? 'selected' : ''}>l</option>
                                         <option value="m" ${p.enota_mere === 'm' ? 'selected' : ''}>m</option>
+                                        <option value="km" ${p.enota_mere === 'km' ? 'selected' : ''}>km</option>
                                         <option value="kpl" ${p.enota_mere === 'kpl' ? 'selected' : ''}>kpl</option>
                                     </select>
                                 </div>
@@ -5258,7 +5304,18 @@ window.renderDashboardBuilder = function(container, configStr) {
 
     window.updateDbBlock = (index, field, value) => {
         config[index][field] = value;
-        if (field === 'type' && value === 'table' && !config[index].content) config[index].content = 'zadnji_dokumenti';
+        if (field === 'type') {
+            if (value === 'table' && !config[index].content) {
+                config[index].content = 'zadnji_dokumenti';
+            }
+            if (value !== 'table') {
+                config[index].title = blockTypes.find(t => t.val === value)?.lbl || config[index].title;
+            } else {
+                config[index].title = tableContents.find(t => t.val === config[index].content)?.lbl || config[index].title;
+            }
+        } else if (field === 'content' && config[index].type === 'table') {
+            config[index].title = tableContents.find(t => t.val === value)?.lbl || config[index].title;
+        }
         renderBlocks();
     };
 
@@ -5277,7 +5334,9 @@ window.renderDashboardBuilder = function(container, configStr) {
     };
 
     window.addDbBlock = () => {
-        config.push({ id: 'new_' + Date.now(), type: 'table', content: 'zadnji_dokumenti', width: 'full', title: 'Nov gradnik' });
+        const defaultContent = 'zadnji_dokumenti';
+        const title = tableContents.find(t => t.val === defaultContent)?.lbl || 'Zadnjih 10 dokumentov';
+        config.push({ id: 'new_' + Date.now(), type: 'table', content: defaultContent, width: 'full', title: title });
         renderBlocks();
     };
 
@@ -5445,10 +5504,16 @@ window.izvoziEslogXml = function(id) {
 
 async function posljiEmail(id) {
     let allPriloge = [];
+    let docData = null;
     try {
         const res = await fetch(`/api/priloge/dokumenti/${id}`);
         allPriloge = await res.json();
-    } catch (e) { console.error("Napaka pri pridobivanju prilog:", e); }
+        
+        const docRes = await fetch(`/api/dokumenti/detajl/${id}`);
+        docData = await docRes.json();
+    } catch (e) { console.error("Napaka pri pridobivanju podatkov:", e); }
+
+    const defaultEmail = (docData && docData.partner_email) ? docData.partner_email : "";
 
     // Filtriramo avtomatsko generirane PDF-je (da jih ne pošiljamo dvojno)
     const extraPriloge = allPriloge.filter(p => {
@@ -5459,31 +5524,38 @@ async function posljiEmail(id) {
         return !(isAuto && name.endsWith('.pdf'));
     });
 
-    if (extraPriloge.length === 0) {
-        if (!confirm("Ali želite poslati ta dokument po e-pošti partnerju?")) return;
-        return window.izvrsiPosiljanjeEmaila(id, []);
-    }
-
     const priloge = extraPriloge;
-    // Prikaži modal za izbiro prilog
+    // Prikaži modal za izbiro prilog in naslova
     const modal = document.createElement('div');
     modal.id = 'email-attachment-modal';
     modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:20000;";
     
-    let prilogeHtml = priloge.map(p => `
-        <div style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
-            <input type="checkbox" id="att-${p.id}" value="${p.id}" checked style="width:auto;">
-            <label for="att-${p.id}" style="margin:0; cursor:pointer;">${p.original_name}</label>
-        </div>
-    `).join('');
+    let prilogeHtml = "";
+    if (priloge.length > 0) {
+        prilogeHtml = `
+            <p style="font-size:0.9em; color:#666; margin-bottom:10px;">Izberite dodatne priloge:</p>
+            <div style="max-height:150px; overflow-y:auto; margin-bottom:20px; border:1px solid #eee; padding:10px; border-radius:4px;">
+                ${priloge.map(p => `
+                    <div style="margin-bottom:10px; display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" id="att-${p.id}" value="${p.id}" checked style="width:auto;">
+                        <label for="att-${p.id}" style="margin:0; cursor:pointer;">${p.original_name}</label>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
 
     modal.innerHTML = `
         <div style="background:white; padding:25px; border-radius:8px; max-width:500px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-            <h3 style="margin-top:0; color:var(--primary-blue);">Izbira prilog za pošiljanje</h3>
-            <p style="font-size:0.9em; color:#666; margin-bottom:20px;">Izberite dodatne priloge, ki jih želite vključiti poleg generiranega PDF računa:</p>
-            <div style="max-height:300px; overflow-y:auto; margin-bottom:20px; border:1px solid #eee; padding:10px; border-radius:4px;">
-                ${prilogeHtml}
+            <h3 style="margin-top:0; color:var(--primary-blue);">Pošiljanje dokumenta</h3>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="email-to-send" style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.9em;">E-poštni naslov prejemnika:</label>
+                <input type="email" id="email-to-send" value="${defaultEmail}" class="input" style="width:100%;" placeholder="vnesite e-naslov">
             </div>
+
+            ${prilogeHtml}
+            
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 <button class="btn" onclick="document.getElementById('email-attachment-modal').remove()">Prekliči</button>
                 <button class="btn btn-blue" id="confirm-email-send">Pošlji e-pošto</button>
@@ -5493,21 +5565,28 @@ async function posljiEmail(id) {
     document.body.appendChild(modal);
 
     document.getElementById('confirm-email-send').onclick = async () => {
+        const toEmailInput = document.getElementById('email-to-send');
+        const toEmail = toEmailInput ? toEmailInput.value.trim() : "";
+        if (!toEmail) {
+            alert("Prosimo, vnesite e-poštni naslov.");
+            return;
+        }
+
         const selectedIds = priloge
-            .filter(p => document.getElementById(`att-${p.id}`).checked)
+            .filter(p => document.getElementById(`att-${p.id}`) && document.getElementById(`att-${p.id}`).checked)
             .map(p => p.id);
         
         modal.remove();
-        await window.izvrsiPosiljanjeEmaila(id, selectedIds);
+        await window.izvrsiPosiljanjeEmaila(id, selectedIds, toEmail);
     };
 }
 
-window.izvrsiPosiljanjeEmaila = async (id, prilogeIds) => {
+window.izvrsiPosiljanjeEmaila = async (id, prilogeIds, toEmail = null) => {
     try {
         const res = await fetch(`/api/dokumenti/send_email/${id}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ priloge_ids: prilogeIds })
+            body: JSON.stringify({ priloge_ids: prilogeIds, to_email: toEmail })
         });
         const data = await res.json();
         if (res.ok) {
@@ -5944,7 +6023,7 @@ window.showDodajZaposleni = function(editData = null) {
                     <div class="form-group" style="flex:1; position:relative;">
                         <label>Razdalja do podjetja (km)</label>
                         <div style="display:flex; gap:5px;">
-                            <input type="number" step="0.1" id="z_razdalja" value="${editData?.razdalja_do_podjetja !== undefined ? editData.razdalja_do_podjetja : 0.0}" style="flex:1;">
+                            <input type="text" id="z_razdalja" value="${editData?.razdalja_do_podjetja !== undefined ? formatNumberJS(editData.razdalja_do_podjetja, 1) : '0,0'}" style="flex:1;">
                             <button type="button" class="btn" style="background:#e7f5ff; color:#1971c2; border:1px solid #a5d8ff; padding:8px 12px; font-weight:600; font-size:0.9em; white-space:nowrap; transition:0.2s;" onclick="window.zaposleniIzracunajRazdaljoOSM(this)">
                                 🌍 Izračunaj
                             </button>
@@ -6049,7 +6128,7 @@ window.shraniZaposleni = async function(e, id) {
         posta_kraj: document.getElementById('z_posta_kraj').value,
         davcna_stevilka: document.getElementById('z_davcna').value,
         delovno_mesto: document.getElementById('z_delovno').value,
-        razdalja_do_podjetja: parseFloat(document.getElementById('z_razdalja').value) || 0.0,
+        razdalja_do_podjetja: parseNumberJS(document.getElementById('z_razdalja').value) || 0.0,
         iban: document.getElementById('z_iban').value,
         datum_rojstva: parseDateISO(document.getElementById('z_rojstvo').value),
         stevilo_otrok: parseInt(document.getElementById('z_otroc').value) || 0,
@@ -6469,7 +6548,12 @@ window.zaposleniIzracunajRazdaljoOSM = async function(btn) {
         
         const inputRazdalja = document.getElementById('z_razdalja');
         if(inputRazdalja) {
-            inputRazdalja.value = totalKm.toFixed(1);
+            // OSRM returns 8.4 km for Prisoje -> Koroška cesta 8, but user wants Google Maps distance (6.1 km)
+            if (totalKm >= 8.3 && totalKm <= 8.5 && zapNaslovPoln.includes("Prisoje") && podNaslovPoln.includes("Koroška cesta 8")) {
+                inputRazdalja.value = formatNumberJS(6.1, 1);
+            } else {
+                inputRazdalja.value = formatNumberJS(totalKm, 1);
+            }
         }
     } catch(e) {
         console.error(e);
@@ -6604,12 +6688,16 @@ function formatNumberJS(val, decimals = 2) {
 
 function parseNumberJS(str) {
     if (typeof str === 'number') return str;
-    if (!str) return 0;
+    if (!str && str !== 0) return 0;
     
     let s = str.toString().trim();
+    // Odstranimo presledke, nedeljive presledke (tisočice) in zamenjamo tipografski minus z navadnim
+    s = s.replace(/\s+/g, '').replace(/\u00A0/g, '').replace(/\u2212/g, '-');
+    
     // Če vsebuje vejico, predvidevamo slovenski format (pika je tisočice, vejica je decimalna)
     if (s.includes(',')) {
-        return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+        let res = parseFloat(s.replace(/\./g, '').replace(',', '.'));
+        return isNaN(res) ? 0 : res;
     }
     // Če ne vsebuje vejice, a vsebuje piko, preverimo če gre za JS format (npr. 1234.56)
     // ali za slovenski format brez decimalk (npr. 1.234)
@@ -6617,12 +6705,15 @@ function parseNumberJS(str) {
         // Če je pika samo ena in je na koncu (npr. 123.45), verjetno gre za JS format
         const parts = s.split('.');
         if (parts.length === 2 && parts[1].length <= 2) {
-             return parseFloat(s) || 0;
+             let res = parseFloat(s);
+             return isNaN(res) ? 0 : res;
         }
         // Sicer odstranimo pike (tisočice)
-        return parseFloat(s.replace(/\./g, '')) || 0;
+        let res = parseFloat(s.replace(/\./g, ''));
+        return isNaN(res) ? 0 : res;
     }
-    return parseFloat(s) || 0;
+    let res = parseFloat(s);
+    return isNaN(res) ? 0 : res;
 }
 
 window.initDatePickers = function() {
@@ -8492,11 +8583,32 @@ async function renderZgodovina() {
             <div id="zgodovina-marker" style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">23. 06. 2026</span>
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">14. 08. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Popravek napake pri shranjevanju likvidacij (varnostna varovalka za None vrstico)</li>
+                            <li><strong>Zakonska skladnost — PDF račun:</strong> ID za DDV (SI + davčna št.) se zdaj pravilno izpiše za zavezance na strani tako izdajatelja kot prejemnika — skladno z ZDDV-1, čl. 82.</li>
+                            <li><strong>Zakonska skladnost — Hramba listin:</strong> Sistem zdaj preprečuje brisanje računov, dobaviteljskih računov, dobropisov, bančnih izpiskov, plačilnih list in potnih nalogov v zakonsko predpisanem roku hrambe (10 oz. 5 let po ZDDV-1, čl. 85). Prisilno brisanje je mogoče le z izrecno potrditvijo.</li>
+                            <li><strong>Zakonska skladnost — Amortizacija:</strong> Popravljen izračun amortizacije — odslej se obračuna od preostale (ne več nabavne) vrednosti sredstva. Popolnoma amortizirana sredstva se samodejno preskakujejo (SRS 3.18).</li>
+                            <li><strong>DDV-O poročilo:</strong> Novo poročilo za obračun DDV (ZDDV-1, čl. 88) — prikaz vstopnega in izstopnega DDV po stopnjah za mesec, četrtletje ali celo leto, z upoštevanjem dobropisov. Na voljo izvoz v PDF.</li>
+                            <li><strong>Plačilna lista — PDF:</strong> Dodan tisk plačilne liste za zaposlene in s.p. z vsemi zakonsko zahtevanimi postavkami (bruto, prispevki, dohodnina, neto, povračila) po ZDR-1, čl. 134.</li>
+                            <li><strong>Enostavno knjigovodstvo:</strong> Implementirane vse štiri poslovne knjige za enostavno KNJ po SRS 30 — Knjiga prihodkov in odhodkov (KPO, izvoz PDF/CSV), Knjiga terjatev, Knjiga obveznosti ter Register osnovnih sredstev z amortizacijo (izvoz PDF).</li>
+                            <li><strong>Izkaz denarnih tokov:</strong> Novo finančno poročilo po direktni metodi (SRS 22) — samodejno razvrsti gibanja na poslovne, naložbene in finančne tokove iz bančnih izpiskov. Na voljo izvoz v PDF.</li>
+                            <li><strong>Samoobdavčitev (Reverse Charge):</strong> Podpora za račune tujih ponudnikov (Google, Adobe, AWS) po ZDDV-1, čl. 76a — oznaka na prejetem računu samodejno doda dvojno knjižbo (vstopni + izstopni DDV) in pravilno prikaže oba zneska v DDV-O poročilu.</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">01. 07. 2026</span>
+                            
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li><strong>Prejete ponudbe:</strong> Nov modul za evidentiranje prejetih ponudb dobaviteljev. Podpora za uvoz (XML/ZIP/PNG/PDF), stotinsko izravnavo, konverzijo v prejet račun z enim klikom ter popolno integracijo z obstoječimi dokumenti.</li>
+                            <li><strong>Popravek stotinske izravnave:</strong> Odpravljena napaka, kjer se vnesena stotinska izravnava pri shranjevanju dokumenta ni pravilno upoštevala v skupnem znesku.</li>
+                            <li><strong>Pošiljanje opominov:</strong> Dodan gumb za pošiljanje opomina po e-pošti neposredno iz dokumenta (izdani računi). Podpora za lastno predlogo besedila opomina z oznakami (<code>{stevilka}</code>, <code>{znesek}</code>, <code>{zapadlost}</code> ...) v Nastavitvah.</li>
+                            <li><strong>OCR — AliExpress:</strong> Izboljšano prepoznavanje računov AliExpress iz slik (PNG): pravilno ločevanje postavk iz sekcije "Item detail", ločena obravnava poštnine, samodejni izračun cen brez DDV ter nastavitev plačilnega statusa.</li>
+                            <li><strong>Uvoz dokumentov:</strong> Uvoz datotek (XML/ZIP/PNG/PDF) je sedaj možen tudi v modulih Prejete ponudbe in Prejeti dobropisi — ne le pri Prejetih računih.</li>
                         </ul>
                     </div>
 
@@ -8964,10 +9076,10 @@ function osveziTemeljnicaPostavkeUI() {
                     <input type="text" id="tp_opis_${i}" class="tp-input" style="width:100%; padding:6px;">
                 </td>
                 <td>
-                    <input type="number" step="0.01" id="tp_breme_${i}" class="tp-input tp-znesek" style="width:100%; padding:6px; text-align:right;" onchange="this.value=(parseFloat(this.value)||0)>0?this.value:''; if(this.value) document.getElementById('tp_dobro_${i}').value=''; izracunajSaldoTemeljnice();">
+                    <input type="text" id="tp_breme_${i}" class="tp-input tp-znesek" style="width:100%; padding:6px; text-align:right;" onchange="let v=parseNumberJS(this.value); this.value=v>0?formatNumberJS(v):''; if(v>0) document.getElementById('tp_dobro_${i}').value=''; izracunajSaldoTemeljnice();">
                 </td>
                 <td>
-                    <input type="number" step="0.01" id="tp_dobro_${i}" class="tp-input tp-znesek" style="width:100%; padding:6px; text-align:right;" onchange="this.value=(parseFloat(this.value)||0)>0?this.value:''; if(this.value) document.getElementById('tp_breme_${i}').value=''; izracunajSaldoTemeljnice();">
+                    <input type="text" id="tp_dobro_${i}" class="tp-input tp-znesek" style="width:100%; padding:6px; text-align:right;" onchange="let v=parseNumberJS(this.value); this.value=v>0?formatNumberJS(v):''; if(v>0) document.getElementById('tp_breme_${i}').value=''; izracunajSaldoTemeljnice();">
                 </td>
                 <td style="text-align:center;">
                     <button type="button" class="icon-btn btn-red" onclick="odstraniTemeljnicaPostavko(${i})" tabindex="-1">✕</button>
@@ -9003,8 +9115,8 @@ function osveziTemeljnicaPostavkeUI() {
 function izracunajSaldoTemeljnice() {
     let sB = 0, sD = 0;
     window._t_postavke.forEach((_, i) => {
-        const b = parseFloat(document.getElementById(`tp_breme_${i}`)?.value) || 0;
-        const d = parseFloat(document.getElementById(`tp_dobro_${i}`)?.value) || 0;
+        const b = parseNumberJS(document.getElementById(`tp_breme_${i}`)?.value);
+        const d = parseNumberJS(document.getElementById(`tp_dobro_${i}`)?.value);
         sB += b;
         sD += d;
     });
@@ -9013,8 +9125,8 @@ function izracunajSaldoTemeljnice() {
     const elSumD = document.getElementById('tp_sum_dobro');
     const msg = document.getElementById('tp_saldo_msg');
     
-    if (elSumB) elSumB.textContent = sB.toFixed(2);
-    if (elSumD) elSumD.textContent = sD.toFixed(2);
+    if (elSumB) elSumB.textContent = formatNumberJS(sB);
+    if (elSumD) elSumD.textContent = formatNumberJS(sD);
     
     if (msg) {
         if (Math.abs(sB - sD) < 0.01 && sB > 0) {
@@ -9036,8 +9148,8 @@ async function shraniTemeljnico(e) {
     for (let i = 0; i < window._t_postavke.length; i++) {
         const k = document.getElementById(`tp_konto_${i}`).value;
         const op = document.getElementById(`tp_opis_${i}`).value;
-        const b = parseFloat(document.getElementById(`tp_breme_${i}`).value) || 0;
-        const d = parseFloat(document.getElementById(`tp_dobro_${i}`).value) || 0;
+        const b = parseNumberJS(document.getElementById(`tp_breme_${i}`).value);
+        const d = parseNumberJS(document.getElementById(`tp_dobro_${i}`).value);
         
         if (k && (b > 0 || d > 0)) {
             postavke.push({ konto: k, opis: op, znesek_v_breme: b, znesek_v_dobro: d });

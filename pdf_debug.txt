@@ -1,5 +1,5 @@
 === STANDARD ===
-PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 29.05.2026
+PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 01.07.2026
 IBAN: SI56 0245 3026 4377 270
 SIM 83 - SIMULATORJI VO®NJE, MIHA KADI© S.P.
 DOBJA VAS 253
@@ -14,30 +14,27 @@ REFP - referenca prejemnika ZPN - znesek plaèanega nadomestila MENT - menjalni 
 SDB - vrsta sheme SEPA direktne obremenitve SDBS - soglasje za SEPA direktno obremenitev SDBV - vraèilo za SEPA direktno obremenitev
 ©TN - ¹tevilka naloga
 Veè informacij o vseh okraj¹avah vam je na voljo na www.nlb.si/sepa in v NLB Poslovalnicah.
-Opro¹èeno DDV po 4. c toèki 44. èlena ZDDV-1 in 'Obrnjena davèna obveznost' DDV ni obraèunan po 1. odstavku 25. èlena ZDDV-1. DDV ni obraèunan po 13. èlenu
-pravilnika o izvajanju ZDDV-1. 'Samofakturiranje' po 81/3 ZDDV-1. Nova Ljubljanska banka d.d., Ljubljana, Trg republike 2, 1520 Ljubljana, vpisana v sodni
-register pri Okro¾nem sodi¹èu v Ljubljani. ©t. reg. vpisa 1/25578/00. Znesek osnovnega kapitala 200.000.000,00 EUR. ID za DDV: SI91132550, BIC koda: LJBASI2X.
+Opro¹èeno DDV po 4. c toèki 44. èlena ZDDV-1 in 'Obrnjena davèna obveznost' DDV ni obraèunan po 1. odstavku 25. èlena ZDDV-1. DDV ni obraèunan po 13. èlenu pravilnika o izvajanju
+ZDDV-1. 'Samofakturiranje' po 81/3 ZDDV-1. Nova Ljubljanska banka d.d., Ljubljana, Trg republike 2, 1520 Ljubljana, vpisana v sodni register pri Okro¾nem sodi¹èu v Ljubljani.
+©t. reg. vpisa 1/25578/00. Znesek osn. kapitala 200.000.000,00 EUR. D©: 91132550, BIC koda: LJBASI2X. ID ¹t. za DDV: SI74126261, NLB - skupina za DDV, èlan skupine za DDV.
 Jamstvo za vloge: 'Sredstva na raèunu se ¹tejejo v okvir za¹èitene vloge, ki zna¹a za posameznega vlagatelja v banki praviloma 100.000 EUR, razen, èe sodi
 vlagatelj med subjekte, katerih vloge niso upravièene do jamstva skladno z Zakonom o sistemu jamstva za vloge (Uradni list RS, ¹t. 27/2016; v nadaljevanju:
 ZSJV). V primeru NLB Poslovnega raèuna za stranke notarja/odvetnika/izvr¹itelja in NLB Fiduciarnega raèuna nepremièninske dru¾be, se sredstva na raèunu
 upo¹tevajo kot zajamèena vloga dejanskega lastnika, èe imetnik raèuna banki sporoèi podatke o dejanskem lastniku. Veè informacij o za¹èiti vlog je na voljo
 na naslovu https://www.bsi.si/.'
 1/1
-PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 29.05.2026
+PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 01.07.2026
 DATUM Opis spremembe Promet v breme / dobro
-IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 78 Datum predhodnega izpiska: 27.05.2026
+IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 95 Datum predhodnega izpiska: 30.06.2026
 PROMET V BREME RAÈUNA
-27.05.2026 NAM: INTER DISKONT TRGOVINA RAVNE NA KORO SVN 4466173510263639 * ©TN: FT26149879325089 27,25
-27.05.2026 NAM: GOMBAC Izola Izola SVN 4466173510263639 * ©TN: FT26149879325159 26,43
-27.05.2026 NAM: WWW.KAMM.SI 04132388 041323880 SVN 4466173510263639 * ©TN: FT26149879325164 33,15
-31.05.2026 NAM: POSLOVNI PAKET OSNOVNI 2 * ©TN: 2763261 7,00
-ZAÈETNO STANJE...................................: 3.663,25
+29.06.2026 NAM: mimovrste.com Ljublj Ljubljana C SVN 4466173510263639 * ©TN: FT26182957503272 29,13
+ZAÈETNO STANJE...................................: 1.087,09
 NADOMESTILO ZA MNO®IÈNA PLAÈILA SEPA.............: 0,00
 NADOMESTILO ZA ZBIRNI NALOG MNO®IÈNA PLAÈILA SEPA: 0,00
 OSTALA NADOMESTILA ZA PLAÈILNE TRANSAKCIJE.......: 0,00
-SKUPAJ PROMET V BREME............................: 93,83
+SKUPAJ PROMET V BREME............................: 29,13
 SKUPAJ PROMET V DOBRO............................: 0,00
-KONÈNO STANJE....................................: 3.569,42
+KONÈNO STANJE....................................: 1.057,96
 ZNESEK LIMITA....................................: 0,00
 
 === LAYOUT ===
@@ -48,7 +45,7 @@ ZNESEK LIMITA....................................: 0,00
                                                                                                                     
                                                                                                                     
                                                                                                                     
-          PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 29.05.2026                                                    
+          PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 01.07.2026                                                    
           IBAN: SI56 0245 3026 4377 270                                                                             
           SIM 83 - SIMULATORJI VO®NJE, MIHA KADI© S.P.                                                              
           DOBJA VAS 253                                                                                             
@@ -80,9 +77,9 @@ ZNESEK LIMITA....................................: 0,00
           SDB - vrsta sheme SEPA direktne obremenitve SDBS - soglasje za SEPA direktno obremenitev SDBV - vraèilo za SEPA direktno obremenitev
           ©TN - ¹tevilka naloga                                                                                     
           Veè informacij o vseh okraj¹avah vam je na voljo na www.nlb.si/sepa in v NLB Poslovalnicah.               
-          Opro¹èeno DDV po 4. c toèki 44. èlena ZDDV-1 in 'Obrnjena davèna obveznost' DDV ni obraèunan po 1. odstavku 25. èlena ZDDV-1. DDV ni obraèunan po 13. èlenu
-          pravilnika o izvajanju ZDDV-1. 'Samofakturiranje' po 81/3 ZDDV-1. Nova Ljubljanska banka d.d., Ljubljana, Trg republike 2, 1520 Ljubljana, vpisana v sodni
-          register pri Okro¾nem sodi¹èu v Ljubljani. ©t. reg. vpisa 1/25578/00. Znesek osnovnega kapitala 200.000.000,00 EUR. ID za DDV: SI91132550, BIC koda: LJBASI2X.
+          Opro¹èeno DDV po 4. c toèki 44. èlena ZDDV-1 in 'Obrnjena davèna obveznost' DDV ni obraèunan po 1. odstavku 25. èlena ZDDV-1. DDV ni obraèunan po 13. èlenu pravilnika o izvajanju
+          ZDDV-1. 'Samofakturiranje' po 81/3 ZDDV-1. Nova Ljubljanska banka d.d., Ljubljana, Trg republike 2, 1520 Ljubljana, vpisana v sodni register pri Okro¾nem sodi¹èu v Ljubljani.
+          ©t. reg. vpisa 1/25578/00. Znesek osn. kapitala 200.000.000,00 EUR. D©: 91132550, BIC koda: LJBASI2X. ID ¹t. za DDV: SI74126261, NLB - skupina za DDV, èlan skupine za DDV.
           Jamstvo za vloge: 'Sredstva na raèunu se ¹tejejo v okvir za¹èitene vloge, ki zna¹a za posameznega vlagatelja v banki praviloma 100.000 EUR, razen, èe sodi
           vlagatelj med subjekte, katerih vloge niso upravièene do jamstva skladno z Zakonom o sistemu jamstva za vloge (Uradni list RS, ¹t. 27/2016; v nadaljevanju:
           ZSJV). V primeru NLB Poslovnega raèuna za stranke notarja/odvetnika/izvr¹itelja in NLB Fiduciarnega raèuna nepremièninske dru¾be, se sredstva na raèunu
@@ -94,24 +91,24 @@ ZNESEK LIMITA....................................: 0,00
                                                                                                                     
                                                                                                                     
                                                                                                               1/1   
-                            PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 29.05.2026                                  
+                            PROMET IN STANJE NLB POSLOVNEGA RAÈUNA DNE: 01.07.2026                                  
                                                                                                                     
           DATUM  Opis spremembe                                                                    Promet v breme / dobro
                                                                                                                     
-          IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 78 Datum predhodnega izpiska: 27.05.2026
+          IBAN: SI56 0245 3026 4377 270 Valuta: EUR Davèna ¹tevilka: 11648236 ©t. izp.: 95 Datum predhodnega izpiska: 30.06.2026
           PROMET V BREME RAÈUNA                                                                                     
-          27.05.2026 NAM: INTER DISKONT TRGOVINA RAVNE NA KORO SVN 4466173510263639 * ©TN: FT26149879325089  27,25  
-          27.05.2026 NAM: GOMBAC Izola Izola SVN 4466173510263639 * ©TN: FT26149879325159                    26,43  
-          27.05.2026 NAM: WWW.KAMM.SI 04132388 041323880 SVN 4466173510263639 * ©TN: FT26149879325164        33,15  
-          31.05.2026 NAM: POSLOVNI PAKET OSNOVNI 2 * ©TN: 2763261                                             7,00  
-          ZAÈETNO STANJE...................................: 3.663,25                                               
+          29.06.2026 NAM: mimovrste.com Ljublj Ljubljana C SVN 4466173510263639 * ©TN: FT26182957503272      29,13  
+          ZAÈETNO STANJE...................................: 1.087,09                                               
           NADOMESTILO ZA MNO®IÈNA PLAÈILA SEPA.............: 0,00                                                   
           NADOMESTILO ZA ZBIRNI NALOG MNO®IÈNA PLAÈILA SEPA: 0,00                                                   
           OSTALA NADOMESTILA ZA PLAÈILNE TRANSAKCIJE.......: 0,00                                                   
-          SKUPAJ PROMET V BREME............................: 93,83                                                  
+          SKUPAJ PROMET V BREME............................: 29,13                                                  
           SKUPAJ PROMET V DOBRO............................: 0,00                                                   
-          KONÈNO STANJE....................................: 3.569,42                                               
+          KONÈNO STANJE....................................: 1.057,96                                               
           ZNESEK LIMITA....................................: 0,00                                                   
+                                                                                                                    
+                                                                                                                    
+                                                                                                                    
                                                                                                                     
                                                                                                                     
                                                                                                                     

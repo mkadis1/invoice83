@@ -1344,8 +1344,109 @@ def save_llama_learning_example(ocr_text, final_confirmed_data, original_data, f
         conn.close()
     except Exception as e:
         print(f"Napaka pri shranjevanju učenja v bazo: {e}")
+        
+    # Kliči posodobitev pravil v ozadju/sinhrono
+    try:
+        partner_davcna = final_confirmed_data.get("partner", {}).get("davcna_stevilka", "").strip()
+        if not partner_davcna:
+            partner_davcna = final_confirmed_data.get("partner", {}).get("naziv", "").strip()
+        if partner_davcna:
+            rules = get_supplier_rules(partner_davcna)
+            llama_update_rules(ocr_text, original_data, example_json, rules, partner_davcna, partner_naziv)
+    except Exception as e:
+        print(f"Napaka pri posodabljanju Llama pravil: {e}")
 
-def parse_with_llama(text, filename, model="llama3"):
+def llama_identify_supplier(text, model="llama3"):
+    import requests
+    import json
+    url = "http://localhost:11434/api/chat"
+    prompt = f"Identify the supplier (the company issuing the invoice, NOT the buyer 'Miha Kadiš' or 'SIM 83' or 'SI11648236'). Extract their name and tax ID (VAT number). Return ONLY valid JSON:\n{{\"naziv\": \"Name\", \"davcna_stevilka\": \"VAT number\"}}\n\nText:\n{text}"
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+        "format": "json"
+    }
+    try:
+        res = requests.post(url, json=payload, timeout=30).json()
+        return json.loads(res['message']['content'])
+    except Exception as e:
+        print(f"Llama identify supplier failed: {e}")
+        return None
+
+def get_supplier_rules(davcna):
+    import database
+    if not davcna: return None
+    try:
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT extraction_rules FROM llama_supplier_rules WHERE davcna_stevilka = ?", (davcna,))
+        row = cursor.fetchone()
+        conn.close()
+        return row['extraction_rules'] if row else None
+    except Exception as e:
+        print(f"Napaka pri branju pravil: {e}")
+        return None
+
+def save_supplier_rules(davcna, naziv, rules):
+    import database
+    if not davcna or not rules: return
+    try:
+        conn = database.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM llama_supplier_rules WHERE davcna_stevilka = ?", (davcna,))
+        if cursor.fetchone():
+            cursor.execute("UPDATE llama_supplier_rules SET extraction_rules = ?, updated_at = CURRENT_TIMESTAMP WHERE davcna_stevilka = ?", (rules, davcna))
+        else:
+            cursor.execute("INSERT INTO llama_supplier_rules (davcna_stevilka, naziv, extraction_rules) VALUES (?, ?, ?)", (davcna, naziv, rules))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Napaka pri shranjevanju pravil: {e}")
+
+def llama_generate_rules(ocr_text, extracted_json, davcna, naziv, model="llama3"):
+    import requests
+    import json
+    url = "http://localhost:11434/api/chat"
+    prompt = f"Based on this OCR text and its correctly extracted JSON data for supplier '{naziv}', write a concise set of extraction rules for an LLM to follow in the future. Focus on where to find the invoice number, dates, amounts, and any specific quirks for this supplier's line items. DO NOT output JSON. Output a bulleted list of rules.\n\nOCR:\n{ocr_text}\n\nJSON:\n{json.dumps(extracted_json, ensure_ascii=False)}"
+    payload = {
+        "model": model,
+        "messages": [{"role": "system", "content": "You write concise extraction rules based on examples."}, {"role": "user", "content": prompt}],
+        "stream": False
+    }
+    try:
+        res = requests.post(url, json=payload, timeout=60).json()
+        rules = res['message']['content']
+        save_supplier_rules(davcna, naziv, rules)
+        print(f"Generated new rules for {naziv}")
+    except Exception as e:
+        print(f"Llama generate rules failed: {e}")
+
+def llama_update_rules(ocr_text, old_json, corrected_json, existing_rules, davcna, naziv, model="llama3"):
+    import requests
+    import json
+    url = "http://localhost:11434/api/chat"
+    if not existing_rules:
+        # If no rules exist, just generate them
+        llama_generate_rules(ocr_text, corrected_json, davcna, naziv, model)
+        return
+        
+    prompt = f"The user corrected the extracted JSON for supplier '{naziv}'.\n\nOCR:\n{ocr_text}\n\nOld JSON (Incorrect):\n{json.dumps(old_json, ensure_ascii=False)}\n\nCorrected JSON:\n{json.dumps(corrected_json, ensure_ascii=False)}\n\nExisting Rules:\n{existing_rules}\n\nUpdate the existing rules to ensure the mistake made in the old JSON is not repeated. Return the COMPLETE updated bulleted list of rules. DO NOT output JSON."
+    payload = {
+        "model": model,
+        "messages": [{"role": "system", "content": "You refine extraction rules based on user corrections."}, {"role": "user", "content": prompt}],
+        "stream": False
+    }
+    try:
+        res = requests.post(url, json=payload, timeout=60).json()
+        rules = res['message']['content']
+        save_supplier_rules(davcna, naziv, rules)
+        print(f"Updated rules for {naziv}")
+    except Exception as e:
+        print(f"Llama update rules failed: {e}")
+
+
+def parse_with_llama(text, filename, model="llama3", rules=None):
     import requests
     import json
     
@@ -1425,6 +1526,11 @@ If the text contains "AliExpress" or "Order ID" or "Alibaba" or "Order time" or 
    - "znesek_skupaj": gross_shipping (e.g. 0.69).
 10. "tuji_partner_neprebran" MUST be false for AliExpress.
 
+"""
+    if rules:
+        prompt += f"\n\nCRITICAL SUPPLIER-SPECIFIC RULES GENERATED FROM LEARNING:\n{rules}\n"
+        
+    prompt += f"""
 Return ONLY a valid JSON object matching this schema:
 {{
   "stevilka": "Invoice number (string, e.g. '26-0B42-0000110'). DO NOT use '2602011739412' unless it is actually in the text.",
@@ -1711,48 +1817,25 @@ def process_invoice_data(source, filename):
             'tip': tip
         }
 
-    # 2. Poskusi najprej s standardnim regex/tekstovnim parserjem
-    regex_res = parse_invoice_data(text)
-    parser_successful = False
-    
-    if isinstance(regex_res, dict):
-        regex_res['ocr_text'] = text
-        if _is_credit_note(filename, text):
-            regex_res = fix_credit_note_data(regex_res, text, filename)
-        regex_res = post_process_invoice_data(regex_res)
-        
-        if 'sklic' not in regex_res or not regex_res['sklic']:
-            regex_res['sklic'] = find_sklic(text)
-            
-        # Preveri, če so ključni podatki uspešno prebrani
-        has_stevilka = regex_res.get("stevilka") and regex_res.get("stevilka") != "NEZNANA"
-        has_partner = regex_res.get("partner", {}).get("naziv") and regex_res.get("partner", {}).get("naziv") != "Neznan Partner"
-        has_znesek = regex_res.get("znesek_skupaj", 0.0) > 0.01
-        
-        if has_stevilka and has_partner and has_znesek:
-            parser_successful = True
-
-    # 3. Če je parser uspešen, neposredno vrni njegove rezultate (preskoči Llamo)
-    if parser_successful:
-        if 'datum_storitve_od' not in regex_res:
-            regex_res['datum_storitve_od'] = regex_res.get('datum_storitve', regex_res.get('datum_izdaje', ''))
-        if 'datum_storitve_do' not in regex_res:
-            regex_res['datum_storitve_do'] = regex_res.get('datum_storitve', regex_res.get('datum_izdaje', ''))
-        if 'datum_storitve' not in regex_res:
-            regex_res['datum_storitve'] = regex_res.get('datum_storitve_od', '')
-        if 'partner' in regex_res and isinstance(regex_res['partner'], dict):
-            regex_res.setdefault('partner_naziv', regex_res['partner'].get('naziv', ''))
-            regex_res.setdefault('partner_davcna', regex_res['partner'].get('davcna_stevilka', ''))
-            regex_res.setdefault('partner_trr', regex_res['partner'].get('trr', ''))
-        regex_res['tip'] = tip
-        print(f"[Parser] Uspešno prepoznavanje za {filename}. Preskakujem Llama AI.")
-        return regex_res
-
-    # 4. Če parser ni bil povsem uspešen, uporabi Llama AI kot pametno alternativo
-    print(f"[Parser] Nepopolni podatki za {filename}, poskušam z Llama AI...")
+    # 2. Poskusi z Llama AI kot primarnim bralnikom
+    print(f"[Parser] Poskušam z Llama AI za {filename}...")
     if ensure_ollama_running("llama3"):
         try:
-            parsed = parse_with_llama(text, filename, "llama3")
+            # 2a. Najprej identificiraj dobavitelja (za pravila)
+            supplier_info = llama_identify_supplier(text, "llama3")
+            rules = None
+            davcna = None
+            if supplier_info:
+                davcna = supplier_info.get("davcna_stevilka", "").strip()
+                if not davcna:
+                    davcna = supplier_info.get("naziv", "").strip()
+                if davcna:
+                    rules = get_supplier_rules(davcna)
+                    if rules:
+                        print(f"[Parser] Uporabljam obstoječa pravila za dobavitelja: {davcna}")
+            
+            # 2b. Ekstrakcija podatkov (z ali brez pravil)
+            parsed = parse_with_llama(text, filename, "llama3", rules=rules)
             if parsed:
                 parsed = post_process_invoice_data(parsed)
                 # Zagotovi, da je ocr_text vedno vključen (za shranjevanje učenja)
@@ -1801,8 +1884,17 @@ def process_invoice_data(source, filename):
         except Exception as e:
             print(f"Llama AI extraction failed, falling back to regex: {e}")
             
-    # 5. Ultimate fallback na prvotne regex rezultate (tudi če so nepopolni)
+    # 3. Fallback na prvotne regex rezultate
+    regex_res = parse_invoice_data(text)
     if isinstance(regex_res, dict):
+        regex_res['ocr_text'] = text
+        if _is_credit_note(filename, text):
+            regex_res = fix_credit_note_data(regex_res, text, filename)
+        regex_res = post_process_invoice_data(regex_res)
+        
+        if 'sklic' not in regex_res or not regex_res['sklic']:
+            regex_res['sklic'] = find_sklic(text)
+            
         if 'datum_storitve_od' not in regex_res:
             regex_res['datum_storitve_od'] = regex_res.get('datum_storitve', regex_res.get('datum_izdaje', ''))
         if 'datum_storitve_do' not in regex_res:
@@ -1815,7 +1907,6 @@ def process_invoice_data(source, filename):
             regex_res.setdefault('partner_trr', regex_res['partner'].get('trr', ''))
         regex_res['tip'] = tip
     return regex_res
-
 
 
 def is_credit_note(filename, text):
