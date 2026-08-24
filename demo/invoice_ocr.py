@@ -1474,7 +1474,8 @@ SPECIFIC RULES FOR "INPOS" INVOICES:
 If the filename contains "inpos" or the supplier is "INPOS":
 1. The invoice number ("stevilka") MUST follow the format "43-9038-XXXX", where "XXXX" is the suffix (e.g. "2054" or "1774"). Look for keywords like "Stevilka", "Sta viika", "Staying", "saving" or similar in the text. If the invoice number is misread by OCR (e.g. "A35038A TTA"), reconstruct the correct number as "43-9038-XXXX" using the suffix from "Sklic pri placilu na 93934-XXXX-26" or from the filename (e.g., if the filename is "inpos 2054.pdf", the suffix is "2054", making the invoice number "43-9038-2054").
 2. The supplier/partner name ("partner" -> "naziv") MUST be "INPOS, d.o.o., Celje" and the tax ID ("davcna_stevilka") MUST be "SI70868565".
-3. In the line items ("postavke"):
+3. The payment reference ("sklic") MUST start with "SI00" (e.g. "SI00 93934-XXXX-26", extracted from "Sklic pri plačilu na 93934-XXXX-26"). It MUST ALWAYS start with "SI00" and NEVER with "SI12".
+4. In the line items ("postavke"):
    - "cena_enote" is the unit price before discount and without VAT (e.g. "15.812" or "9.992" in the row).
    - "popust" is the discount percentage. Note that OCR might read it as "800" (meaning 8.0%) or "20,00" (meaning 20.0%). If it is a multiple of 100 like "800" or "2000" and has no decimal points, divide it by 100 to get the correct percentage (e.g. 8.0 or 20.0). If it is "20,00" or "20", it is 20.0%.
    - "znesek_skupaj" MUST be the concluding value in the row which represents the value WITH tax/VAT (e.g. "17.75" or "9.75"). Do NOT use the value without VAT (like "14.55" or "7.99") for "znesek_skupaj"!

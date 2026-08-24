@@ -1977,9 +1977,18 @@ def send_email_invoice(id: int, request: EmailRequest = None):
     
     cursor.execute("SELECT * FROM partnerji WHERE id = ?", (inv['partner_id'],))
     partner_row = cursor.fetchone()
-    if not partner_row or not partner_row['email']:
+    partner = dict(partner_row) if partner_row else {}
+    
+    to_email_raw = (request.to_email if (request and request.to_email) else partner.get('email', '')) or ''
+    recipients = [e.strip() for e in re.split(r'[,;\s]+', to_email_raw) if e.strip()]
+    if not recipients and partner.get('email'):
+        recipients = [e.strip() for e in re.split(r'[,;\s]+', partner['email']) if e.strip()]
+        
+    if not recipients:
         conn.close()
-        raise HTTPException(status_code=400, detail="Partner nima vnesenega e-naslova.")
+        raise HTTPException(status_code=400, detail="Partner nima vnesenega e-naslova in e-naslov prejemnika ni bil naveden.")
+        
+    to_header = ", ".join(recipients)
         
     cursor.execute("SELECT * FROM dokumenti_postavke WHERE dokument_id = ?", (id,))
     items = [dict(r) for r in cursor.fetchall()]
@@ -1992,7 +2001,6 @@ def send_email_invoice(id: int, request: EmailRequest = None):
         raise HTTPException(status_code=500, detail="Nastavitve niso najdene v bazi.")
     
     company = dict(company_row)
-    partner = dict(partner_row)
     
     if not company.get('smtp_server') or not company.get('smtp_port') or not company.get('smtp_username') or not company.get('smtp_password'):
         raise HTTPException(status_code=400, detail="SMTP nastavitve niso izpolnjene v Nastavitvah.")
@@ -2010,7 +2018,7 @@ def send_email_invoice(id: int, request: EmailRequest = None):
         
         msg = MIMEMultipart()
         msg['From'] = company.get('email_posiljatelja') or company['smtp_username']
-        msg['To'] = request.to_email if (request and request.to_email) else partner['email']
+        msg['To'] = to_header
         msg['Subject'] = f"{doc_title} št. {inv['stevilka']} - {company.get('naziv', '')}"
         
         # Uporaba predloge besedila
@@ -2058,12 +2066,12 @@ def send_email_invoice(id: int, request: EmailRequest = None):
             server.starttls()
             server.ehlo()
             server.login(company['smtp_username'], company['smtp_password'])
-            server.send_message(msg)
+            server.send_message(msg, to_addrs=recipients)
             server.quit()
         else:
             server = smtplib.SMTP_SSL(company['smtp_server'], int(company['smtp_port']), timeout=10)
             server.login(company['smtp_username'], company['smtp_password'])
-            server.send_message(msg)
+            server.send_message(msg, to_addrs=recipients)
             server.quit()
             
         # Logiranje uspešnega pošiljanja
@@ -2072,7 +2080,7 @@ def send_email_invoice(id: int, request: EmailRequest = None):
         cursor.execute("""
             INSERT INTO email_log (dokument_id, tip_dokumenta, stevilka_dokumenta, prejemnik, zadeva, status, poslano_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (id, inv['tip'], inv['stevilka'], partner['email'], msg['Subject'], 'success', get_now_slo()))
+        """, (id, inv['tip'], inv['stevilka'], to_header, msg['Subject'], 'success', get_now_slo()))
         conn.commit()
         conn.close()
             
@@ -2085,7 +2093,7 @@ def send_email_invoice(id: int, request: EmailRequest = None):
             cursor.execute("""
                 INSERT INTO email_log (dokument_id, tip_dokumenta, stevilka_dokumenta, prejemnik, zadeva, status, napaka, poslano_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (id, inv['tip'], inv['stevilka'], partner['email'], f"{doc_title} št. {inv['stevilka']}", 'error', str(e), get_now_slo()))
+            """, (id, inv['tip'], inv['stevilka'], to_header if 'to_header' in locals() else partner.get('email', ''), f"{doc_title} št. {inv['stevilka']}", 'error', str(e), get_now_slo()))
             conn.commit()
             conn.close()
         except: pass

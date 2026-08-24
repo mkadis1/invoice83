@@ -538,12 +538,12 @@ window.refreshCurrentModule = function() {
 
 // --- GLOBALNO RAZVRŠČANJE (SORTIRANJE) ---
 window.appSortState = {
-    'izdani_racuni': { field: 'datum_izdaje', order: 'desc' },
-    'prejeti_racuni': { field: 'datum_izdaje', order: 'desc' },
-    'prejete_ponudbe': { field: 'datum_izdaje', order: 'desc' },
-    'ponudbe': { field: 'datum_izdaje', order: 'desc' },
-    'dobropisi': { field: 'datum_izdaje', order: 'desc' },
-    'delovni_nalogi': { field: 'datum_izdaje', order: 'desc' },
+    'izdani_racuni': { field: 'datum_zapadlosti', order: 'desc' },
+    'prejeti_racuni': { field: 'datum_zapadlosti', order: 'desc' },
+    'prejete_ponudbe': { field: 'datum_zapadlosti', order: 'desc' },
+    'ponudbe': { field: 'datum_zapadlosti', order: 'desc' },
+    'dobropisi': { field: 'datum_zapadlosti', order: 'desc' },
+    'delovni_nalogi': { field: 'datum_zapadlosti', order: 'desc' },
     'partnerji': { field: 'naziv', order: 'asc' },
     'artikli_storitve': { field: 'sifra', order: 'asc' },
     'izpiski': { field: 'datum', order: 'desc' },
@@ -589,6 +589,9 @@ window.sortAppData = function(data, moduleName) {
             valB = (valB || "").toString().toLowerCase();
         }
         
+        if (!valA && valB) return 1;
+        if (valA && !valB) return -1;
+        
         if (valA < valB) return state.order === 'asc' ? -1 : 1;
         if (valA > valB) return state.order === 'asc' ? 1 : -1;
         return 0;
@@ -598,6 +601,10 @@ window.sortAppData = function(data, moduleName) {
 window.renderSortControls = function(moduleName, fields, onUpdate) {
     const state = window.appSortState[moduleName];
     if (!state) return '';
+    
+    if (!fields.some(f => f.key === state.field) && fields.length > 0) {
+        state.field = fields[0].key;
+    }
     
     return `
         <div style="background: #f8f9fa; padding: 10px 15px; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; font-size: 0.9em;">
@@ -5545,30 +5552,81 @@ async function posljiEmail(id) {
         `;
     }
 
+    const initialEmails = defaultEmail ? defaultEmail.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean) : [""];
+    if (initialEmails.length === 0) initialEmails.push("");
+
+    const renderEmailRowsHtml = initialEmails.map((email, idx) => `
+        <div class="email-input-row" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+            <input type="text" class="input email-recipient-input" value="${email}" style="flex:1;" placeholder="vnesite e-naslov (npr. info@podjetje.si ali več ločenih z vejico)">
+            ${initialEmails.length > 1 || idx > 0 ? `<button type="button" class="btn-remove-email" style="background:#fee2e2; border:1px solid #fca5a5; color:#b91c1c; border-radius:4px; cursor:pointer; padding:6px 10px; font-weight:bold; font-size:12px;" title="Odstrani">✕</button>` : ''}
+        </div>
+    `).join('');
+
     modal.innerHTML = `
-        <div style="background:white; padding:25px; border-radius:8px; max-width:500px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+        <div style="background:white; padding:25px; border-radius:8px; max-width:520px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
             <h3 style="margin-top:0; color:var(--primary-blue);">Pošiljanje dokumenta</h3>
             
             <div style="margin-bottom: 20px;">
-                <label for="email-to-send" style="display:block; margin-bottom:5px; font-weight:bold; font-size:0.9em;">E-poštni naslov prejemnika:</label>
-                <input type="email" id="email-to-send" value="${defaultEmail}" class="input" style="width:100%;" placeholder="vnesite e-naslov">
+                <label style="display:block; margin-bottom:6px; font-weight:bold; font-size:0.9em;">E-poštni naslov(i) prejemnika:</label>
+                <div id="email-recipients-container">
+                    ${renderEmailRowsHtml}
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+                    <button type="button" id="btn-add-email-recipient" style="background:none; border:none; color:var(--primary-blue, #0056b3); cursor:pointer; font-size:0.85em; font-weight:bold; padding:4px 0; display:inline-flex; align-items:center; gap:4px;">
+                        <span style="font-size:1.1em;">+</span> Dodaj nov e-naslov
+                    </button>
+                    <span style="font-size:0.75em; color:#777;">(več naslovov lahko ločite tudi z vejico)</span>
+                </div>
             </div>
 
             ${prilogeHtml}
             
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button class="btn" onclick="document.getElementById('email-attachment-modal').remove()">Prekliči</button>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn" style="background:#e5e7eb; color:#000000; font-weight:600;" onclick="document.getElementById('email-attachment-modal').remove()">Prekliči</button>
                 <button class="btn btn-blue" id="confirm-email-send">Pošlji e-pošto</button>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
 
+    const container = document.getElementById('email-recipients-container');
+    
+    // Poslušalec za odstranjevanje vrstic z e-pošto
+    container.addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('btn-remove-email')) {
+            const row = e.target.closest('.email-input-row');
+            if (row) row.remove();
+        }
+    });
+
+    document.getElementById('btn-add-email-recipient').onclick = () => {
+        const row = document.createElement('div');
+        row.className = 'email-input-row';
+        row.style = "display:flex; gap:8px; align-items:center; margin-bottom:8px;";
+        row.innerHTML = `
+            <input type="text" class="input email-recipient-input" value="" style="flex:1;" placeholder="vnesite dodaten e-naslov">
+            <button type="button" class="btn-remove-email" style="background:#fee2e2; border:1px solid #fca5a5; color:#b91c1c; border-radius:4px; cursor:pointer; padding:6px 10px; font-weight:bold; font-size:12px;" title="Odstrani">✕</button>
+        `;
+        container.appendChild(row);
+        const inp = row.querySelector('input');
+        if (inp) inp.focus();
+    };
+
     document.getElementById('confirm-email-send').onclick = async () => {
-        const toEmailInput = document.getElementById('email-to-send');
-        const toEmail = toEmailInput ? toEmailInput.value.trim() : "";
-        if (!toEmail) {
-            alert("Prosimo, vnesite e-poštni naslov.");
+        const inputs = Array.from(container.querySelectorAll('.email-recipient-input'));
+        const allEmails = [];
+        inputs.forEach(inp => {
+            if (inp.value) {
+                const parts = inp.value.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+                allEmails.push(...parts);
+            }
+        });
+
+        // Odstranimo podvojene naslove ob ohranitvi vrstnega reda
+        const uniqueEmails = [...new Set(allEmails)];
+
+        if (uniqueEmails.length === 0) {
+            alert("Prosimo, vnesite vsaj en e-poštni naslov.");
             return;
         }
 
@@ -5577,7 +5635,7 @@ async function posljiEmail(id) {
             .map(p => p.id);
         
         modal.remove();
-        await window.izvrsiPosiljanjeEmaila(id, selectedIds, toEmail);
+        await window.izvrsiPosiljanjeEmaila(id, selectedIds, uniqueEmails.join(', '));
     };
 }
 
