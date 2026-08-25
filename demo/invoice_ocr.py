@@ -1132,6 +1132,10 @@ def check_corrections(original, final):
     try:
         if abs(float(original.get("znesek_skupaj") or 0) - float(final.get("znesek_skupaj") or 0)) > 0.01:
             return True
+        if abs(float(original.get("znesek_ddv") if original.get("znesek_ddv") is not None else 0) - float(final.get("znesek_ddv") if final.get("znesek_ddv") is not None else 0)) > 0.01:
+            return True
+        if abs(float(original.get("znesek_brez_ddv") if original.get("znesek_brez_ddv") is not None else 0) - float(final.get("znesek_brez_ddv") if final.get("znesek_brez_ddv") is not None else 0)) > 0.01:
+            return True
     except:
         return True
         
@@ -1170,6 +1174,8 @@ def check_corrections(original, final):
             if abs(float(oi.get("cena_enote") or 0) - float(fi.get("cena_enote") or 0)) > 0.001:
                 return True
             if abs(float(oi.get("popust") or 0) - float(fi.get("popust") or 0)) > 0.01:
+                return True
+            if abs(float(oi.get("stopnja_ddv") if oi.get("stopnja_ddv") is not None and oi.get("stopnja_ddv") != "" else 22.0) - float(fi.get("stopnja_ddv") if fi.get("stopnja_ddv") is not None and fi.get("stopnja_ddv") != "" else 22.0)) > 0.01:
                 return True
             if abs(float(oi.get("znesek_skupaj") or 0) - float(fi.get("znesek_skupaj") or 0)) > 0.01:
                 return True
@@ -1329,7 +1335,7 @@ def save_llama_learning_example(ocr_text, final_confirmed_data, original_data, f
             "enota_mere": item.get("enota_mere", "kos"),
             "cena_enote": float(item.get("cena_enote") or 0.0),
             "popust": float(item.get("popust") or 0.0),
-            "stopnja_ddv": float(item.get("stopnja_ddv") or 22.0),
+            "stopnja_ddv": float(item.get("stopnja_ddv") if item.get("stopnja_ddv") is not None and item.get("stopnja_ddv") != "" else 22.0),
             "znesek_skupaj": float(item.get("znesek_skupaj") or 0.0)
         })
         
@@ -1527,6 +1533,20 @@ If the text contains "AliExpress" or "Order ID" or "Alibaba" or "Order time" or 
    - "znesek_skupaj": gross_shipping (e.g. 0.69).
 10. "tuji_partner_neprebran" MUST be false for AliExpress.
 
+SPECIFIC RULES FOR "GOOGLE" INVOICES (Google Cloud EMEA Limited, Google Ireland Limited, Google Workspace, Google Cloud, Google Ads):
+If the text contains "Google Cloud EMEA" or "Google Ireland" or "Google Workspace" or "Google Cloud" or "členom 196 Direktive" or filename contains "Google":
+1. The supplier is "Google Cloud EMEA Limited" (tax ID "IE3668997OH", Velasco, Clanwilliam Place, Dublin 2, Irska) OR "Google Ireland Limited" (tax ID "IE6388047V", Gordon House, Barrow Street, Dublin 4, Irska).
+2. The invoice has 0% VAT / reverse charge ("DDV (0%): 0,00 €" / "uveljaviti DDV v skladu s členom 196 Direktive Sveta 2006/112/ES").
+3. "znesek_ddv" MUST ALWAYS be 0.0.
+4. "znesek_brez_ddv" MUST ALWAYS equal "znesek_skupaj" (e.g. 25.30).
+5. "sklic" MUST ALWAYS be empty string "" (there is NO payment reference / sklic because the invoice is paid via business credit card / automatic billing). DO NOT use invoice number or billing ID as sklic!
+6. For all line items:
+   - "stopnja_ddv" MUST be 0.0 (0%). Never use 22.0%!
+   - "cena_enote" is equal to the unit amount without VAT, which is the full listed price (e.g. 25.30). DO NOT divide by 1.22!
+   - "popust": 0.0.
+   - "znesek_skupaj": matches the item amount (e.g. 25.30).
+7. "tuji_partner_neprebran" MUST be false.
+
 """
     if rules:
         prompt += f"\n\nCRITICAL SUPPLIER-SPECIFIC RULES GENERATED FROM LEARNING:\n{rules}\n"
@@ -1711,12 +1731,30 @@ def post_process_invoice_data(data):
         return data
         
     postavke = data.get("postavke", [])
+    
+    # If the invoice explicitly specifies znesek_ddv == 0.0 (or znesek_brez_ddv == znesek_skupaj > 0),
+    # ensure that all line items have stopnja_ddv = 0.0
+    is_zero_vat_invoice = False
+    try:
+        z_ddv_raw = float(data.get("znesek_ddv") or 0.0) if data.get("znesek_ddv") is not None else None
+        z_skupaj_raw = float(data.get("znesek_skupaj") or 0.0)
+        z_brez_raw = float(data.get("znesek_brez_ddv") or 0.0)
+        if z_ddv_raw == 0.0 and z_skupaj_raw > 0:
+            is_zero_vat_invoice = True
+        elif z_skupaj_raw > 0 and abs(z_skupaj_raw - z_brez_raw) < 0.01:
+            is_zero_vat_invoice = True
+    except:
+        pass
+
     if postavke:
         for p in postavke:
             try:
+                if is_zero_vat_invoice:
+                    p["stopnja_ddv"] = 0.0
+
                 kol = float(p.get("kolicina") or 1.0)
                 cena = float(p.get("cena_enote") or 0.0)
-                ddv_p = float(p.get("stopnja_ddv") or 22.0)
+                ddv_p = float(p.get("stopnja_ddv") if p.get("stopnja_ddv") is not None and p.get("stopnja_ddv") != "" else 22.0)
                 sk = float(p.get("znesek_skupaj") or 0.0)
                 pop = float(p.get("popust") or 0.0)
                 
@@ -1737,12 +1775,17 @@ def post_process_invoice_data(data):
                 
                 # Zdaj preveri če je cena bruto (MPC) ali neto
                 # Če se ujema bruto izračun (cena * kol * (1 - pop/100)) z znesek_skupaj (sk), je cena bila bruto.
-                calc_gross_if_unit_is_gross = (cena * kol) * (1 - pop / 100)
-                if abs(calc_gross_if_unit_is_gross - sk) < 0.05:
-                    # Cena je bila bruto (MPC)!
-                    # Cena brez DDV = cena / (1 + DDV/100)
-                    cena_neto = round(cena / (1 + ddv_p / 100), 4)
-                    p["cena_enote"] = cena_neto
+                if ddv_p > 0:
+                    calc_gross_if_unit_is_gross = (cena * kol) * (1 - pop / 100)
+                    if abs(calc_gross_if_unit_is_gross - sk) < 0.05:
+                        # Cena je bila bruto (MPC)!
+                        # Cena brez DDV = cena / (1 + DDV/100)
+                        cena_neto = round(cena / (1 + ddv_p / 100), 4)
+                        p["cena_enote"] = cena_neto
+                else:
+                    # Za 0% DDV je cena brez DDV enaka znesku / kolicini
+                    if cena <= 0 and kol > 0 and sk > 0:
+                        p["cena_enote"] = round(sk / kol, 4)
             except Exception as e:
                 print(f"Error post-processing item: {e}")
                 
@@ -1753,16 +1796,29 @@ def post_process_invoice_data(data):
             z_skupaj = round(sum(float(p.get("znesek_skupaj") or 0.0) for p in postavke), 2)
             data["znesek_skupaj"] = z_skupaj
             
-        z_ddv = float(data.get("znesek_ddv") or 0.0)
-        if z_ddv <= 0.01 and postavke:
-            z_ddv = round(sum(float(p.get("znesek_skupaj") or 0.0) * (float(p.get("stopnja_ddv") or 22.0) / (100 + float(p.get("stopnja_ddv") or 22.0))) for p in postavke), 2)
+        z_ddv = float(data.get("znesek_ddv") if data.get("znesek_ddv") is not None else 0.0)
+        if (data.get("znesek_ddv") is None or z_ddv <= 0.01) and not is_zero_vat_invoice and postavke:
+            z_ddv = round(sum(float(p.get("znesek_skupaj") or 0.0) * (float(p.get("stopnja_ddv") if p.get("stopnja_ddv") is not None else 0.0) / (100 + float(p.get("stopnja_ddv") if p.get("stopnja_ddv") is not None else 0.0))) for p in postavke), 2)
             data["znesek_ddv"] = z_ddv
             
         z_brez = float(data.get("znesek_brez_ddv") or 0.0)
-        if z_brez <= 0.01 and z_skupaj > 0:
+        if (data.get("znesek_brez_ddv") is None or z_brez <= 0.01) and z_skupaj > 0:
             data["znesek_brez_ddv"] = round(z_skupaj - z_ddv, 2)
     except Exception as e:
         print(f"Error recalculating totals: {e}")
+        
+    # Check if supplier is Google or if text indicates automatic business card charge (no payment slip/sklic)
+    try:
+        partner_name = (data.get("partner_naziv") or (data.get("partner", {}).get("naziv") if isinstance(data.get("partner"), dict) else "") or "").lower()
+        ocr_t = (data.get("ocr_text") or "").lower()
+        
+        if "google" in partner_name or "google cloud" in ocr_t or "google workspace" in ocr_t or "morebitni dolgovani znesek vam bomo samodejno zaračunali" in ocr_t:
+            data["sklic"] = ""
+            data["placano"] = True
+            data["placan"] = True
+            data["nacin_placila"] = "Poslovna kartica"
+    except Exception as e:
+        print(f"Error in supplier specific post-processing: {e}")
         
     return data
 

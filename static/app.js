@@ -526,12 +526,21 @@ window.potrdiTemeljnicaPopup = function() {
     }
 };
 
-window.refreshCurrentModule = function() {
+window.refreshCurrentModule = async function() {
     const tab = window.appTabs.find(t => t.id === window.activeTabId);
     if (tab) {
         const container = document.getElementById(`tab-content-${tab.id}`);
         if (container) {
-            window.renderModuleToContainer(tab.module, container, tab.title, tab.data);
+            const appContent = document.getElementById('app-content');
+            const savedScroll = (window._lastDocScrollTop !== null && window._lastDocScrollTop !== undefined) 
+                ? window._lastDocScrollTop 
+                : (appContent ? appContent.scrollTop : 0);
+            
+            await window.renderModuleToContainer(tab.module, container, tab.title, tab.data);
+            
+            if (appContent && savedScroll > 0 && appContent.scrollTop === 0) {
+                appContent.scrollTop = savedScroll;
+            }
         }
     }
 };
@@ -1205,8 +1214,14 @@ async function renderDashboard() {
 
 // --- PARTNERJI ---
 async function renderPartnerji() {
+    const appContent = document.getElementById('app-content');
+    const prevScroll = (window._lastDocScrollTop !== null && window._lastDocScrollTop !== undefined) 
+        ? window._lastDocScrollTop 
+        : (appContent ? appContent.scrollTop : 0);
 
-    contentDiv.innerHTML = '<p>Nalagam...</p>';
+    if (!contentDiv.firstElementChild) {
+        contentDiv.innerHTML = '<p>Nalagam...</p>';
+    }
     try {
         const res = await fetch('/api/partnerji');
         const data = await res.json();
@@ -1253,7 +1268,7 @@ async function renderPartnerji() {
                     : '<span style="color:#e03131;">NE</span>';
                 
                 html += `
-                    <tr>
+                    <tr id="partner-row-${p.id}" data-id="${p.id}">
                         <td><input type="checkbox" class="row-checkbox" data-id="${p.id}" ${isChecked} onclick="window.toggleItemSelection(${p.id}, 'partnerji')"></td>
                         <td style="font-weight:500; cursor:pointer; color:var(--primary-blue); text-decoration:underline;" onclick="showUrediPartnerja(${p.id})">${p.naziv}</td>
                         <td style="font-size:0.9em; color:#666;">${polniNaslov}</td>
@@ -1270,6 +1285,10 @@ async function renderPartnerji() {
         
         html += `</tbody></table>`;
         contentDiv.innerHTML = html;
+
+        if (appContent && prevScroll > 0) {
+            appContent.scrollTop = prevScroll;
+        }
     } catch (e) {
         contentDiv.innerHTML = `<p style="color:red">Napaka pri nalaganju.</p>`;
     }
@@ -1728,8 +1747,14 @@ window.updateKontiDatalist = async function() {
 
 async function renderArtikliStoritve() {
     window.updateKontiDatalist();
-    console.log("Kličem renderArtikliStoritve...");
-    contentDiv.innerHTML = '<p style="padding:20px;">Nalagam artikle in storitve...</p>';
+    const appContent = document.getElementById('app-content');
+    const prevScroll = (window._lastDocScrollTop !== null && window._lastDocScrollTop !== undefined) 
+        ? window._lastDocScrollTop 
+        : (appContent ? appContent.scrollTop : 0);
+
+    if (!contentDiv.firstElementChild) {
+        contentDiv.innerHTML = '<p style="padding:20px;">Nalagam artikle in storitve...</p>';
+    }
     try {
         const res = await fetch('/api/artikli_storitve');
         if (!res.ok) throw new Error("Napaka pri pridobivanju podatkov s strežnika.");
@@ -1775,7 +1800,7 @@ async function renderArtikliStoritve() {
                 const isChecked = window.appSelection.ids.includes(a.id) ? 'checked' : '';
                 const zalogaText = a.vodi_zalogo ? `<span style="font-weight:bold; color:${a.zaloga_kolicina > 0 ? '#2b8a3e' : '#e03131'}">${formatNumberJS(a.zaloga_kolicina || 0)} ${a.enota_mere}</span>` : '<span style="color:#adb5bd;">/</span>';
                 html += `
-                    <tr>
+                    <tr id="artikel-row-${a.id}" data-id="${a.id}">
                         <td><input type="checkbox" class="row-checkbox" data-id="${a.id}" ${isChecked} onclick="window.toggleItemSelection(${a.id}, 'artikli_storitve')"></td>
                         <td><code style="background:#eee; padding:2px 5px; border-radius:3px; font-weight:bold;">${a.sifra}</code></td>
                         <td><span style="font-size:0.85em; text-transform:uppercase; color:#666;">${a.vrsta === 'artikel' ? '📦 Artikel' : '🛠 Storitev'}</span></td>
@@ -1794,6 +1819,10 @@ async function renderArtikliStoritve() {
         
         html += `</tbody></table>`;
         contentDiv.innerHTML = html;
+
+        if (appContent && prevScroll > 0) {
+            appContent.scrollTop = prevScroll;
+        }
     } catch (e) {
         console.error(e);
         contentDiv.innerHTML = `<div style="padding:20px; background:#fff5f5; border:1px solid #ffc9c9; border-radius:8px; color:#c92a2a;">
@@ -1993,7 +2022,14 @@ async function brisiArtikelStoritev(id) {
 // --- DOKUMENTI ---
 async function renderDokumenti(tip, naslov) {
     titleEl.textContent = naslov;
-    contentDiv.innerHTML = '<p>Nalagam...</p>';
+    const appContent = document.getElementById('app-content');
+    const prevScroll = (window._lastDocScrollTop !== null && window._lastDocScrollTop !== undefined) 
+        ? window._lastDocScrollTop 
+        : (appContent ? appContent.scrollTop : 0);
+
+    if (!contentDiv.firstElementChild) {
+        contentDiv.innerHTML = '<p>Nalagam...</p>';
+    }
     try {
         const res = await fetch(`/api/dokumenti/${tip}`);
         const data = await res.json();
@@ -2051,7 +2087,7 @@ async function renderDokumenti(tip, naslov) {
                                   d.status !== 'plačano';
                 const rowClass = isOverdue ? 'class="row-overdue"' : '';
                 html += `
-                    <tr ${rowClass}>
+                    <tr id="doc-row-${d.id}" data-id="${d.id}" ${rowClass}>
                         <td><input type="checkbox" class="row-checkbox" data-id="${d.id}" ${isChecked} onclick="window.toggleItemSelection(${d.id}, '${tip}')"></td>
                         <td style="white-space: nowrap;">
                             <span style="color:var(--primary-blue); font-weight:bold; cursor:pointer; text-decoration:underline;" onclick="showUrediDokument(${d.id}, '${tip}', '${naslov}')">${d.interna_stevilka || d.stevilka}</span>
@@ -2079,8 +2115,8 @@ async function renderDokumenti(tip, naslov) {
                         <td class="action-buttons">
                             ${(tip === 'izdani_racuni' || tip === 'prejeti_racuni') ? 
                                 (!d.knjizeno ? 
-                                    `<button class="icon-btn btn-green" onclick="window.knjiziPosamezen(${d.id}, 'knjizi', '${tip}')" title="Knjiži">${ICONS.book}</button>` : 
-                                    `<button class="icon-btn btn-orange" onclick="window.knjiziPosamezen(${d.id}, 'razknjizi', '${tip}')" title="Razknjiži">${ICONS.unbook}</button>`
+                                     `<button class="icon-btn btn-green" onclick="window.knjiziPosamezen(${d.id}, 'knjizi', '${tip}')" title="Knjiži">${ICONS.book}</button>` : 
+                                     `<button class="icon-btn btn-orange" onclick="window.knjiziPosamezen(${d.id}, 'razknjizi', '${tip}')" title="Razknjiži">${ICONS.unbook}</button>`
                                 ) : ''}
                             ${tip === 'ponudbe' ? `<button class="icon-btn btn-green" onclick="window.ustvariRacunIzPonudbe(${d.id})" title="Ustvari račun">${ICONS.invoice}</button>` : ''}
                             ${tip === 'prejete_ponudbe' ? `<button class="icon-btn btn-green" onclick="window.ustvariPrejetRacunIzPonudbe(${d.id})" title="Ustvari prejet račun">${ICONS.invoice}</button>` : ''}
@@ -2095,6 +2131,10 @@ async function renderDokumenti(tip, naslov) {
         
         html += `</tbody></table>`;
         contentDiv.innerHTML = html;
+
+        if (appContent && prevScroll > 0) {
+            appContent.scrollTop = prevScroll;
+        }
         
     } catch (e) {
         contentDiv.innerHTML = `<p style="color:red">Napaka pri nalaganju podatkov.</p>`;
@@ -2102,6 +2142,12 @@ async function renderDokumenti(tip, naslov) {
 }
 
 async function showUrediDokument(id, tip, naslov) {
+    const appContent = document.getElementById('app-content');
+    if (appContent && !window._inPopupNavigation && (window._lastDocScrollTop === null || window._lastDocScrollTop === undefined)) {
+        window._lastDocScrollTop = appContent.scrollTop;
+    }
+    window._lastActiveDocId = id;
+    window._lastActiveDocTip = tip;
     try {
         const res = await fetch(`/api/dokumenti/detajl/${id}`);
         if (!res.ok) throw new Error("Ni mogoče pridobiti podatkov.");
@@ -2189,9 +2235,44 @@ window.kalkulirajTecajIzEur = function() {
     }
 };
 
-window.zapriGlavniPopup = function() {
+window.zapriGlavniPopup = async function() {
     document.getElementById('dokument-popup-overlay').style.display = 'none';
-    if (window.refreshCurrentModule) window.refreshCurrentModule();
+    const activeDocId = window._lastActiveDocId;
+    const activeScroll = window._lastDocScrollTop;
+
+    if (window.refreshCurrentModule) {
+        await window.refreshCurrentModule();
+    }
+
+    const appContent = document.getElementById('app-content');
+    if (appContent && activeScroll !== null && activeScroll !== undefined) {
+        appContent.scrollTop = activeScroll;
+    }
+
+    if (activeDocId) {
+        const row = document.getElementById(`doc-row-${activeDocId}`) || 
+                    document.getElementById(`partner-row-${activeDocId}`) ||
+                    document.getElementById(`artikel-row-${activeDocId}`) ||
+                    document.querySelector(`tr[data-id="${activeDocId}"]`);
+        if (row) {
+            if (appContent) {
+                const cRect = appContent.getBoundingClientRect();
+                const rRect = row.getBoundingClientRect();
+                if (rRect.top < cRect.top || rRect.bottom > cRect.bottom) {
+                    row.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+                }
+            }
+            row.classList.remove('highlight-row');
+            void row.offsetWidth; // force reflow
+            row.classList.add('highlight-row');
+            setTimeout(() => row.classList.remove('highlight-row'), 2000);
+        }
+    }
+
+    window._lastDocScrollTop = null;
+    window._lastActiveDocId = null;
+    window._lastActiveDocTip = null;
+    window._inPopupNavigation = false;
 };
 
 window.zapriDokumentPopup = function() {
@@ -2199,6 +2280,10 @@ window.zapriDokumentPopup = function() {
 };
 
 window.odpriGlavniPopup = function(title, innerHtml, footerHtml = "", wide = false) {
+    const appContent = document.getElementById('app-content');
+    if (appContent && !window._inPopupNavigation && (window._lastDocScrollTop === null || window._lastDocScrollTop === undefined)) {
+        window._lastDocScrollTop = appContent.scrollTop;
+    }
     const box = document.getElementById('dokument-popup-box');
     document.getElementById('dokument-popup-overlay').style.display = 'flex';
     
@@ -2221,6 +2306,15 @@ async function showDodajDokument(tip, naslov, editData = null) {
         window._dokumentHistoryStack = [];
     }
     window._navigatingHistory = false;
+
+    const appContent = document.getElementById('app-content');
+    if (appContent && !window._inPopupNavigation && (window._lastDocScrollTop === null || window._lastDocScrollTop === undefined)) {
+        window._lastDocScrollTop = appContent.scrollTop;
+    }
+    if (editData && editData.id) {
+        window._lastActiveDocId = editData.id;
+    }
+    window._lastActiveDocTip = tip;
 
     const pRes = await fetch('/api/partnerji');
     const partnerji = await pRes.json();
@@ -2275,8 +2369,8 @@ async function showDodajDokument(tip, naslov, editData = null) {
                             ${tip === 'prejete_ponudbe' ? `<button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#2b8a3e; color:white; border:1px solid #2b8a3e;" onclick="window.ustvariPrejetRacunIzPonudbe(${editData.id})" title="Ustvari prejet račun iz te ponudbe">🧾 Ustvari prejet račun</button>` : ''}
                             <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da;" onclick="showDodajDokument('${tip}', '${naslov}')" title="Nov dokument">➕ Nov</button>
                             <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#e7f5ff; color:#1971c2; border:1px solid #a5d8ff;" onclick="window.kopirajDokument(${editData.id}, '${tip}', '${naslov}')" title="Kopiraj dokument">📋 Kopiraj</button>
-                            <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da; ${!prevId ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${prevId ? `onclick="showUrediDokument(${prevId}, '${tip}', '${naslov}')"` : 'disabled'} title="Prejšnji">◀ Prejšnji</button>
-                            <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da; ${!nextId ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${nextId ? `onclick="showUrediDokument(${nextId}, '${tip}', '${naslov}')"` : 'disabled'} title="Naslednji">Naslednji ▶</button>
+                            <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da; ${!prevId ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${prevId ? `onclick="window._inPopupNavigation = true; showUrediDokument(${prevId}, '${tip}', '${naslov}')"` : 'disabled'} title="Prejšnji">◀ Prejšnji</button>
+                            <button type="button" class="btn" style="padding: 4px 10px; font-size: 0.9em; background:#f1f3f5; color:#495057; border:1px solid #ced4da; ${!nextId ? 'opacity:0.5;cursor:not-allowed;' : ''}" ${nextId ? `onclick="window._inPopupNavigation = true; showUrediDokument(${nextId}, '${tip}', '${naslov}')"` : 'disabled'} title="Naslednji">Naslednji ▶</button>
                         ` : ''}
                     </div>
                 </div>
@@ -3772,7 +3866,7 @@ async function showImportPreview(data) {
                     <input type="text" id="import-global-konto" list="konti-datalist" placeholder="Vpišite konto za vse vrstice..." style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;">
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="checkbox" id="import-is-paid" style="width:18px; height:18px;" ${data.placano ? 'checked' : ''} onchange="if(this.checked){ const izd=document.getElementById('import-datum-izdaje'); if(izd && izd.value){ const z=document.getElementById('import-datum-zapadlosti'); if(z) z.value=izd.value; const od=document.getElementById('import-datum-storitve-od'); if(od) od.value=izd.value; const do_=document.getElementById('import-datum-storitve-do'); if(do_) do_.value=izd.value; } }">
+                    <input type="checkbox" id="import-is-paid" style="width:18px; height:18px;" ${(data.placano || data.placan) ? 'checked' : ''} onchange="if(this.checked){ const izd=document.getElementById('import-datum-izdaje'); if(izd && izd.value){ const z=document.getElementById('import-datum-zapadlosti'); if(z) z.value=izd.value; const od=document.getElementById('import-datum-storitve-od'); if(od) od.value=izd.value; const do_=document.getElementById('import-datum-storitve-do'); if(do_) do_.value=izd.value; } }">
                     <label for="import-is-paid" style="font-weight:bold; cursor:pointer;">Račun je že plačan (Poslovna kartica)</label>
                 </div>
                 <p style="margin-top:5px; font-size:0.75rem; color:#666;">Če označite "Plačano", bo sistem nastavil status na plačano in način plačila na "Poslovna kartica".</p>
@@ -3819,10 +3913,10 @@ async function showImportPreview(data) {
                                 <div style="flex: 0.8; min-width: 70px;">
                                     <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:3px;">DDV %</label>
                                     <select class="i-p-ddv" style="width:100%; height:32px;" onchange="window.kalkulirajImportZneske()">
-                                        <option value="22" ${(!p.stopnja_ddv || p.stopnja_ddv === 22) ? 'selected' : ''}>22 %</option>
-                                        <option value="9.5" ${p.stopnja_ddv === 9.5 ? 'selected' : ''}>9.5 %</option>
-                                        <option value="5" ${p.stopnja_ddv === 5 ? 'selected' : ''}>5 %</option>
-                                        <option value="0" ${p.stopnja_ddv === 0 ? 'selected' : ''}>0 %</option>
+                                        <option value="22" ${(parseFloat(p.stopnja_ddv) === 22 || p.stopnja_ddv === undefined || p.stopnja_ddv === null || p.stopnja_ddv === '') ? 'selected' : ''}>22 %</option>
+                                        <option value="9.5" ${parseFloat(p.stopnja_ddv) === 9.5 ? 'selected' : ''}>9.5 %</option>
+                                        <option value="5" ${parseFloat(p.stopnja_ddv) === 5 ? 'selected' : ''}>5 %</option>
+                                        <option value="0" ${parseFloat(p.stopnja_ddv) === 0 ? 'selected' : ''}>0 %</option>
                                     </select>
                                 </div>
                                 <div style="flex: 1; min-width: 90px;">
@@ -6775,6 +6869,9 @@ function parseNumberJS(str) {
 }
 
 window.initDatePickers = function() {
+    document.querySelectorAll("input[placeholder='DD.MM.YYYY'], input[placeholder='DD.MM.YYYY HH:MM']").forEach(el => {
+        el.setAttribute("autocomplete", "off");
+    });
     if (typeof flatpickr !== 'undefined') {
         flatpickr("input[placeholder='DD.MM.YYYY']", {
             dateFormat: "d.m.Y",
@@ -8126,8 +8223,27 @@ document.addEventListener('click', function(e) {
     const overlay = document.getElementById('partner-popup-overlay');
     if(overlay && e.target === overlay) window.zapriPartnerPopup();
     
+    const dokOverlay = document.getElementById('dokument-popup-overlay');
+    if(dokOverlay && e.target === dokOverlay) window.zapriGlavniPopup();
+
     const likvOverlay = document.getElementById('likvidacija-modal-overlay');
     if(likvOverlay && e.target === likvOverlay) likvOverlay.style.display = 'none';
+});
+
+// Zapri popup ob pritisku tipke Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const dokOverlay = document.getElementById('dokument-popup-overlay');
+        if (dokOverlay && dokOverlay.style.display === 'flex') {
+            window.zapriGlavniPopup();
+            return;
+        }
+        const partnerOverlay = document.getElementById('partner-popup-overlay');
+        if (partnerOverlay && (partnerOverlay.style.display === 'flex' || partnerOverlay.classList.contains('active'))) {
+            window.zapriPartnerPopup();
+            return;
+        }
+    }
 });
 
 // --- ZAGON: Naloži zadnji aktivni modul ob odprtju (samo za trenutno sejo/osvežitev) ---

@@ -62,23 +62,26 @@ def get_now_slo():
     return datetime.now(ZoneInfo("Europe/Ljubljana")).strftime("%Y-%m-%d %H:%M:%S")
 
 # --- HEARTBEAT WATCHDOG ---
-_last_heartbeat = time.time()
-_HEARTBEAT_TIMEOUT = 300  # Povečano na 300 sekund zaradi throttlinga brskalnikov v ozadju
+# Če teče kot strežnik (SERVER_MODE=1), watchdog ne ugasne procesa
+if os.environ.get("SERVER_MODE") != "1":
+    _last_heartbeat = time.time()
+    _HEARTBEAT_TIMEOUT = 300  # Povečano na 300 sekund zaradi throttlinga brskalnikov v ozadju
 
-def _watchdog():
-    """Ozadje: ugasne streznik, ko browser zapre okno."""
-    while True:
-        time.sleep(5)
-        if time.time() - _last_heartbeat > _HEARTBEAT_TIMEOUT:
-            msg = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Heartbeat timeout ({_HEARTBEAT_TIMEOUT}s) - ugasam streznik.\n"
-            print(msg)
-            with open("server_log.txt", "a", encoding="utf-8") as f:
-                f.write(msg)
-            import os, signal
-            os.kill(os.getpid(), signal.SIGTERM)
+    def _watchdog():
+        """Ozadje: ugasne streznik, ko browser zapre okno."""
+        while True:
+            time.sleep(5)
+            if time.time() - _last_heartbeat > _HEARTBEAT_TIMEOUT:
+                msg = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Heartbeat timeout ({_HEARTBEAT_TIMEOUT}s) - ugasam streznik.\n"
+                print(msg)
+                with open("server_log.txt", "a", encoding="utf-8") as f:
+                    f.write(msg)
+                import os, signal
+                os.kill(os.getpid(), signal.SIGTERM)
 
-_wd_thread = threading.Thread(target=_watchdog, daemon=True)
-_wd_thread.start()
+    _wd_thread = threading.Thread(target=_watchdog, daemon=True)
+    _wd_thread.start()
+
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -2633,6 +2636,15 @@ def _enrich_eslog_data(data):
                         data['bizi_enriched'] = True
                 except Exception as bizi_err:
                     print(f"Bizi.si enrichment failed: {bizi_err}")
+                    
+    # Za Google in AliExpress nastavimo, da je račun plačan s poslovno kartico in brez sklica
+    p_naziv_low = (data.get('partner', {}).get('naziv') or '').lower()
+    if 'google' in p_naziv_low or 'aliexpress' in p_naziv_low:
+        data['sklic'] = ''
+        data['placano'] = True
+        data['placan'] = True
+        data['nacin_placila'] = 'Poslovna kartica'
+        
     return data
 
 @app.post("/api/dokumenti/import_eslog_bulk_potrdi")

@@ -2594,6 +2594,15 @@ def _enrich_eslog_data(data):
                         data['bizi_enriched'] = True
                 except Exception as bizi_err:
                     print(f"Bizi.si enrichment failed: {bizi_err}")
+                    
+    # Za Google in AliExpress nastavimo, da je račun plačan s poslovno kartico in brez sklica
+    p_naziv_low = (data.get('partner', {}).get('naziv') or '').lower()
+    if 'google' in p_naziv_low or 'aliexpress' in p_naziv_low:
+        data['sklic'] = ''
+        data['placano'] = True
+        data['placan'] = True
+        data['nacin_placila'] = 'Poslovna kartica'
+        
     return data
 
 @app.post("/api/dokumenti/import_eslog_bulk_potrdi")

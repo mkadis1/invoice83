@@ -13,6 +13,13 @@ APP_JS = os.path.join(STATIC_DIR, 'app.js')
 DEMO_DIR = os.path.join(BASE_DIR, 'demo')
 ZIP_OUTPUT_PATH = r'c:\Users\mihak\My Drive\Dokumenti\Antigravity\Invoice83_tester.zip'
 
+# Raspberry Pi Self-Hosting Nastavitve
+RPI_USER = "admin"
+RPI_HOST = "100.65.3.105"
+RPI_DIR = "/home/admin/racunovodstvo"
+RPI_SERVICE = "racunovodstvo"
+ENABLE_RPI_DEPLOY = True
+
 def clean():
     print("--- Ciscenje zacasnih datotek...")
     # __pycache__
@@ -286,6 +293,27 @@ def git_push():
     except Exception as e:
         print(f"[ERR] Napaka pri Git operacijah: {e}")
 
+def deploy_rpi():
+    if not ENABLE_RPI_DEPLOY:
+        print("[SKIP] Deploy na Raspberry Pi je onemogocen.")
+        return
+
+    print(f"\n--- Posodabljanje na Raspberry Pi ({RPI_USER}@{RPI_HOST})...")
+    remote_cmds = (
+        f"cd {RPI_DIR} && "
+        "git pull && "
+        f"{RPI_DIR}/venv/bin/pip install -r requirements.txt && "
+        f"sudo systemctl restart {RPI_SERVICE}"
+    )
+    
+    try:
+        # Povezava prek SSH ukaza
+        subprocess.run(["ssh", "-o", "ConnectTimeout=10", f"{RPI_USER}@{RPI_HOST}", remote_cmds], check=True)
+        print(f"[OK] Raspberry Pi ({RPI_HOST}) je bil uspesno posodobljen in storitev ponovno zagnana!")
+    except Exception as e:
+        print(f"[!] Opozorilo: Posodobitev na Raspberry Pi ni uspela: {e}")
+        print(f"[*] Nasvet: Preverite, ali je Raspberry Pi prizgan in dosegljiv preko Tailscale (ssh {RPI_USER}@{RPI_HOST}).")
+
 if __name__ == "__main__":
     print("=== AVTOMATSKA IZDAJA (RELEASE) ===")
     clean()
@@ -293,4 +321,6 @@ if __name__ == "__main__":
     update_changelog()
     run_scripts()
     git_push()
+    deploy_rpi()
     print("\n[OK] Vse koncano!")
+

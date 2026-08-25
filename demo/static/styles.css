@@ -246,6 +246,20 @@ tr:hover {
     background-color: #ffe3e3 !important;
 }
 
+@keyframes rowHighlightPulse {
+    0% { background-color: #d0ebff !important; }
+    40% { background-color: #e7f5ff !important; }
+    100% { background-color: transparent; }
+}
+
+.highlight-row {
+    animation: rowHighlightPulse 1.8s ease-out;
+}
+
+.highlight-row td {
+    background-color: transparent !important;
+}
+
 .form-group {
     margin-bottom: 15px;
 }
