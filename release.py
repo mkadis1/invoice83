@@ -303,7 +303,7 @@ def deploy_rpi():
         f"cd {RPI_DIR} && "
         "git pull && "
         f"{RPI_DIR}/venv/bin/pip install -r requirements.txt && "
-        f"sudo systemctl restart {RPI_SERVICE}"
+        "sudo systemctl restart racunovodstvo racunovodstvo-demo"
     )
     
     try:
