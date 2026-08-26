@@ -130,7 +130,8 @@
 
     <!-- Header tools moved inside main content header -->
 
-    <div class="sidebar">
+    <div id="mobile-overlay" onclick="window.toggleMobileMenu()"></div>
+    <div class="sidebar" id="sidebar">
         <div class="brand" id="brand-logo-container" onclick="document.getElementById('logo-input').click()" title="Kliknite za nalaganje ali spremembo logotipa">
             <h1 id="brand-text">Invoice83</h1>
         </div>
@@ -236,6 +237,7 @@
     </div>
     <div class="main-content">
         <header>
+            <button id="mobile-menu-btn" class="mobile-menu-btn" onclick="window.toggleMobileMenu()">☰</button>
             <div class="tabs-outer-container">
                 <button id="tabs-scroll-left" class="tabs-scroll-btn" onclick="window.scrollTabs(-1)">◀</button>
                 <div id="app-tabs-bar" class="app-tabs-bar">
@@ -431,6 +433,24 @@
                 appContent.addEventListener('scroll', updateVisibility);
             }
         })();
+    </script>
+    <script>
+        window.toggleMobileMenu = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        };
+        
+        // Zaprto na klik menija (izvedeno, ko uporabnik klikne navigacijo)
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar.classList.contains('open')) {
+                    window.toggleMobileMenu();
+                }
+            });
+        });
     </script>
 </body>
 </html>
