@@ -69,6 +69,9 @@ UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+import demo_analytics
+demo_analytics.init_analytics_db()
+
 SESSIONS_DIR = Path("sessions")
 SESSIONS_DIR.mkdir(exist_ok=True)
 
@@ -76,10 +79,19 @@ SESSIONS_DIR.mkdir(exist_ok=True)
 async def session_isolation_middleware(request: Request, call_next):
     import shutil
     path = request.url.path
-    if not path.startswith("/api") or path in ["/api/heartbeat", "/api/companies", "/api/debug-session"]:
+    
+    # Pridobi sejo
+    session_id = request.headers.get("X-Session-ID")
+    
+    # Zabeleži obisk za analitiko (brez statičnih datotek)
+    if session_id and not path.startswith("/static"):
+        client_ip = request.headers.get("x-forwarded-for") or (request.client.host if request.client else "unknown")
+        user_agent = request.headers.get("user-agent", "")
+        demo_analytics.log_session_hit(session_id, client_ip, user_agent, path)
+
+    if not path.startswith("/api") or path in ["/api/heartbeat", "/api/companies", "/api/debug-session", "/api/demo/track-event", "/api/demo-stats/json"]:
         return await call_next(request)
 
-    session_id = request.headers.get("X-Session-ID")
     if not session_id:
         database.set_active_db("demo.db")
         return await call_next(request)
@@ -107,6 +119,8 @@ async def session_isolation_middleware(request: Request, call_next):
 
 @app.on_event("startup")
 def startup():
+    import demo_analytics
+    demo_analytics.init_analytics_db()
     database.set_active_db("demo.db")
     database.init_db()
     conn = database.get_db()
@@ -140,11 +154,37 @@ def read_root():
         return HTMLResponse(content=f"<html><body>Napaka pri nalaganju index.html: {str(e)}</body></html>")
 
 @app.get("/api/heartbeat")
-def heartbeat():
-    """Browser pinguje ta endpoint vsakih 5 sekund. Watchdog se resetira."""
-    global _last_heartbeat
-    _last_heartbeat = time.time()
+def heartbeat(request: Request):
+    session_id = request.headers.get("X-Session-ID")
+    if session_id:
+        import demo_analytics
+        demo_analytics.log_heartbeat(session_id)
     return {"ok": True}
+
+@app.post("/api/demo/track-event")
+async def track_demo_event(request: Request):
+    try:
+        session_id = request.headers.get("X-Session-ID")
+        data = await request.json()
+        if session_id and data:
+            import demo_analytics
+            demo_analytics.log_event(session_id, data.get("category", "akcija"), data.get("name", ""), data.get("details", ""))
+        return {"status": "ok"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/demo-admin/stats")
+def demo_admin_stats():
+    from fastapi.responses import HTMLResponse
+    import demo_analytics
+    stats = demo_analytics.get_analytics_summary()
+    return HTMLResponse(demo_analytics.render_dashboard_html(stats))
+
+@app.get("/api/demo-stats/json")
+def demo_stats_json():
+    import demo_analytics
+    return demo_analytics.get_analytics_summary()
+
 
 class LlamaSettings(BaseModel):
     learning_mode: bool

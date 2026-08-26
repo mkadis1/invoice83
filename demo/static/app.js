@@ -1,9 +1,50 @@
+// --- SESSION INTERCEPTOR (Za izolacijo demo sej in analitiko) ---
+(function() {
+    try {
+        let sid = localStorage.getItem('invoice83_session_id');
+        if (!sid) {
+            sid = 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now().toString(36);
+            localStorage.setItem('invoice83_session_id', sid);
+        }
+        window._sessionId = sid;
+
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            options = options || {};
+            options.headers = options.headers || {};
+            if (options.headers instanceof Headers) {
+                if (!options.headers.has('X-Session-ID')) {
+                    options.headers.append('X-Session-ID', sid);
+                }
+            } else if (Array.isArray(options.headers)) {
+                options.headers.push(['X-Session-ID', sid]);
+            } else {
+                options.headers['X-Session-ID'] = sid;
+            }
+            return originalFetch.call(this, url, options);
+        };
+
+        window.trackDemoEvent = function(category, name, details) {
+            try {
+                fetch('/api/demo/track-event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: category || 'akcija', name: name || '', details: details || '' })
+                }).catch(function() {});
+            } catch(e) {}
+        };
+    } catch(e) {
+        console.warn("Session init error:", e);
+    }
+})();
+
 let contentDiv = document.getElementById('app-content');
 const titleEl = document.getElementById('module-title');
 
 // --- TAB SYSTEM STATE ---
 window.appTabs = [];
 window.activeTabId = null;
+
 
 // Startup Error Boundary
 window.onerror = function(msg, url, line, col, error) {
@@ -831,6 +872,9 @@ async function showModule(moduleName) {
     };
     
     const title = titleMap[moduleName] || 'Invoice83';
+    if (typeof window.trackDemoEvent === 'function') {
+        window.trackDemoEvent('zavihek', title);
+    }
     window.createTab(moduleName, title);
 }
 
