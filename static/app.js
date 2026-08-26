@@ -8801,8 +8801,20 @@ async function renderZgodovina() {
             <div id="zgodovina-marker" style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">14. 08. 2026</span>
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">26. 08. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li>Implement demo analytics, event tracking, and dashboard</li>
+                            <li>Restart both main and demo services during deploy</li>
+                            <li>Add Raspberry Pi deployment scripts and server mode config</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">14. 08. 2026</span>
+                            
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Zakonska skladnost — PDF račun:</strong> ID za DDV (SI + davčna št.) se zdaj pravilno izpiše za zavezance na strani tako izdajatelja kot prejemnika — skladno z ZDDV-1, čl. 82.</li>

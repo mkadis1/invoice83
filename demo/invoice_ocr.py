@@ -1111,6 +1111,217 @@ def fix_inpos_data(data, text, filename=""):
         
     return data
 
+
+def _is_aliexpress_document(filename="", text=""):
+    fn = (filename or "").lower()
+    t = (text or "").lower()
+    if "aliexpress" in fn or "ordersummary" in fn:
+        return True
+    if "aliexpress" in t or "alibaba" in t:
+        return True
+    if ("order id" in t or "order 1d" in t or "order time" in t) and ("item detail" in t or "shipping fee" in t or "vat included" in t or "things to note" in t):
+        return True
+    return False
+
+
+def fix_aliexpress_data(data, text="", filename=""):
+    """
+    100% deterministic normalizer and fallback parser for AliExpress orders.
+    """
+    import re
+    from datetime import datetime
+    
+    if not isinstance(data, dict):
+        data = {}
+        
+    # 1. Partner information
+    if "partner" not in data or not isinstance(data["partner"], dict):
+        data["partner"] = {}
+    p = data["partner"]
+    p["naziv"] = "Aliexpress"
+    p["davcna_stevilka"] = "NL826439810B01"
+    p["drzava"] = "Singapur"
+    p["ulica"] = "10 Collyer Quay # 10-01, Ocean Financial Centre"
+    p["kraj"] = "Singapur"
+    p["postna_stevilka"] = "049315"
+    p["tuji_partner_neprebran"] = False
+    data["partner_naziv"] = p["naziv"]
+    data["partner_davcna"] = p["davcna_stevilka"]
+    data["partner_trr"] = ""
+    
+    # 2. Document/Order number
+    st = str(data.get("stevilka") or "")
+    if not re.match(r'^\d{15,18}$', st):
+        m = re.search(r'\b(\d{15,18})\b', (text or "") + " " + (filename or ""))
+        if m:
+            data["stevilka"] = m.group(1)
+            
+    # 3. Dates
+    m_map = {'jan':'01','feb':'02','mar':'03','apr':'04','may':'05','jun':'06','jul':'07','aug':'08','sep':'09','oct':'10','nov':'11','dec':'12'}
+    dt = data.get("datum_izdaje") or ""
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', dt):
+        pats = [
+            r'(?:Order time|Paid on|Date)[^\w]*([A-Za-z]{3})\s+(\d{1,2})[,\.\s]+(\d{4})',
+            r'([A-Za-z]{3})\s+(\d{1,2})[,\.\s]+(\d{4})',
+            r'(\d{1,2})\s+([A-Za-z]{3})[,\.\s]+(\d{4})',
+            r'(\d{4})-(\d{2})-(\d{2})'
+        ]
+        for pat in pats:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                try:
+                    g = m.groups()
+                    if len(g) == 3:
+                        if g[0].lower()[:3] in m_map:
+                            mm, d, y = m_map[g[0].lower()[:3]], g[1].zfill(2), g[2]
+                            dt = f"{y}-{mm}-{d}"
+                        elif g[1].lower()[:3] in m_map:
+                            d, mm, y = g[0].zfill(2), m_map[g[1].lower()[:3]], g[2]
+                            dt = f"{y}-{mm}-{d}"
+                    elif len(g) == 3:
+                        dt = f"{g[0]}-{g[1]}-{g[2]}"
+                    break
+                except:
+                    pass
+    if not dt:
+        dt = datetime.now().strftime("%Y-%m-%d")
+        
+    data["datum_izdaje"] = dt
+    data["datum_zapadlosti"] = dt
+    data["datum_storitve_od"] = dt
+    data["datum_storitve_do"] = dt
+    data["datum_placila"] = dt
+    
+    # 4. Payment method
+    data["sklic"] = ""
+    data["placano"] = True
+    data["nacin_placila"] = "Poslovna kartica"
+    
+    # 5. Financial totals
+    m_sub = re.search(r'Subtotal:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_disc = re.search(r'All\s*discount:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_ship = re.search(r'Shipping\s*fee:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_tot = re.search(r'(?<!Sub)Total:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    
+    subtotal = float(m_sub.group(1)) if m_sub else 0.0
+    discount_amount = float(m_disc.group(1)) if m_disc else 0.0
+    shipping_fee = float(m_ship.group(1)) if m_ship else 0.0
+    total = float(m_tot.group(1)) if m_tot else round(subtotal - discount_amount + shipping_fee, 2)
+    
+    # OCR Sanity check: shipping_fee cannot be ridiculously larger than total unless it's a bug
+    if total > 0 and shipping_fee > total + discount_amount:
+        if shipping_fee / 100 <= total + discount_amount:
+            shipping_fee = shipping_fee / 100
+        else:
+            shipping_fee = 0.0
+    
+    m_vat = re.search(r'(?:[€\$]|EUR)?\s*([\d]+\.[\d]{2})\s*VAT\s*included', text, re.IGNORECASE)
+    if m_vat and float(m_vat.group(1)) < total:
+        vat_amount = float(m_vat.group(1))
+    else:
+        vat_amount = round(total - shipping_fee - ((total - shipping_fee) / 1.22), 2)
+        
+    net_amount = round(total - vat_amount, 2)
+    
+    data["znesek_skupaj"] = total
+    data["znesek_ddv"] = vat_amount
+    data["znesek_brez_ddv"] = net_amount
+    
+    disc_pct = round((discount_amount / subtotal) * 100, 2) if subtotal > 0 else 0.0
+    
+    # 6. Extract Line Items
+    postavke = []
+    
+    item_part = ''
+    if 'item detail' in text.lower():
+        parts = re.split(r'item detail', text, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            item_part = parts[1]
+    elif 'ccemd detail' in text.lower():
+        parts = re.split(r'ccemd detail', text, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            item_part = parts[1]
+    elif 'detail' in text.lower():
+        parts = re.split(r'detail', text, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            item_part = parts[1]
+            
+    if 'things to note' in item_part.lower():
+        item_part = re.split(r'things to note', item_part, flags=re.IGNORECASE)[0]
+        
+    item_matches = list(re.finditer(r'(?:[€\$]|EUR)?\s*([\d]+\.[\d]{2})\s*x\s*(\d+)', item_part))
+    
+    if item_matches:
+        last_pos = 0
+        raw_items = []
+        for im in item_matches:
+            price_gross = float(im.group(1))
+            qty = float(im.group(2))
+            chunk = item_part[last_pos:im.start()]
+            last_pos = im.end()
+            
+            lines = [l.strip() for l in chunk.splitlines() if l.strip()]
+            clean_lines = []
+            for l in lines:
+                if re.match(r'^[~\-—_\*\|\s@\>\\\.\:\?\,\(\)\d]+$', l): continue
+                if any(k in l.lower() for k in ['store', 'things to note', 'view details']): continue
+                clean_lines.append(l)
+                
+            desc = " ".join(clean_lines).strip()
+            desc = re.sub(r'^[~\-—_\*\|\s@\>\\\.\:\?\,\(\)\d]+', '', desc).strip()
+            if not desc:
+                desc = f"Aliexpress izdelek {data.get('stevilka', '')}"
+                
+            raw_items.append({"opis": desc, "kolicina": qty, "price_gross": price_gross})
+            
+        if len(raw_items) == 1 and subtotal > 0 and abs(raw_items[0]["price_gross"] * raw_items[0]["kolicina"] - subtotal) > 0.05:
+            raw_items[0]["price_gross"] = round(subtotal / raw_items[0]["kolicina"], 2)
+            
+        for it in raw_items:
+            price_gross = it["price_gross"]
+            qty = it["kolicina"]
+            unit_price_net = round(price_gross / 1.22, 4)
+            item_subtotal = price_gross * qty
+            if disc_pct > 0:
+                item_total_gross = round(item_subtotal * (1 - disc_pct / 100), 2)
+            else:
+                item_total_gross = round(item_subtotal, 2)
+                
+            postavke.append({
+                "opis": it["opis"],
+                "kolicina": qty,
+                "enota_mere": "kos",
+                "cena_enote": unit_price_net,
+                "popust": disc_pct,
+                "stopnja_ddv": 22.0,
+                "znesek_skupaj": item_total_gross
+            })
+    else:
+        postavke.append({
+            "opis": f"Nakup AliExpress {data.get('stevilka', '')}",
+            "kolicina": 1.0,
+            "enota_mere": "kos",
+            "cena_enote": round(subtotal / 1.22, 4) if subtotal else round((total - shipping_fee + discount_amount) / 1.22, 4),
+            "popust": disc_pct,
+            "stopnja_ddv": 22.0,
+            "znesek_skupaj": round(subtotal - discount_amount, 2) if subtotal else round(total-shipping_fee, 2)
+        })
+        
+    if shipping_fee > 0:
+        postavke.append({
+            "opis": "Shipping fee",
+            "kolicina": 1.0,
+            "enota_mere": "kos",
+            "cena_enote": shipping_fee,
+            "popust": 0.0,
+            "stopnja_ddv": 0.0,
+            "znesek_skupaj": shipping_fee
+        })
+        
+    data["postavke"] = postavke
+    return data
+
+
 def check_corrections(original, final):
     if not original:
         return True
@@ -1363,6 +1574,9 @@ def save_llama_learning_example(ocr_text, final_confirmed_data, original_data, f
         print(f"Napaka pri posodabljanju Llama pravil: {e}")
 
 def llama_identify_supplier(text, model="llama3"):
+    if _is_aliexpress_document("", text):
+        return {"naziv": "Aliexpress", "davcna_stevilka": "NL826439810B01"}
+        
     import requests
     import json
     url = "http://localhost:11434/api/chat"
@@ -1386,7 +1600,7 @@ def get_supplier_rules(davcna):
     try:
         conn = database.get_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT extraction_rules FROM llama_supplier_rules WHERE davcna_stevilka = ?", (davcna,))
+        cursor.execute("SELECT extraction_rules FROM llama_supplier_rules WHERE davcna_stevilka = ? OR UPPER(naziv) = UPPER(?)", (davcna, davcna))
         row = cursor.fetchone()
         conn.close()
         return row['extraction_rules'] if row else None
@@ -1510,28 +1724,29 @@ If the text contains "Dobropis" or "credit note":
 
 SPECIFIC RULES FOR ALIEXPRESS ORDERS:
 If the text contains "AliExpress" or "Order ID" or "Alibaba" or "Order time" or "Item detail":
-1. The supplier/partner name MUST be "Aliexpress" and the tax ID is "NL826439810B01", country is "Kitajska". The BUYER is Miha Kadiš.
-2. The "stevilka" (invoice/order number) is the long numeric Order ID (15-18 digits), e.g. "3068081298166667".
+1. The supplier/partner name MUST be "Aliexpress" and the tax ID is "NL826439810B01", country is "Singapur", ulica is "10 Collyer Quay # 10-01, Ocean Financial Centre", kraj is "Singapur", postna_stevilka is "049315", tuji_partner_neprebran is false.
+2. The "stevilka" (invoice/order number) is the long numeric Order ID (15-18 digits).
 3. "datum_izdaje" and "datum_zapadlosti" are the order/payment date (e.g. "Feb 2, 2026" → "2026-02-02").
-4. "znesek_skupaj" is the "Total" amount (e.g. "€5.14" → 5.14). This is the GROSS amount WITH VAT.
-5. ALL prices on AliExpress receipts are GROSS (WITH VAT included at 22%). You MUST calculate net unit prices by dividing the gross price by 1.22: cena_enote = gross_price / 1.22.
-6. Look for "Subtotal" (e.g. €4.49) and "All discount" (e.g. €0.04).
-7. Calculate the discount percentage: discount_pct = (All discount / Subtotal) * 100 (e.g., (0.04 / 4.49) * 100 = 0.89%).
-8. For each product in the "Item detail" section:
-   - Use the product name as "opis" (concat any sub-lines or model specifications like "ESP32-C3").
-   - Set "kolicina" to the quantity specified after 'x' in the Item detail section (e.g., 'x2' means kolicina = 2.0). Do NOT just default to 1.0.
-   - Calculate "cena_enote" (unit price without VAT) using the single unit's gross price: cena_enote = unit_gross_price / 1.22 (e.g., if listed as €2.32 x2, the unit gross price is 2.32, so cena_enote = 2.32 / 1.22 = 1.9016).
-   - Set "popust" to the calculated discount_pct (e.g. 0.89 or 1.0).
-   - Set "stopnja_ddv" to 22.0.
-   - Calculate "znesek_skupaj" for the line item as: (unit_gross_price * kolicina) - ((unit_gross_price * kolicina) * discount_pct / 100) (e.g. (2.32 * 2) - 0 = 4.64).
-9. The "Shipping fee" (e.g. "€0.69") is ALWAYS a separate line item:
+4. "nacin_placila" MUST be "Poslovna kartica" and "placano" MUST be true. "sklic" is "".
+5. Look for "Subtotal", "All discount" (or "Coins"/"Balance"), "Shipping fee", and "Total".
+6. VERIFICATION LOGIC: Calculate "Total" = "Subtotal" - "All discount" + "Shipping fee". The extracted "znesek_skupaj" MUST be this "Total". The total VAT amount ("znesek_ddv") is derived from the items (22% on regular items, 0% on shipping).
+7. For each product in the "Item detail" section:
+   - "opis": Use the product name.
+   - "kolicina": The quantity specified after 'x' (e.g., 'x2' means 2.0).
+   - "stopnja_ddv": MUST be 22.0.
+   - Extract the unit gross price (e.g. if €2.32 x2, unit gross is 2.32).
+   - "cena_enote": Calculate unit price WITHOUT VAT as: unit gross price / 1.22 (e.g. 2.32 / 1.22 = 1.9016).
+   - "popust": Calculate item discount percentage as ("All discount" / "Subtotal") * 100.
+   - "znesek_skupaj": Calculate as (unit gross price * kolicina) * (1 - popust/100).
+   - CRITICAL: The sum of (unit gross price * kolicina) for all items MUST exactly equal the "Subtotal"! If an item price is misread, recalculate it based on Subtotal.
+8. The "Shipping fee" MUST be added as a SEPARATE line item (only if > 0):
    - "opis": "Shipping fee".
    - "kolicina": 1.0.
-   - "cena_enote": gross_shipping / 1.22 (e.g. 0.69 / 1.22 = 0.5656).
-   - "popust": 0.0 (no discount applies to shipping fee).
-   - "stopnja_ddv": 22.0.
-   - "znesek_skupaj": gross_shipping (e.g. 0.69).
-10. "tuji_partner_neprebran" MUST be false for AliExpress.
+   - "stopnja_ddv": MUST be 0.0 (0% VAT for shipping).
+   - "cena_enote": The gross shipping fee amount (since 0% VAT, net = gross).
+   - "popust": 0.0.
+   - "znesek_skupaj": The gross shipping fee amount.
+9. "tuji_partner_neprebran" MUST be false.
 
 SPECIFIC RULES FOR "GOOGLE" INVOICES (Google Cloud EMEA Limited, Google Ireland Limited, Google Workspace, Google Cloud, Google Ads):
 If the text contains "Google Cloud EMEA" or "Google Ireland" or "Google Workspace" or "Google Cloud" or "členom 196 Direktive" or filename contains "Google":
@@ -1651,6 +1866,8 @@ Here is the invoice text:
         parsed = fix_soncek_data(parsed, text, filename)
     elif (_is_sp_document(filename, text)):
         parsed = fix_sp_data(parsed, text, filename)
+    elif _is_aliexpress_document(filename, text) or "aliexpress" in str(p.get("naziv", "")).lower() or "alibaba" in str(p.get("naziv", "")).lower():
+        parsed = fix_aliexpress_data(parsed, text, filename)
     if _is_credit_note(filename, text):
         parsed = fix_credit_note_data(parsed, text, filename)
         
@@ -1767,11 +1984,16 @@ def post_process_invoice_data(data):
                 gross_diff = gross_before_with_vat - sk
                 
                 # Če je popust v EUR (npr. -4.99 ali 4.99)
-                if pop < 0 or abs(pop - gross_diff) < 0.1:
-                    pop_val = abs(pop) if pop < 0 else gross_diff
+                if pop < 0:
+                    pop_val = abs(pop)
                     if gross_before_with_vat > 0:
-                        pop = round((pop_val / gross_before_with_vat) * 100, 2)
-                        p["popust"] = pop
+                        p["popust"] = round((pop_val / gross_before_with_vat) * 100, 2)
+                elif pop > 0 and abs(pop - gross_diff) < 0.1 and gross_diff > 0.05:
+                    pop_val = gross_diff
+                    if gross_before_with_vat > 0:
+                        p["popust"] = round((pop_val / gross_before_with_vat) * 100, 2)
+                elif abs(pop) < 0.001 or abs(gross_diff) < 0.05:
+                    p["popust"] = 0.0
                 
                 # Zdaj preveri če je cena bruto (MPC) ali neto
                 # Če se ujema bruto izračun (cena * kol * (1 - pop/100)) z znesek_skupaj (sk), je cena bila bruto.
@@ -1812,7 +2034,7 @@ def post_process_invoice_data(data):
         partner_name = (data.get("partner_naziv") or (data.get("partner", {}).get("naziv") if isinstance(data.get("partner"), dict) else "") or "").lower()
         ocr_t = (data.get("ocr_text") or "").lower()
         
-        if "google" in partner_name or "google cloud" in ocr_t or "google workspace" in ocr_t or "morebitni dolgovani znesek vam bomo samodejno zaračunali" in ocr_t:
+        if "google" in partner_name or "google cloud" in ocr_t or "google workspace" in ocr_t or "morebitni dolgovani znesek vam bomo samodejno zaračunali" in ocr_t or "aliexpress" in partner_name or "aliexpress" in ocr_t or "ordersummary" in ocr_t or "alibaba" in partner_name or "alibaba" in ocr_t:
             data["sklic"] = ""
             data["placano"] = True
             data["placan"] = True
@@ -1895,6 +2117,9 @@ def process_invoice_data(source, filename):
             parsed = parse_with_llama(text, filename, "llama3", rules=rules)
             if parsed:
                 parsed = post_process_invoice_data(parsed)
+                # Za AliExpress dokumente vedno reapply fix po post_process (ki bi sicer resetiral DDV na 0)
+                if _is_aliexpress_document(filename, text):
+                    parsed = fix_aliexpress_data(parsed, text, filename)
                 # Zagotovi, da je ocr_text vedno vključen (za shranjevanje učenja)
                 if 'ocr_text' not in parsed or not parsed['ocr_text']:
                     parsed['ocr_text'] = text
@@ -1945,7 +2170,9 @@ def process_invoice_data(source, filename):
     regex_res = parse_invoice_data(text)
     if isinstance(regex_res, dict):
         regex_res['ocr_text'] = text
-        if _is_credit_note(filename, text):
+        if _is_aliexpress_document(filename, text):
+            regex_res = fix_aliexpress_data(regex_res, text, filename)
+        elif _is_credit_note(filename, text):
             regex_res = fix_credit_note_data(regex_res, text, filename)
         regex_res = post_process_invoice_data(regex_res)
         

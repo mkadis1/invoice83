@@ -60,6 +60,39 @@
             align-items: center; justify-content: center; flex-direction: column; text-align: center;
             padding: 20px;
         }
+
+        /* Gumb za vrnitev na vrh */
+        #back-to-top {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 9999;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary-blue, #2563eb);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition: opacity 0.25s, transform 0.25s;
+        }
+        #back-to-top.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        #back-to-top:hover {
+            background: #1d4ed8;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
     </style>
     <script>
         // Startup Monitor
@@ -345,9 +378,59 @@
     </div>
 
     <datalist id="konti-datalist"></datalist>
+
+    <!-- Gumb za vrnitev na vrh -->
+    <button id="back-to-top" title="Na vrh" onclick="window.scrollToTop()">↑</button>
+
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/sl.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="/static/app.js?v=2026060312"></script>
+    <script>
+        // Gumb za vrnitev na vrh
+        (function() {
+            var btn = document.getElementById('back-to-top');
+
+            function getScrollTop() {
+                var appContent = document.getElementById('app-content');
+                var appScroll = appContent ? appContent.scrollTop : 0;
+                var winScroll = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                return Math.max(appScroll, winScroll);
+            }
+
+            function updateVisibility() {
+                if (getScrollTop() > 250) {
+                    btn.classList.add('visible');
+                } else {
+                    btn.classList.remove('visible');
+                }
+            }
+
+            window.scrollToTop = function() {
+                var appContent = document.getElementById('app-content');
+                if (appContent) {
+                    appContent.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+                document.body.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // Prav tako pomakni morebitne odprte modale/popupe
+                var popups = document.querySelectorAll('#dokument-popup-box, #partner-popup-box, #artikel-popup-overlay > div, #artikel-form-popup-container');
+                popups.forEach(function(el) {
+                    if (el && el.scrollTop > 0) {
+                        el.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                });
+            };
+
+            // Poslušaj pomik na vsebini aplikacije in na celotnem oknu (s capture)
+            window.addEventListener('scroll', updateVisibility, true);
+            var appContent = document.getElementById('app-content');
+            if (appContent) {
+                appContent.addEventListener('scroll', updateVisibility);
+            }
+        })();
+    </script>
 </body>
 </html>
