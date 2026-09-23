@@ -57,6 +57,34 @@ import time
 
 app = FastAPI(title="Invoice83 API")
 
+# --- HTTP BASIC AUTH (samo v strežniškem načinu SERVER_MODE=1) ---
+_AUTH_ENABLED = os.environ.get("SERVER_MODE") == "1"
+_AUTH_USER = os.environ.get("AUTH_USER", "")
+_AUTH_PASS = os.environ.get("AUTH_PASS", "")
+
+if _AUTH_ENABLED and _AUTH_USER and _AUTH_PASS:
+    from fastapi import Request
+    from fastapi.responses import Response as _Response
+    import base64 as _base64
+
+    @app.middleware("http")
+    async def basic_auth_middleware(request: Request, call_next):
+        """Ščiti celotno aplikacijo z Basic Auth — aktivno samo v SERVER_MODE=1."""
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Basic "):
+            try:
+                decoded = _base64.b64decode(auth_header[6:]).decode("utf-8")
+                username, password = decoded.split(":", 1)
+                if username == _AUTH_USER and password == _AUTH_PASS:
+                    return await call_next(request)
+            except Exception:
+                pass
+        return _Response(
+            content="Dostop zavrnjen. Vnesite uporabniško ime in geslo.",
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Invoice83"'},
+        )
+
 def get_now_slo():
     """Vrne trenutni čas v Sloveniji (Europe/Ljubljana) v formatu YYYY-MM-DD HH:MM:SS."""
     return datetime.now(ZoneInfo("Europe/Ljubljana")).strftime("%Y-%m-%d %H:%M:%S")

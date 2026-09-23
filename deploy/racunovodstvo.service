@@ -7,6 +7,8 @@ User=admin
 WorkingDirectory=/home/admin/racunovodstvo
 Environment="SERVER_MODE=1"
 Environment="PORT=8000"
+Environment="AUTH_USER=miha.kadis"
+Environment="AUTH_PASS=Opoz1c1ja!"
 ExecStart=/home/admin/racunovodstvo/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=3
