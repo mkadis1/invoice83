@@ -1,0 +1,523 @@
+=== GLS invoice__1771-MK-29304989__myCjsCUo2AYDjSw6.pdf ===
+Sim 83 - Simulatorji vožnje M GENERAL LOGISTICS SYSTEMS,
+iha Kadiš s.p. Logistične storitve d.o.o.
+Cesta v Prod 84
+Miha Kadiš s.p. SI-1000 Ljubljana
+11648236 ID za DDV / VAT no.: SI74531891
+Dobja vas 253 TRR / Bank account: SI56 1010 0005 2763 339
+SI-2390-Ravne na Koroškem Kontaktna oseba / Contact: Mojca Bostič
+Račun / Invoice
+Št. računa / Invoice no.: #1771-MK-29304989
+Datum valute / Date of payment: račun je že poravnan
+Št. Naročila / Order no.: #6577717
+Datum računa / Invoice date: 13.04.2026
+Artikel M.E. Količina Znesek brez DDV VAT % Cena EUR
+Service code Q.u. Quantity Net Amount VAT % Unit price
+Paket 7010645652 Kos/p. 1 2,86 € 22,00 % 3,49 €
+dostava do prejemnika Kos/p. 1 0,99 € 22,00 % 1,21 €
+Skupaj / Total: 4,70 €
+DDV % Davčna osnova DDV Skupaj z DDV
+VAT % NET VAT Gross
+22,00 % 3,85 0,85 4,70
+Skupaj za plačilo / Total amount: 4,70 €
+ZOI: 5fdfa513ab1f0ae1184a6b198cb7c0ca
+EOR: b0d082ea-2d24-4bd8-8d9b-e065d7c1278c
+Posljujemo v skladu z veljavnimi Splošnimi pogoji poslovanja podjetja General Logistic Systems d.o.o., ki so
+objavljeni na naši spletni strani. / We are working according to the Slovenian General Conditions of
+Transportation and General Terms and Conditions of General Logistics Systems d.o.o.
+V primeru nepravočasnega plačila si lahko pridržujemo pravico zaračunati zakonske zamudne obresti. / In
+case of late payment we can take a right to charge you interests based on Slovenian law.
+Rok za reklamacijo računa je 8 dni od izdaje računa. / Due date for reject invoice is 8 days.
+General Logistics Systems, Logistične storitve, d.o.o.
+Okrožno sodišče v Ljubljani, Ust. Kapital 751.127 EUR. SRG: 2000/13500. št. vložka: 061 / 13331600.
+Matična čt. 1538217. ID za DDV: SI74531891.
+T: +386 1 500-11-61, E: racuni.gls@gls-slovenia.com
+Powered by TCPDF (www.tcpdf.org)
+
+
+=== Fanatec Invoice-F1276886.pdf ===
+INVOICE SUPPLIER
+Corsair Components Limited
+1020 ESKDALE ROAD, WINNERSH
+TRIANGLE,
+INVOICE:
+WOKINGHAM, UK,
+F1276886 RG41 5TS
+VAT Registration number : NL827571732B01
+ISSUE DATE:
+April 27, 2026 April 27, 2026
+CLIENT
+Miha Kadis s.p.
+Dobja vas 253
+2390 Ravne na Koroskem
+Slovenia
+Item Description Quantity Unit Price incl. tax Total Tax Amount
+ClubSport Button Cluster Pack SKU: CS_BCP 2 39.95 €79.90 €14.41
+SUBTOTAL: €79.90
+TOTAL EXCL. TAX: €65.49
+TOTAL INCL. TAX: €79.90
+April 27, 2026 €79.90
+ISSUE DATE: AMOUNT DUE:
+PAYMENT METHOD
+Thank you for your purchase.
+Credit Card
+ORDER NUMBER
+#F1276886
+FANATEC | Website: help.fanatec.com
+View this document online at https://fanatec.sufio.com/cxkytuttprgz?vgeuk7r32a. Created in Sufio
+
+
+=== Ebull Racun_st-_1389-2026.pdf ===
+eBull d.o.o.
+Velika Ligojna 32a, SI-1360 Vrhnika
+SI18717667
+Tel: 05 90 47 040
+Fax: 05 90 31 990
+narocila:narocila@ebull.si
+Web: www.ebull.si
+Račun št. 1389-2026
+Miha Kadiš s.p.
+Identifik. številka kupca: 11648236
+Miha Kadiš
+Datum dokumenta: 4.3.2026
+Dobja vas 253 Datum valute: 9.3.2026
+Sklicna št.: 002026-1389
+Opombe: Predračun št.:260703; PLAČANO
+2390 RAVNE NA KOROŠKEM
+Način odpreme: Dostava po pošti
+Dokument izdal: Andrej Frank
+Kraj: Vrhnika
+Datum odpr. oz. opr. storitve: 9.3.2026
+Št.nar.kupca/datum:E2603-0935/4.3.26
+Dostava: Miha Kadiš s.p., Miha Kadiš, Dobja vas 253, 2390 RAVNE NA KOROŠKEM, SLOVENIJA, ,
+Fakturirano po dobavnicah: 1321
+Št. Šifra Opis DS% Kol.ME MPC Rab. Vrednost EUR Cena pop.
+Dobavnica št. 1321 Miha Kadiš s.p. Dobja vas 253, 2390 RAVNE NA KOROŠKEM, Predračun št.:260703; PLAČANO Št.nar.kup.E2603-0935
+16970135034796 ROBOTSKA KOSILNICA GOAT O500 PANORAMA 22 1Kos 737,697 22,22 573,76 573,762
+črtna koda: 6970135034796
+26970135030750 GOAT NADOMESTNA REZILA SERIJE G/O/A 22 1Kos 13,107 13,11 13,107
+črtna koda: 6970135030750
+Vrednost dobavnice 1321 586,87 + 129,11 DDV = 715,98
+Vrednost (upoštevani popust 163,93 EUR) 586,87
+DDV 22,00% od osnove 586,87 129,11
+Skupaj za plačilo EUR 715,98
+Količina na enoto mere: 2 Kos (18,602kg) (0,112m³) (Skupaj: 18,602kg) (Skupaj: 0,112m³)
+Zapadlost računa je 9.3.2026.
+EBULL D.O.O. Direktor:
+Anja Leskovar
+Andrej Frank
+eBull, svetovanje, trgovina in storitve, d.o.o., Velika Ligojna 32a, 1360 Vrhnika; matična številka: 3652190000, davčna številka: SI18717667, osnovni kapital: 30.000,00 EUR
+Banka: Unicredit banka Slovenija d.d., TRR: SI 56 2900 0005 1675 928, SWIFT: BACXSI22; OTP Banka d.d., TRR: SI 56 0400 0027 7674 566, SWIFT: KBMASI2X
+
+
+=== soncek 2177.pdf ===
+a es ee ee
+" HOBY Pa soncek port vo. a www.pohistvo-soncek-si<
+= “tudi na vase pF istvo. ~e Paes See
+i CENTER: fo ! SS ie
+B soncek ji SONCEK d.o.0. Tel: + 386 02 87 23502 | Emall: info@ponisivea-soncek-st
+Podklanc 31, 2370 Dravograd Fax: + 386 02 87 23 507
+Miha Kadi s.p. . [RACUN 1-10-2177
+Dobja vas 253 DRAVOGRAD, dne 26.02.2026 13:13:21
+2390 Ravne na Koroskem Dobavnica 00867
+Rok plaéila 26.02.2026
+TR racun 0247 0001 5451 739
+Datum dobave blaga oziroma izvrSitve storitev: 26.02.2026 _
+Kupec | Skladigée | Kome. Naroilo Dat. narocila ID St. za DDV kupca
+11648236 1 013 11648236 Al Zeezanee
+224520 +. 1570MN IVERAL DIAMANTNO BELA 19mm ‘
+2800*2070*19mm ~0,500 M2 15,19 0,00 22,0% 15,20 7,60
+215719 1570MN TRAK ROBNI ABS 23*1mm \ |
+1-011105-0699 4,250 M 0,70 0,00 22,0% 0,70 2,98
+00034 ROBLJENJEDO2OMMSPUR 4.250 TM 1,28 0,08 22,0% 27 A
+SKUPAJ . 16,02
+- rabat 0,65% od osnove 5,44 0,04
+SKUPAJ brez DDV 15,98
++ DDV 22,00% od osnove 15,98 3,52
+SKUPAJ ZA PLACILO EUR | 19,50
+Prejeto predplatilo 344.2026 zdne 26.02.2026 city os. 19,50
+odtega DDV 3,52 \
+ZA PLACILO EUR i 0,00
+pe
+[i] Sy# [me] Interna stevika: 345.2026 7 }
+" lzdelal: 013 Mirsad Bajrami | \
+. ZO! cbb14c588628c30b06287,14023061 aef ) ;
+Oo EOR f717a4e1-b5b4-43d7-95e9-c763fde031d7 :
+Pri placilu se sklicujte na Stevilko 00 345-11648236
+aa nes waa Bajrami BONCE K 1.0.0. Direktor: Tomaz Skarlovnik, dipl.ing.les
+el.; 7 Podktg ; !
+2 107 2370 DR AVOGRAD OA vi Y
+. t'
+rR eee ee eI hae
+SONCEK TRGOVSKO PODJET,
+, E Do.0., skrajgan nazlv firme; SONCEK D,0.0., O ‘tea: 90 eur,
+Matiéna St. : 9371805, ID za DDV : $124011 499, Ljubljanska banka d.d., IBAN:SI56 0247 6001 5451 SE eee oor: LJBASI2X
+" . |
+
+a
+“g ma bee | | oo gent JERE
+| CENTER; RECS |
+‘Ee SONCEK d.o.0. Tel: + 386 02 87 23 502 | Emall: info@pohistvo-soncek.si .
+Podklanc 31, 2370 Dravograd | Fax: + 386 02 87 23 507
+Miha Kadi s.p. *
+Dobja vas 253 - [BRAVOGRAD, dne 26.02.2026 13:13:21
+2390 Ravne na Koroskem Dobavnica 00867
+Rok plagila 26.02.2026
+TR ratun 0247 0001 5451 739
+Datum dobave blaga oziroma izvrsitve storitev: 26.02.2026
+‘Sitaenkta Nav SSS CKOlibina Enota Cena Rabat_DDV __Netocena_\fediost
+
+224520 | 1570MN IVERAL DIAMANTNO BELA 19mm a :
+- 2800*2070*19mm ~9,500 M2 "15,19 0,00 22,0% 15,20 7,60
+215719 1570MN TRAK ROBNI ABS 23*1mm aN oe
+1-011105-0699 . 4,250 M 0,70 0,00 22,0% 0,70 2,98
+00034 ROBLYENJE DO 20MMS PUR” _ 4260 TM 1,28 (0,65'22,0% 27) AD
+SKUPAJ CC J oo . 16,02
+- rabat 0,65% od osnove . 7 544 _ —_ 0,04
+SKUPAJ brez DDV , ne eS oe 15,98
++ DDV 22,00% od osnove 15,98 , yoo 3,52
+SKUPAJ ZA PLACILO EUR | . . rh 19,50
+Prejeto predplacilo 344.2026 zdne 26.02.2026 — OO an 4 J S. 19,50
+odtega DDV_ 3,52 . oo re — Cog “A
+ZA PLACILO EUR a oO ee 0,00
+[i] Sy# [me] Intema stevika: 345.2026 rr
+| 3, |Zdelal: 013 Mirsad Bajrami {| =. “4. ob So ,
+. .ZO1! cbb14c588628¢30b0628714023061aef — ne Co ;
+ol EOR f717a4e1-b5b4-43d7-95e9-c763fde031d7 a
+Pri plaéilu se sklicujte na Stevilko 00 345-11648236 =i “ati :«; / :
+
+. “ . . , .
+Racun sestavil: Mirsad Bajrami SONCEK-doo, ~~ — 
+
+=== e-racuni Racun_st._2026-00650.pdf ===
+E-RAČUNI d.o.o.
+Titova cesta 8, 2000 Maribor
+Tel. 02 3000-135, Fax 02 3000-136
+ID št. za DDV: SI95985352
+Račun številka: 2026-00650
+SIM 83 - SIMULATORJI VOŽNJE
+MIHA KADIŠ S.P.
+Maribor, 05.01.2026
+DOBJA VAS 253 Datum zapadlosti: 05.01.2026
+Datum opr. storitve: 09.01.2026-08.02.2026
+Veza na ponudbo: 2026-00059
+2390 Ravne na Koroškem Način plačila: nakazilo na TR
+TRR: SI56 0443 0000 0256 970
+Sklic: 05 1266500
+Davčna št.: 11648236
+Poz. Vrsta blaga - storitev Kol. EM Cena brez DDV R % DDV % Vred. brez DDV
+1 e-racuni.com paket BASIC 1 mes. 11,11 0% 22 11,11
+Za obdobje od 09.01.2026 do 08.02.2026
+Skupaj vrednost brez DDV: 11,11
+Osnova 22%: 11,11
+DDV 22%: 2,44
+Za plačilo EUR: 13,55
+Prejeto plačilo: 13,55
+Ostane za plačilo: 0,00
+ID naročnika: 107.932921
+Uporabniško ime: MIHA.KADIS@83.SI
+POMEMBNO: pogoj za podaljšanje naročnine je plačilo ponudbe v celoti vključno s poravnanimi vsemi dolgovi iz preteklosti.
+Račun bo izstavljen in poslan po elektronski pošti na elektronski naslov naveden na tej ponudbi. V kolikor podatki o kupci na tej ponudbi
+niso pravilni, potem vas prosimo, da ponovite postopek naročanja in vnesete pravilne podatke o kupcu (naziv, sedež, davčna oz. DDV
+številka).
+V primeru nakazila nezadostnega zneska bo naročnina podaljšana za krajše obdobje proporcionalno glede na vplačan znesek oz. bo
+ponudnik izvedel vračilo nakazila s predhodnim odbitkom stroškov procesiranja plačila. Pravila vračila denarja so določena v splošnih
+pogojih objavljenih na www.e-racuni.com
+Z izvedbo nakazila, plačilom preko Flik-a oz. s plačilom s kartico kupec izrecno podaja soglasje s splošnimi pogoji uporabe programa
+objavljenimi na spletni strani www.e-racuni.com
+Pri plačilu obvezno vpišite sklic oz. pripišite številko ponudbe v namen plačila sicer ne bo mogoče podaljšati vaše naročnine. V kolikor
+naročnina ni podaljšana do konca plačanega predhodnega obdobja, se lahko dostop avtomatsko blokira.
+Vračilo denarja za neporabljeno naročnino je možno za vsak polni mesec, ki sledi trenutnemu mesecu uporabe. Ob vračilu se zaračunajo
+administrativni stroški obdelave stornacije v višini 25 EUR + DDV. Vračamo izključno na TR ne glede na način plačila.
+Vračilo denarja za obračunane storitve, vplačano dobroimetje in aktivacijo modulov ni mogoče.
+Fakturiral/-a: Maša Gorišek Direktor:
+David Gorišek
+www.e-racuni.com - Online poslovni programi Stran: 1 / 1
+ID št. za DDV: SI95985352 - IBAN: SI56600000001302296 BIC: HLONSI22 - Matična št.: 1619675000
+Družba je registrirana pri Okrožnem sodišču Maribor, Št. registra 1/11079/00 dne:21.5.2001
+Znesek osnovnega kapitala: 58.763 EUR
+
+
+=== Bauhaus 0110052001.pdf ===
+Stran 1 od 3
+BAUHAUS d.o.o., k.d., Kajuhova ulica 45, 1000 Ljubljana Račun
+Kontaktni center za pomoč strankam:
+*
+Št. telefona : +386 1 546 68 08
+Miha E-Mail : spletna.trgovina@bauhaus.si
+Kadiš s.p.
+Dobja vas 253 Številka kupca : 6501211024
+2390 Ravne na Koroškem Datum naročila : 02.03.2026
+Št. : +38670838383 Številka naročila : SI39309470
+Datum dokumenta : 03.03.2026 14:32:00
+Številka dokumenta : 929-ED1-92011151
+Interna številka dok. : 110052001
+Naslov dostave
+Miha
+Kadiš s.p.
+Dobja vas 253
+2390 Ravne na Koroškem
+Št. : +38670838383
+Podrobno
+Poz. Artikel Naziv artikla Količina Neto cena Neto znesek DDV DDV
+Bruto cena Bruto znesek % EUR
+10 20795207 Kavelj za perforirano steno 1 9,80 9,80 22,0 2,15
+(23 -del., Srebrne barve) 11,95 11,95
+20 20678414 Dolle Stenska tirnica 8 3,73 29,84 22,0 6,56
+(Dolžina: 1.995 mm, Jeklo, 4,55 36,40
+Črna)
+30 20678399 Dolle Regalni nosilec 16 0,66 10,49 22,0 2,31
+(Dolžina: 20 cm, Nosilnost: 0,80 12,80
+55 kg, Črna)
+40 31736837 Regalux Regal za velike 4 32,74 130,97 22,0 28,83
+obremenitve (V x Š x G: 39,95 159,80
+180 x 90 x 40 cm,
+Nosilnost na polico: 210
+kg, Število polic: 5 kos,
+Priklop, Antracit)
+Vmesna vsota 220,95
+Nadaljevanje na naslednji strani ...
+*
+Delovni čas kontaktnega centra: pon-pet: 07.00 - 20.00; sob: 08.00 - 20.00
+Bauhaus trgovsko podjetje d.o.o., k.d., Kajuhova ulica 45, 1000 Ljubljana, ID št. za DDV: SI86657593
+Družba je v sodni register vpisana pri Okrožnem sodišču v Ljubljani pod reg.št. vložka 12720500.
+Osnovni kapital je v celoti plačan. Matična št.: 5873002.
+TRR odprt pri NLB d.d., Trg republike 2, 1520 Ljubljana, IBAN: SI56 0292 3026 5479 537, SWIFT: LJBASI2X
+Stran 2 od 3
+Datum dokumenta : 03.03.2026 14:32:00
+BAUHAUS d.o.o., k.d., Kajuhova ulica 45, 1000 Ljubljana
+Številka dokumenta : 929-ED1-92011151
+Interna številka dok. : 110052001
+Vmesna vsota s strani: 1 220,95
+Poz. Artikel Naziv artikla Količina Neto cena Neto znesek DDV DDV
+Bruto cena Bruto znesek % EUR
+50 11142266 Küpper Set kavljev za 2 5,70 11,39 22,0 2,51
+perforirano steno 72000 6,95 13,90
+(Ustrezno za: Küpper
+luknjičasto steno, 12 -del.)
+60 20675035 Dolle Regalni nosilec 4 0,90 3,61 22,0 0,79
+(Dolžina: 35 cm, Nosilnost: 1,10 4,40
+55 kg, Črna)
+70 20794888 Set za perforirano steno (60 1 49,14 49,14 22,0 10,81
+x 60 cm, 2 kos) 59,95 59,95
+80 20677864 Dolle Regalni nosilec 4 0,82 3,28 22,0 0,72
+(Dolžina: 30 cm, Nosilnost: 1,00 4,00
+55 kg, Črna)
+90 22575210 Strošek dostave 1 3,20 3,20 22,0 0,70
+3,90 3,90
+Vmesna vsota 0,00
+Nadaljevanje na naslednji strani ...
+Bauhaus trgovsko podjetje d.o.o., k.d., Kajuhova ulica 45, 1000 Ljubljana, ID št. za DDV: SI86657593
+Družba je v sodni register vpisana pri Okrožnem sodišču v Ljubljani pod reg.št. vložka 12720500.
+Osnovni kapital je v celoti plačan. Matična št.: 5873002.
+TRR odprt pri NLB d.d., Trg republike 2, 1520 Ljubljana, IBAN: SI56 0292 3026 5479 537, SWIFT: LJBASI2X
+Stran 3 od 3
+Datum dokumenta : 03.03.2026 14:32:00
+BAUHAUS d.o.o., k.d., Kajuhova ulica 45, 1000 Ljubljana
+Številka dokumenta : 929-E
+
+=== Petrol racun_317002066117.pdf ===
+RAČUN 317002066117
+PETROL, SLOVENSKA ENERGETSKA DRUŽBA, D.D., DUNAJSKA CESTA 50, 1000 LJUBLJANA, ID za DDV: SI80267432
+Ljubljana:
+04.02.2026
+Šifra plačnika:
+1001416887
+Konto pogodbe:
+MIHA KADIŠ S.P.
+200000205451
+DOBJA VAS 253
+2390 RAVNE NA KOROŠKEM Številka računa:
+317002066117
+Davčna številka:
+11648236
+DATUM OPRAVLJENE STORITVE: ROK PLAČILA: ZNESEK ZA PLAČILO:
+31.01.2026 18.02.2026 56,62 €
+Storitev Znesek v EUR
+Električna energija 46,41
+Osnova Stopnja Znesek
+46,41 22 % 10,21
+Skupaj z DDV 56,62
+ZNESEK ZA PLAČILO 56,62
+Prosimo, da znesek poravnate na transakcijski račun:
+SI56 0451 5000 0225 742 SWIFT: KBMASI2X, OTP BANKA D.D.
+SI56 0292 3002 0267 126 SWIFT: LJBASI2X, NOVA LJUBLJANSKA BANKA D.D.
+SI56 2900 0010 1824 249 SWIFT: BACXSI22, UNICREDIT BANKA SLOVENIJA D.D.
+Pri plačilu na transakcijski račun vedno natančno navedite sklic na številko: SI12 3170020661170,
+koda namena: OTHR.
+ELEKTRIČNA ENERGIJA
+Naziv/Naslov merilnega mesta: MPIK - LOKAL 5, DOBJA VAS 253, 2390 RAVNE NA KOROŠKEM
+Št. merilnega mesta: 2-222490 Uporabniška skupina: 0
+GSRN MT: 383111580138675930 SN izvod: OC GOK K59
+Št. števca: 40866368 Priključna shema: PS.1A
+Elektrooperater: Elektro Celje Priključna moč: 17 kW (3X25 A)
+Št. pogodbe o dobavi: 1613862 Način določitve obračunskih količin: M1-1
+Paket/produkt: Petrol MPO Osnovni paket Vrsta odjema: Mali poslovni odjem
+PODATKI O PORABI ELEKTRIČNE ENERGIJE
+Št.števca Izvor odčitka Vrsta porabe Datum od Datum do Začetno stanje Končno stanje Razlika kWh/kW/kVArh
+40866368 Daljinsko odčitavanje ENERGIJA VT 01.01.2026 01.02.2026 58.258 58.370 112 112
+40866368 Daljinsko odčitavanje ENERGIJA MT 01.01.2026 01.02.2026 13.247 13.335 88 88
+Skupna poraba energije v obdobju (kWh) 200
+Povprečna dnevna poraba tekočega obračunskega obdobja (kWh) VT: 3,613 MT: 2,839 ET/Skupaj 6,452
+OBRAČUN PORABLJENE ELEKTRIČNE ENERGIJE
+Storitev OBDOBJE OD-DO DNI KOLIČINA ENOTA Faktor CENA DDV % ZNESEK BREZ DDV
+Energija VT 01.01.2026-31.01.2026 31 112 kWh 0,14195 22,00 15,90
+Energija MT 01.01.2026-31.01.2026 31 88 kWh 0,11995 22,00 10,56
+Energija skupaj 26,46
+Dogovorjena obrač. moč ČB1 01.01.2026-31.01.2026 31 3,4 kW 1,71126 22,00 5,82
+Dogovorjena obrač. moč ČB2 01.01.2026-31.01.2026 31 3,4 kW 0,91224 22,00 3,10
+Dogovorjena obrač. moč ČB3 01.01.2026-31.01.2026 31 3,4 kW 0,16297 22,00 0,55
+Dogovorjena obrač. moč ČB4 01.01.2026-31.01.2026 31 3,4 kW 0,00407 22,00 0,01
+Prevzeta energija ČB1 01.01.2026-31.01.2026 31 78 kWh 0,01998 22,00 1,56
+Prevzeta energija ČB2 01.01.2026-31.01.2026 31 63 kWh 0,01833 22,00 1,15
+Prevzeta energija ČB3 01.01.2026-31.01.2026 31 42 kWh 0,01809 22,00 0,76
+Prevzeta energija ČB4 01.01.2026-31.01.2026 31 17 kWh 0,01855 22,00 0,32
+Uporaba omrežja skupaj 13,27
+Prispevek za delo. oper. trga 01.01.2026-31.01.2026 31 200 kWh 0,00013 22,00 0,03
+Prispevek OVE in SPTE 01.01.2026-31.01.2026 31 3,4 kW 1,23398 22,00 4,20
+Prispevek za ener.učinkovitost 01.01.2026-31.01.2026 31 200 kWh 0,00080 22,00 0,16
+Trošarina 1. stopnja 01.01.2026-31.01.2026 31 200 kWh 0,0015
+
+=== Telemach CLB-S1-1000427622.pdf ===
+Telemach Slovenija d.o.o.
+Račun št. CLB-S1-1000427622
+Brnčičeva ulica 49A
+1231 Ljubljana – Črnuče Kraj in datum izdaje: Ljubljana, 31.01.2026
+IBAN: SI56 0400 0027 7723 551
+info@telemach.si
+telemach.si Sklic: SI12 9055460338011
+070 700 700 Obračunsko obdobje: 01.01.2026 - 31.01.2026
+ZOI: 31b04e53bdcb2f7fcb3a8a43dfba0553
+MIHA KADIŠ S.P.
+Spoznajte Telemachov klub in kupujte
+DOBJA VAS 185 ugodneje!
+2390 RAVNE NA KOROŠKEM Nakupujte na 24 obrokov, ki jih plačate kar na vašem
+mesečnem računu. Preverite ponudbo izdelkov po
+izjemnih cenah in z brezplačno dostavo. Več na
+telemach.si/shoppster-izdelki.
+Št. kupca: 1001071150
+Račun za JANUAR 2026 Znesek 0,67 EUR Rok plačila 28.02.2026
+Telefonska Številka pogodbe in opis Št. merilnih Enote Popust % DDV Znesek Znesek z DDV
+številka enot brez DDV
+103021356
+070750457 Mobilni paket ŠE VEČ 0,097 EN 22 % 0,55 0,67
+Skupaj EUR brez DDV 0,55
+DDV 0,12
+(1) Znesek računa EUR z DDV 0,67
+(2) Oprema na obroke 0,00
+(1+2) SKUPAJ ZA PLAČILO 0,67
+Specifikacija zneska DDV
+DDV % Osnova DDV Znesek DDV
+22 % 0,55 0,12
+ZNESEK DDV 0,55 0,12
+V primeru dodatnih vprašanj povezanih z vašim računom nam pišite na reklamacije@telemach.si, pokličite našo številko 070 700 700 ali pa preverite odgovore na najpogostejša vprašanja
+povezana z računi na naši spletni strani v rubriki Pomoč in informacije/Pogosta vprašanja. Pri plačilu obvezno navedite sklicno številko SI129055460338011. Račun je mogoče reklamirati v 15
+dneh od prejema računa.
+Št. reg. Vpisa pri Okrožnem sodišču v LJ Srg: 1323/92, matična številka: 5692229000. Identifikacijska številka za DDV: SI66863627, osnovni kapital: 32.824.527,98 EUR. TRR odprt pri UniCredit
+BankaSlovenije d.d. IBAN SI56290000055197804
+MIHA KADIŠ S.P.
+DOBJA VAS 185
+2390 RAVNE NA KOROŠKEM
+Plačilo računa CLB-S1-1000427622 MIHA KADIŠ S.P.
+DOBJA VAS 185
+2390 RAVNE NA KOROŠKEM
+***0,67
+***0,67
+SI56 0400 0027 7723 551
+SI12 9055460338011
+CBTV Plačilo računa CLB-S1-1000427622 28.02.2026
+Telemach Slovenija d.o.o. SI56 0400 0027 7723 551
+Brnčičeva ulica 49A
+SI12 9055460338011
+1231 Ljubljana - Črnuče
+Telemach Slovenija d.o.o.
+Brnčičeva ulica 49A
+1231 Ljubljana - Črnuče
+(!) POZOR PRED NEZNANIMI KLICI IZ TUJINE
+Uporabnike mobilnih storitev opozarjamo, da ponovno zaznavamo klice z mednarodnih številk z namenom zlorabe – čemur pravimo
+tudi »prevara wangiri«. Gre za računalniško ustvarjene klice, pri katerih klicatelji naključno izberejo več tisoč številk (niti ne vedo, ali so
+prave) in jih pokličejo. Vsi dohodni klici so brezplačni, povratni klic uporabnika pa se obračuna kot odhodni klic po tarifi za mednarodni
+promet, kar lahko povzroči visoke stroške. Svetujemo vam, da ne odgovarjate na klice z neznanih mednarodnih številk in ne vračate
+klicev.
+Vabimo vas tudi, da obiščete spletno stran https://telemach.si/varni-na-spletu/, kjer boste našli seznam najpogostejših zlorab,
+nasvete za varno uporabo storitev ter navodila, kako ukrepati v nezaželenih okoliščinah.
+
+
+=== Vanc Račun Kadiš jan 2026.pdf ===
+VANCWORK DETAILING, AVTOKOZMETIKA, ALEN ČEPIN SENICA, S.P.
+Dobja vas 188a
+2390 RAVNE NA KOROŠKEM
+Kupec: (3)
+KADIŠ MIHA s.p.
+DŠ:11648236 RAČUN
+Številka:90-90-26900000
+DOBJA VAS 253 Datum FURS: 15.01.2026 Ura:13:04 Int.št.:090- 900000/26
+Kraj: RAVNE NA KOROŠKEM
+2390 RAVNE NA KOROŠKEM
+Datum: 15.01.2026
+Zapadlost: 22.01.2026
+Datum dobave blaga
+oz.opravljene storitve: 15.01.2026
+POZ NAZIV STORITVE OZ. ARTIKLA KOLIČINA EM CENA RAB % DDV % ZNESEK
+001 Delovna ura (60 min) 1,00 kos 35,00 0,00 D1 22,0 35,00
+Specifikacija DDV: Skupaj znesek: 35,00
+DDV Osnova Znesek DDV -Rabat: 0,00
+D1 - Osnovna stopnja 22% 35,00 7,70 Osnova za DDV: 35,00
++Znesek DDV: 7,70
+Skupaj: 42,70
+Za plačilo EUR : 42,70
+Fakturiral Direktor
+ALEN ČEPIN ALEN ČEPIN SENICA
+ZOI: e53e619c4cc0ade5144923caaae40f07
+EOR:b7a79b66-052c-4122-9143-312123afdae6
+VANCWORK DETAILING, AVTOKOZMETIKA, ID št. za DDV: SI22666206 Matična št.: 9135367
+ALEN ČEPIN SENICA, S.P. Registracija: AJPES, 19. 05. 2022
+Telefon:040581387
+Dobja vas 188a, 2390, RAVNE NA KOROŠKEM Faks:
+e-mail: vancworkdetailing2@gmail.com TRR: 10100-0060172005 pri Intesa San Paolo IBAN/SWIFT: SI56 1010 0006 0172 005 / BAKOSI2X
+
+
+=== IKEA STO635-01-600254_TaxInvoice.pdf ===
+Stran 1 od1
+Račun
+Prodajalec: Kupec:
+IKEA Slovenija, trgovina na drobno, d.o.o. SIM 83 - Simulatorji vožnje, Miha Kadiš s.p.
+Svedska ulica 006 Dobja vas 253
+1000 Ljubljana 2390 RAVNE NA KOROŠKEM
+Slovenija Slovenija
+ID za DDV: SI62033930 Družinska številka IKEA: 6275986********8184
+ID za DDV: 11648236
+Podrobnosti o računu:
+Datum naročila: 11. 2. 2026 Naslov za dostavo:
+Številka naročila: 1582279251 SIM 83 - Simulatorji vožnje, Miha Kadiš s.p.
+Datum in ura računa: 11. 2. 2026, 15.47 Prisoje 63b
+Številka računa: STO635-01-600254 2391 Prevalje
+Datum dobave: 13. 2. 2026 Slovenija
+Blagajnik št: SI62033930
+Cena izdelka
+Št. izdelka Opis in naziv izdelka Količina DDV Znesek z DDV
+brez DDV
+305.888.00 MARKUS pis stl Malo VISSLE temno siva 1 122,13 22 % 149,00 €
+500.005.97 Paketna dostava 1 5,73 22 % 6,99 €
+DDV obračun: Skupaj za plačilo: 155,99 €
+DDV 22 %
+Blago 149,00
+Storitve 6,99
+Skupaj 155,99
+Znesek brez DDV 127,86
+DDV 28,13
+Podatki o plačilu: Način plačila VISA kreditna kartica 155,99 €
+Številka kartice ************3639
+EOR: 544801a9-4cc9-4a17-bed3-150adbb845cf
+ZOI: 7785ca9fb4302a6ddae7865c865703de
+IKEA Slovenija d.o.o, vpis v sodni register 30.06.2008 pri Okrožnem sodišču v Ljubljani, SRG 2008/21679, matična številka 3353184000, znesek
+osnovnega kapitala 2,300.000 EUR. Družba je vključena v sistem ravnanja z odpadno embalažo družbe Interseroh d.o.o.
+Notranja referenca: SIINV26000000059456
+6202
+.V.B
+smetsyS
+AEKI
+retnI
+©
+
+

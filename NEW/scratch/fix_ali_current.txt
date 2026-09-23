@@ -1,0 +1,320 @@
+        new_postavke.append(item)
+        
+    data["postavke"] = new_postavke
+    
+    # 5. Recalculate totals
+    if new_postavke:
+        total_gross = round(sum(item["znesek_skupaj"] for item in new_postavke), 2)
+        data["znesek_skupaj"] = total_gross
+        data["znesek_ddv"] = round(sum(item["znesek_skupaj"] * (item["stopnja_ddv"] / (100 + item["stopnja_ddv"])) for item in new_postavke), 2)
+        data["znesek_brez_ddv"] = round(total_gross - data["znesek_ddv"], 2)
+        
+    return data
+
+
+def _is_aliexpress_document(filename="", text=""):
+    fn = (filename or "").lower()
+    t = (text or "").lower()
+    if "aliexpress" in fn or "ordersummary" in fn:
+        return True
+    if "aliexpress" in t or "alibaba" in t:
+        return True
+    if ("order id" in t or "order 1d" in t or "order time" in t) and ("item detail" in t or "shipping fee" in t or "vat included" in t or "things to note" in t):
+        return True
+    return False
+
+
+def fix_aliexpress_data(data, text="", filename=""):
+    """
+    100% deterministic normalizer and fallback parser for AliExpress orders.
+    """
+    import re
+    from datetime import datetime
+    
+    if not isinstance(data, dict):
+        data = {}
+        
+    # 1. Partner information
+    if "partner" not in data or not isinstance(data["partner"], dict):
+        data["partner"] = {}
+    p = data["partner"]
+    p["naziv"] = "Aliexpress"
+    p["davcna_stevilka"] = "NL826439810B01"
+    p["drzava"] = "Singapur"
+    p["ulica"] = "10 Collyer Quay # 10-01, Ocean Financial Centre"
+    p["kraj"] = "Singapur"
+    p["postna_stevilka"] = "049315"
+    p["tuji_partner_neprebran"] = False
+    data["partner_naziv"] = p["naziv"]
+    data["partner_davcna"] = p["davcna_stevilka"]
+    data["partner_trr"] = ""
+    
+    # 2. Document/Order number
+    st = str(data.get("stevilka") or "")
+    if not re.match(r'^\d{15,18}$', st):
+        m = re.search(r'\b(\d{15,18})\b', (text or "") + " " + (filename or ""))
+        if m:
+            data["stevilka"] = m.group(1)
+            
+    # 3. Dates
+    m_map = {'jan':'01','feb':'02','mar':'03','apr':'04','may':'05','jun':'06','jul':'07','aug':'08','sep':'09','oct':'10','nov':'11','dec':'12'}
+    dt = data.get("datum_izdaje") or ""
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', dt):
+        pats = [
+            r'(?:Order time|Paid on|Date)[^\w]*([A-Za-z]{3})\s+(\d{1,2})[,\.\s]+(\d{4})',
+            r'([A-Za-z]{3})\s+(\d{1,2})[,\.\s]+(\d{4})',
+            r'(\d{1,2})\s+([A-Za-z]{3})[,\.\s]+(\d{4})',
+            r'(\d{4})-(\d{2})-(\d{2})'
+        ]
+        for pat in pats:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                try:
+                    g = m.groups()
+                    if len(g) == 3:
+                        if g[0].lower()[:3] in m_map:
+                            mm, d, y = m_map[g[0].lower()[:3]], g[1].zfill(2), g[2]
+                            dt = f"{y}-{mm}-{d}"
+                        elif g[1].lower()[:3] in m_map:
+                            d, mm, y = g[0].zfill(2), m_map[g[1].lower()[:3]], g[2]
+                            dt = f"{y}-{mm}-{d}"
+                    elif len(g) == 3:
+                        dt = f"{g[0]}-{g[1]}-{g[2]}"
+                    break
+                except:
+                    pass
+    if not dt:
+        dt = datetime.now().strftime("%Y-%m-%d")
+        
+    data["datum_izdaje"] = dt
+    data["datum_zapadlosti"] = dt
+    data["datum_storitve_od"] = dt
+    data["datum_storitve_do"] = dt
+    data["datum_placila"] = dt
+    
+    # 4. Payment method
+    data["sklic"] = ""
+    data["placano"] = True
+    data["nacin_placila"] = "Poslovna kartica"
+    
+    # 5. Financial totals
+    m_sub = re.search(r'Subtotal:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_disc = re.search(r'All\s*discount:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_ship = re.search(r'Shipping\s*fee:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_tot = re.search(r'(?<!Sub)Total:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    
+    subtotal = float(m_sub.group(1)) if m_sub else 0.0
+    discount_amount = float(m_disc.group(1)) if m_disc else 0.0
+    shipping_fee = float(m_ship.group(1)) if m_ship else 0.0
+    total = float(m_tot.group(1)) if m_tot else round(subtotal - discount_amount + shipping_fee, 2)
+    
+    # OCR Sanity check: shipping_fee cannot be ridiculously larger than total unless it's a bug
+    if total > 0 and shipping_fee > total + discount_amount:
+        if shipping_fee / 100 <= total + discount_amount:
+            shipping_fee = shipping_fee / 100
+        else:
+            shipping_fee = 0.0
+    
+    m_vat = re.search(r'(?:[€\$]|EUR)?\s*([\d]+\.[\d]{2})\s*VAT\s*included', text, re.IGNORECASE)
+    if m_vat and float(m_vat.group(1)) < total:
+        vat_amount = float(m_vat.group(1))
+    else:
+        vat_amount = round(total - shipping_fee - ((total - shipping_fee) / 1.22), 2)
+        
+    net_amount = round(total - vat_amount, 2)
+    
+    if total > 0:
+        data["znesek_skupaj"] = total
+        data["znesek_ddv"] = vat_amount
+        data["znesek_brez_ddv"] = net_amount
+    else:
+        # Keep llama's totals if our regex failed
+        pass
+    
+    disc_pct = round((discount_amount / subtotal) * 100, 2) if subtotal > 0 else 0.0
+    
+    # 6. Extract Line Items
+    postavke = []
+    
+    item_part = ''
+    if 'item detail' in text.lower():
+        parts = re.split(r'item detail', text, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            item_part = parts[1]
+    elif 'ccemd detail' in text.lower():
+        parts = re.split(r'ccemd detail', text, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            item_part = parts[1]
+    elif 'detail' in text.lower():
+        parts = re.split(r'detail', text, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            item_part = parts[1]
+            
+    if 'things to note' in item_part.lower():
+        item_part = re.split(r'things to note', item_part, flags=re.IGNORECASE)[0]
+        
+    item_matches = list(re.finditer(r'(?:[€\$]|EUR)?\s*([\d]+\.[\d]{2})\s*x\s*(\d+)', item_part))
+    
+    if item_matches:
+        last_pos = 0
+        raw_items = []
+        for im in item_matches:
+            price_gross = float(im.group(1))
+            qty = float(im.group(2))
+            chunk = item_part[last_pos:im.start()]
+            last_pos = im.end()
+            
+            lines = [l.strip() for l in chunk.splitlines() if l.strip()]
+            clean_lines = []
+            for l in lines:
+                if re.match(r'^[~\-—_\*\|\s@\>\\\.\:\?\,\(\)\d]+$', l): continue
+                if any(k in l.lower() for k in ['store', 'things to note', 'view details']): continue
+                clean_lines.append(l)
+                
+            desc = " ".join(clean_lines).strip()
+            desc = re.sub(r'^[~\-—_\*\|\s@\>\\\.\:\?\,\(\)\d]+', '', desc).strip()
+            if not desc:
+                desc = f"Aliexpress izdelek {data.get('stevilka', '')}"
+                
+            raw_items.append({"opis": desc, "kolicina": qty, "price_gross": price_gross})
+            
+        if len(raw_items) == 1 and subtotal > 0 and abs(raw_items[0]["price_gross"] * raw_items[0]["kolicina"] - subtotal) > 0.05:
+            raw_items[0]["price_gross"] = round(subtotal / raw_items[0]["kolicina"], 2)
+            
+        for it in raw_items:
+            price_gross = it["price_gross"]
+            qty = it["kolicina"]
+            unit_price_net = round(price_gross / 1.22, 4)
+            item_subtotal = price_gross * qty
+            if disc_pct > 0:
+                item_total_gross = round(item_subtotal * (1 - disc_pct / 100), 2)
+            else:
+                item_total_gross = round(item_subtotal, 2)
+                
+            postavke.append({
+                "opis": it["opis"],
+                "kolicina": qty,
+                "enota_mere": "kos",
+                "cena_enote": unit_price_net,
+                "popust": disc_pct,
+                "stopnja_ddv": 22.0,
+                "znesek_skupaj": item_total_gross
+            })
+    else:
+        postavke.append({
+            "opis": f"Nakup AliExpress {data.get('stevilka', '')}",
+            "kolicina": 1.0,
+            "enota_mere": "kos",
+            "cena_enote": round(subtotal / 1.22, 4) if subtotal else round((total - shipping_fee + discount_amount) / 1.22, 4),
+            "popust": disc_pct,
+            "stopnja_ddv": 22.0,
+            "znesek_skupaj": round(subtotal - discount_amount, 2) if subtotal else round(total-shipping_fee, 2)
+        })
+        
+    if shipping_fee > 0:
+        postavke.append({
+            "opis": "[DEBUG] Shipping fee",
+            "kolicina": 1.0,
+            "enota_mere": "kos",
+            "cena_enote": shipping_fee,
+            "popust": 0.0,
+            "stopnja_ddv": 0.0,
+            "znesek_skupaj": shipping_fee
+        })
+        
+
+    # PRESERVE LLAMA DATA IF PRESENT
+    if data.get("postavke") and len(data["postavke"]) > 0 and not any(p.get("opis", "").startswith("Nakup AliExpress") for p in data["postavke"]):
+        # Verify Llama's math against subtotal
+        llama_items = data["postavke"]
+        regular_items = [p for p in llama_items if "shipping" not in str(p.get("opis", "")).lower()]
+        
+        sum_gross = sum(p.get("znesek_skupaj", 0) for p in regular_items)
+        expected_subtotal = subtotal if subtotal > 0 else round(total - shipping_fee + discount_amount, 2)
+        
+        # If Llama's math is wrong, and there's only 1 regular item, fix its price!
+        if len(regular_items) == 1 and abs(sum_gross - (expected_subtotal - discount_amount)) > 0.05:
+            # Re-apply discount mathematically
+            qty = regular_items[0].get("kolicina", 1.0)
+            unit_gross_price = round(expected_subtotal / qty, 2)
+            unit_price_net = round(unit_gross_price / 1.22, 4)
+            item_subtotal = unit_gross_price * qty
+            if disc_pct > 0:
+                item_total_gross = round(item_subtotal * (1 - disc_pct / 100), 2)
+            else:
+                item_total_gross = round(item_subtotal, 2)
+                
+            regular_items[0]["cena_enote"] = unit_price_net
+            regular_items[0]["popust"] = disc_pct
+            regular_items[0]["znesek_skupaj"] = item_total_gross
+            
+        # FORCE SHIPPING FEE TO MATCH OUR DETERMINISTIC CALCULATION
+        has_shipping = False
+        for p in llama_items:
+            if "shipping" in str(p.get("opis", "")).lower():
+                has_shipping = True
+                p["opis"] = "[DEBUG] " + p.get("opis", "")
+                p["kolicina"] = 1.0
+                p["cena_enote"] = shipping_fee
+                p["stopnja_ddv"] = 0.0
+                p["znesek_skupaj"] = shipping_fee
+                break
+                
+        if shipping_fee > 0 and not has_shipping:
+            llama_items.append({
+                "opis": "[DEBUG] Shipping fee",
+                "kolicina": 1.0,
+                "enota_mere": "kos",
+                "cena_enote": shipping_fee,
+                "popust": 0.0,
+                "stopnja_ddv": 0.0,
+                "znesek_skupaj": shipping_fee
+            })
+    else:
+        data["postavke"] = postavke
+        
+    return data
+
+
+
+def check_corrections(original, final):
+    if not original:
+        return True
+        
+    # Primerjamo ključna polja
+    if original.get("stevilka") != final.get("stevilka"):
+        return True
+    if original.get("datum_izdaje") != final.get("datum_izdaje"):
+        return True
+    if original.get("datum_zapadlosti") != final.get("datum_zapadlosti"):
+        return True
+    if original.get("datum_storitve_od") != final.get("datum_storitve_od"):
+        return True
+    if original.get("datum_storitve_do") != final.get("datum_storitve_do"):
+        return True
+    if original.get("sklic") != final.get("sklic"):
+        return True
+        
+    try:
+        if abs(float(original.get("znesek_skupaj") or 0) - float(final.get("znesek_skupaj") or 0)) > 0.01:
+            return True
+        if abs(float(original.get("znesek_ddv") if original.get("znesek_ddv") is not None else 0) - float(final.get("znesek_ddv") if final.get("znesek_ddv") is not None else 0)) > 0.01:
+            return True
+        if abs(float(original.get("znesek_brez_ddv") if original.get("znesek_brez_ddv") is not None else 0) - float(final.get("znesek_brez_ddv") if final.get("znesek_brez_ddv") is not None else 0)) > 0.01:
+            return True
+    except:
+        return True
+        
+    orig_partner = original.get("partner", {}) if isinstance(original.get("partner"), dict) else {}
+    final_partner = final.get("partner", {}) if isinstance(final.get("partner"), dict) else {}
+    
+    op_naziv = original.get("partner_naziv") or orig_partner.get("naziv") or ""
+    fp_naziv = final.get("partner_naziv") or final_partner.get("naziv") or ""
+    op_davcna = original.get("partner_davcna") or orig_partner.get("davcna_stevilka") or ""
+    fp_davcna = final.get("partner_davcna") or final_partner.get("davcna_stevilka") or ""
+    
+    # Normaliziramo primerjavo davčne
+    op_davcna_cisto = re.sub(r'[^\d]', '', op_davcna)
+    fp_davcna_cisto = re.sub(r'[^\d]', '', fp_davcna)
+    
+    if op_naziv.strip().lower() != fp_naziv.strip().lower() or op_davcna_cisto != fp_davcna_cisto:

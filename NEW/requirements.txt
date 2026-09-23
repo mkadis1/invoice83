@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic
+requests
+beautifulsoup4
+Pillow
+pytesseract
+pdfplumber
+fpdf2
+qrcode[pil]
+python-multipart
+cryptography

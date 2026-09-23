@@ -1,0 +1,72 @@
+﻿=== Calling parse_with_llama ===
+=== Llama raw result ===
+{
+  "stevilka": "3074440807136667",
+  "sklic": "",
+  "datum_izdaje": "2026-07-07",
+  "datum_zapadlosti": "2026-07-07",
+  "datum_storitve_od": "2026-07-07",
+  "datum_storitve_do": "2026-07-07",
+  "znesek_skupaj": 14.85,
+  "znesek_ddv": 2.5,
+  "znesek_brez_ddv": 12.35,
+  "partner": {
+    "naziv": "Aliexpress",
+    "davcna_stevilka": "NL826439810B01",
+    "trr": "",
+    "drzava": "Singapur",
+    "ulica": "10 Collyer Quay # 10-01, Ocean Financial Centre",
+    "kraj": "Singapur",
+    "postna_stevilka": "049315",
+    "tuji_partner_neprebran": false
+  },
+  "postavke": [
+    {
+      "opis": "wMnossuacesusune Mini HDMI to HDMI Cable 1080p 3D 2m",
+      "kolicina": 2.0,
+      "enota_mere": "kos",
+      "cena_enote": 6.1066,
+      "popust": 6.98,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 13.86
+    },
+    {
+      "opis": "Shipping fee",
+      "kolicina": 1.0,
+      "enota_mere": "kos",
+      "cena_enote": 0.99,
+      "popust": 0.0,
+      "stopnja_ddv": 0.0,
+      "znesek_skupaj": 0.99
+    }
+  ],
+  "partner_naziv": "Aliexpress",
+  "partner_davcna": "NL826439810B01",
+  "partner_trr": "",
+  "datum_placila": "2026-07-07",
+  "placano": true,
+  "nacin_placila": "Poslovna kartica"
+}
+
+=== After fix_aliexpress_data ===
+[
+  {
+    "opis": "wMnossuacesusune Mini HDMI to HDMI Cable 1080p 3D 2m",
+    "kolicina": 2.0,
+    "enota_mere": "kos",
+    "cena_enote": 6.1066,
+    "popust": 6.98,
+    "stopnja_ddv": 22.0,
+    "znesek_skupaj": 13.86
+  },
+  {
+    "opis": "Shipping fee",
+    "kolicina": 1.0,
+    "enota_mere": "kos",
+    "cena_enote": 0.99,
+    "popust": 0.0,
+    "stopnja_ddv": 0.0,
+    "znesek_skupaj": 0.99
+  }
+]
+Total: 14.85

@@ -1,0 +1,80 @@
+    if ensure_ollama_running("llama3"):
+        try:
+            # 2a. Najprej identificiraj dobavitelja (za pravila)
+            supplier_info = llama_identify_supplier(text, "llama3")
+            rules = None
+            davcna = None
+            if supplier_info:
+                davcna = supplier_info.get("davcna_stevilka", "").strip()
+                if not davcna:
+                    davcna = supplier_info.get("naziv", "").strip()
+                if davcna:
+                    rules = get_supplier_rules(davcna)
+                    if rules:
+                        print(f"[Parser] Uporabljam obstoječa pravila za dobavitelja: {davcna}")
+            
+            # 2b. Ekstrakcija podatkov (z ali brez pravil)
+            parsed = parse_with_llama(text, filename, "llama3", rules=rules)
+            if parsed:
+                parsed = post_process_invoice_data(parsed)
+                # Za AliExpress dokumente vedno reapply fix po post_process (ki bi sicer resetiral DDV na 0)
+                if _is_aliexpress_document(filename, text):
+                    parsed = fix_aliexpress_data(parsed, text, filename)
+                # Zagotovi, da je ocr_text vedno vključen (za shranjevanje učenja)
+                if 'ocr_text' not in parsed or not parsed['ocr_text']:
+                    parsed['ocr_text'] = text
+                partner_info = parsed.get("partner", {}) if isinstance(parsed.get("partner"), dict) else {}
+                partner_naziv = partner_info.get("naziv", "Neznan Partner")
+                partner_davcna = partner_info.get("davcna_stevilka", "")
+                partner_trr = partner_info.get("trr", "")
+                
+                if partner_davcna and len(partner_davcna) == 8 and partner_davcna.isdigit():
+                    partner_davcna = "SI" + partner_davcna
+                
+                datum_storitve_od = parsed.get("datum_storitve_od", "") or parsed.get("datum_izdaje", "")
+                datum_storitve_do = parsed.get("datum_storitve_do", "") or datum_storitve_od
+                
+                return {
+                    'stevilka': parsed.get("stevilka", "NEZNANA"),
+                    'sklic': parsed.get("sklic", ""),
+                    'vezni_racun': parsed.get("vezni_racun", ""),
+                    'datum_izdaje': parsed.get("datum_izdaje", ""),
+                    'datum_zapadlosti': parsed.get("datum_zapadlosti", ""),
+                    'datum_storitve': datum_storitve_od,
+                    'datum_storitve_od': datum_storitve_od,
+                    'datum_storitve_do': datum_storitve_do,
+                    'partner': {
+                        'naziv': partner_naziv,
+                        'davcna_stevilka': partner_davcna,
+                        'trr': partner_trr,
+                        'drzava': partner_info.get("drzava", "Slovenija"),
+                        'ulica': partner_info.get("ulica", ""),
+                        'kraj': partner_info.get("kraj", ""),
+                        'postna_stevilka': partner_info.get("postna_stevilka", ""),
+                        'tuji_partner_neprebran': partner_info.get("tuji_partner_neprebran", False),
+                    },
+                    'partner_naziv': partner_naziv,
+                    'partner_davcna': partner_davcna,
+                    'partner_trr': partner_trr,
+                    'znesek_skupaj': float(parsed.get("znesek_skupaj", 0.0)),
+                    'znesek_brez_ddv': float(parsed.get("znesek_brez_ddv", 0.0)),
+                    'znesek_ddv': float(parsed.get("znesek_ddv", 0.0)),
+                    'postavke': parsed.get("postavke", []),
+                    'ocr_text': text,
+                    'tip': tip
+                }
+        except Exception as e:
+            print(f"Llama AI extraction failed, falling back to regex: {e}")
+            
+    # 3. Fallback na prvotne regex rezultate
+    regex_res = parse_invoice_data(text)
+    if isinstance(regex_res, dict):
+        regex_res['ocr_text'] = text
+        if _is_aliexpress_document(filename, text):
+            regex_res = fix_aliexpress_data(regex_res, text, filename)
+        elif _is_credit_note(filename, text):
+            regex_res = fix_credit_note_data(regex_res, text, filename)
+        regex_res = post_process_invoice_data(regex_res)
+        
+        if 'sklic' not in regex_res or not regex_res['sklic']:
+            regex_res['sklic'] = find_sklic(text)

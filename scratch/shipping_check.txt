@@ -1,0 +1,32 @@
+            regular_items[0]["znesek_skupaj"] = item_total_gross
+            
+        # FORCE SHIPPING FEE TO MATCH OUR DETERMINISTIC CALCULATION
+        has_shipping = False
+        for p in llama_items:
+            if "shipping" in str(p.get("opis", "")).lower():
+                has_shipping = True
+                p["kolicina"] = 1.0
+                p["cena_enote"] = shipping_fee
+                p["stopnja_ddv"] = 0.0
+                p["znesek_skupaj"] = shipping_fee
+                break
+                
+        if shipping_fee > 0 and not has_shipping:
+            llama_items.append({
+                "opis": "Shipping fee",
+                "kolicina": 1.0,
+                "enota_mere": "kos",
+                "cena_enote": shipping_fee,
+                "popust": 0.0,
+                "stopnja_ddv": 0.0,
+                "znesek_skupaj": shipping_fee
+            })
+    else:
+        data["postavke"] = postavke
+        
+    return data
+
+
+
+def check_corrections(original, final):
+    if not original:

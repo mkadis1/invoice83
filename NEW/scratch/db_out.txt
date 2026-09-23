@@ -1,0 +1,59 @@
+﻿Tables: ['partnerji', 'sqlite_sequence', 'dokumenti', 'dokumenti_postavke', 'izpiski_glava', 'izpiski_postavke', 'osnovna_sredstva', 'nastavitve', 'zakljucna_besedila', 'zaposleni', 'potni_nalogi', 'tarife_potanj', 'place', 'kontni_nacrt', 'priloge', 'placila_povezave', 'email_log', 'temeljnice', 'temeljnice_postavke', 'ajpes_shema', 'artikli_storitve', 'zaloga', 'llama_settings', 'llama_learning_examples', 'partner_kontakti', 'partner_interakcije', 'partner_opravila', 'ujp_log', 'llama_supplier_rules']
+
+Table partnerji columns: ['id', 'naziv', 'ulica', 'postna_stevilka', 'kraj', 'drzava', 'davcna_stevilka', 'zavezanec_za_ddv', 'trr', 'vrsta', 'telefon', 'email', 'status', 'kategorija', 'vir_stranke', 'opombe', 'ujp_subjekt', 'ujp_zadnji_check']
+
+Table sqlite_sequence columns: ['name', 'seq']
+
+Table dokumenti columns: ['id', 'poslovno_leto', 'tip', 'stevilka', 'partner_id', 'datum_izdaje', 'datum_zapadlosti', 'znesek_brez_ddv', 'znesek_ddv', 'znesek_skupaj', 'status', 'opombe', 'datum_storitve_od', 'datum_storitve_do', 'zakljucno_besedilo', 'noga_dokumenta', 'datum_placila', 'nacin_placila', 'priloga', 'valuta', 'tecaj', 'znesek_v_valuti', 'vkljuci_placilo', 'odstotek_placila', 'knjizeno', 'interna_stevilka', 'sklic', 'kompenzacija_doc_id', 'delna_placila', 'delno_placano_znesek', 'stotinska_izravnava', 'hramba_zakljucena', 'samoobdavcitev', 'stopnja_ddv_samo']
+
+Table dokumenti_postavke columns: ['id', 'dokument_id', 'opis', 'kolicina', 'cena_enote', 'stopnja_ddv', 'znesek_skupaj', 'konto', 'popust', 'enota_mere', 'artikel_id']
+
+Table izpiski_glava columns: ['id', 'datum', 'stevilka_izpiska', 'zacetno_stanje', 'koncno_stanje', 'kontrolna_vsota', 'priloga', 'knjizeno']
+
+Table izpiski_postavke columns: ['id', 'izpisek_id', 'tip_prometa', 'partner_id', 'namen', 'znesek', 'koda_namena', 'konto', 'manualna_likvidacija']
+
+Table osnovna_sredstva columns: ['id', 'naziv', 'inventarna_stevilka', 'datum_nabave', 'nabavna_vrednost', 'stopnja_amortizacije', 'trenutna_vrednost', 'aktiven', 'amortizacijska_skupina', 'tip']
+
+Table nastavitve columns: ['id', 'naziv', 'ulica', 'posta_kraj', 'drzava', 'davcna_stevilka', 'zavezanec_za_ddv', 'trr', 'banka', 'email_posiljatelja', 'telefon', 'spletna_stran', 'dvostavno_knjigovodstvo', 'kratko_ime', 'smtp_server', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_use_tls', 'email_template_racun', 'email_template_ponudba', 'email_template_dobropis', 'dashboard_config', 'ujp_cert_path', 'ujp_cert_password', 'ujp_test_mode', 'email_template_opomin']
+
+Table zakljucna_besedila columns: ['id', 'naziv', 'besedilo']
+
+Table zaposleni columns: ['id', 'ime_priimek', 'naslov', 'davcna_stevilka', 'iban', 'delovno_mesto', 'datum_rojstva', 'stevilo_otrok', 'invalid_ali_nega', 'delovna_doba_leta', 'dopust_odmerjen', 'dopust_rocni_popravek', 'posta_kraj', 'razdalja_do_podjetja']
+
+Table potni_nalogi columns: ['id', 'stevilka_naloga', 'zaposleni_id', 'vozilo', 'namen', 'datum_izdaje', 'datum_cas_odhoda', 'datum_cas_povratka', 'relacija_zacetek', 'relacija_cilj', 'relacija_konec', 'razdalja_km', 'znesek_kilometrine', 'znesek_dnevnice', 'skupni_znesek', 'knjizeno']
+
+Table tarife_potanj columns: ['id', 'veljavnost_od', 'kilometrina', 'dnevnica_polna', 'dnevnica_polovicna', 'dnevnica_znizana', 'zadnje_preverjanje']
+
+Table place columns: ['id', 'zaposleni_id', 'mesec', 'leto', 'vrsta_zaposlitve', 'bruto_placa', 'neto_izplacilo', 'znesek_piz', 'znesek_zz', 'znesek_zap', 'znesek_starsevsko', 'znesek_ozp', 'znesek_akontacija_doh', 'znesek_skupaj', 'sklic', 'zapadlost', 'placan', 'znesek_do', 'knjizeno', 'konto_prispevkov', 'potni_stroski', 'malica', 'st_malic', 'cena_malice', 'st_dni_pot', 'km_enosmerno', 'cena_km']
+
+Table kontni_nacrt columns: ['id', 'stevilka', 'naziv', 'opis']
+
+Table priloge columns: ['id', 'parent_type', 'parent_id', 'filename', 'original_name', 'uploaded_at']
+
+Table placila_povezave columns: ['id', 'izpisek_postavka_id', 'dokument_id', 'znesek']
+
+Table email_log columns: ['id', 'dokument_id', 'tip_dokumenta', 'stevilka_dokumenta', 'prejemnik', 'zadeva', 'poslano_at', 'status', 'napaka']
+
+Table temeljnice columns: ['id', 'poslovno_leto', 'vrsta', 'stevilka', 'datum', 'opis', 'dokument_id', 'zaklenjeno', 'ustvarjeno_at']
+
+Table temeljnice_postavke columns: ['id', 'temeljnica_id', 'konto', 'partner_id', 'opis', 'datum_zapadlosti', 'znesek_v_breme', 'znesek_v_dobro', 'zaprto', 'dokument_id', 'dokument_tip']
+
+Table ajpes_shema columns: ['id', 'oznaka_aop', 'naziv', 'vrsta_izkaza', 'formula']
+
+Table artikli_storitve columns: ['id', 'sifra', 'vrsta', 'naziv', 'opis', 'enota_mere', 'cena_malo', 'cena_velo', 'stopnja_ddv', 'konto', 'aktiven', 'vodi_zalogo']
+
+Table zaloga columns: ['id', 'artikel_id', 'kolicina', 'zadnja_sprememba', 'datum', 'opis', 'dokument_id']
+
+Table llama_settings columns: ['kljuc', 'vrednost']
+
+Table llama_learning_examples columns: ['id', 'filename', 'ocr_text', 'corrected_json', 'created_at']
+
+Table partner_kontakti columns: ['id', 'partner_id', 'ime_priimek', 'oddelek', 'funkcija', 'email', 'telefon', 'primarni']
+
+Table partner_interakcije columns: ['id', 'partner_id', 'datum', 'tip', 'vsebina', 'naslednji_korak']
+
+Table partner_opravila columns: ['id', 'partner_id', 'naslov', 'opis', 'rok', 'status', 'prioriteta']
+
+Table ujp_log columns: ['id', 'dokument_id', 'stevilka', 'poslano_at', 'status', 'odgovor']
+
+Table llama_supplier_rules columns: ['id', 'davcna_stevilka', 'naziv', 'extraction_rules', 'created_at', 'updated_at']

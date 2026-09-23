@@ -19,6 +19,8 @@ if os.name == 'nt':
 BUYER_IDS = {'11648236', 'SI11648236'}
 BUYER_NAMES = {'sim 83', 'miha kadiš', 'miha kadis', 'kadis miha', 'kadiš miha', 'dobja vas 253', 'dobja vas 185'}
 
+DEFAULT_AI_MODEL = "qwen2.5:7b"
+
 def validate_slo_tax_id(tax_id):
     if not tax_id or len(tax_id) != 8 or not tax_id.isdigit():
         return False
@@ -538,7 +540,7 @@ def parse_invoice_data(text):
 
     return data
 
-def ensure_ollama_running(model_name="llama3"):
+def ensure_ollama_running(model_name=DEFAULT_AI_MODEL):
     import requests
     import subprocess
     import time
@@ -1138,7 +1140,7 @@ def fix_aliexpress_data(data, text="", filename=""):
     if "partner" not in data or not isinstance(data["partner"], dict):
         data["partner"] = {}
     p = data["partner"]
-    p["naziv"] = "Aliexpress"
+    p["naziv"] = "Alibaba.com Singapore E-Commerce Private Limited"
     p["davcna_stevilka"] = "NL826439810B01"
     p["drzava"] = "Singapur"
     p["ulica"] = "10 Collyer Quay # 10-01, Ocean Financial Centre"
@@ -1198,34 +1200,66 @@ def fix_aliexpress_data(data, text="", filename=""):
     data["nacin_placila"] = "Poslovna kartica"
     
     # 5. Financial totals
-    m_sub = re.search(r'Subtotal:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
-    m_disc = re.search(r'All\s*discount:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
-    m_ship = re.search(r'Shipping\s*fee:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
-    m_tot = re.search(r'(?<!Sub)Total:?\s*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    def _parse_ali_num(val_str):
+        if not val_str:
+            return 0.0, False
+        s = val_str.strip()
+        has_dot = ('.' in s or ',' in s)
+        # Leading zero with 2 digits e.g. '099' -> 0.99, '007' -> 0.07, '045' -> 0.45
+        if re.match(r'^0\d{2}$', s):
+            return float(s[0] + '.' + s[1:]), True
+        try:
+            val = float(s.replace(',', '.'))
+            return val, has_dot
+        except:
+            return 0.0, False
+
+    m_sub = re.search(r'(?:Subtotal|Subtota|Vmesna\s*vsota)[:\s\~]*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_disc = re.search(r'(?:All\s*discount|Discount|Popust|Coins|Balance)[:\s\~]*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_ship = re.search(r'(?:Shipping\s*fee|Shipping|Po[sš]tnina)[:\s\~]*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_imp = re.search(r'(?:Estimated\s*import\s*charges|Import\s*charges|Import\s*charge)[:\s\~]*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
+    m_tot = re.search(r'(?<!Sub)(?:Total|Skupaj)[:\s\~]*[^\d\n]*([\d\.]+)', text, re.IGNORECASE)
     
-    subtotal = float(m_sub.group(1)) if m_sub else 0.0
-    discount_amount = float(m_disc.group(1)) if m_disc else 0.0
-    shipping_fee = float(m_ship.group(1)) if m_ship else 0.0
-    total = float(m_tot.group(1)) if m_tot else round(subtotal - discount_amount + shipping_fee, 2)
+    subtotal, sub_has_dot = _parse_ali_num(m_sub.group(1)) if m_sub else (0.0, False)
+    discount_amount, disc_has_dot = _parse_ali_num(m_disc.group(1)) if m_disc else (0.0, False)
+    shipping_fee, ship_has_dot = _parse_ali_num(m_ship.group(1)) if m_ship else (0.0, False)
+    import_charges, imp_has_dot = _parse_ali_num(m_imp.group(1)) if m_imp else (0.0, False)
+    total, tot_has_dot = _parse_ali_num(m_tot.group(1)) if m_tot else (0.0, False)
+
+    # Sanity checks for missing decimal points (e.g. OCR read '099' as 99, '104' as 104, '1490' as 1490):
+    if not tot_has_dot and total >= 100.0:
+        total = round(total / 100.0, 2)
+
+    if not disc_has_dot and discount_amount >= 10.0:
+        if total > 0 and discount_amount > total:
+            discount_amount = round(discount_amount / 100.0, 2)
+        elif subtotal > 0 and discount_amount > subtotal:
+            discount_amount = round(discount_amount / 100.0, 2)
+
+    if total > 0 and shipping_fee > total:
+        shipping_fee = round(shipping_fee / 100.0, 2)
+
+    if total > 0 and import_charges > total:
+        import_charges = round(import_charges / 100.0, 2)
+
+    if not sub_has_dot and subtotal >= 100.0:
+        subtotal = round(subtotal / 100.0, 2)
+
+    if total == 0.0 and (subtotal > 0 or shipping_fee > 0 or import_charges > 0):
+        total = round(subtotal - discount_amount + shipping_fee + import_charges, 2)
     
-    # OCR Sanity check: shipping_fee cannot be ridiculously larger than total unless it's a bug
-    if total > 0 and shipping_fee > total + discount_amount:
-        if shipping_fee / 100 <= total + discount_amount:
-            shipping_fee = shipping_fee / 100
-        else:
-            shipping_fee = 0.0
-    
-    m_vat = re.search(r'(?:[€\$]|EUR)?\s*([\d]+\.[\d]{2})\s*VAT\s*included', text, re.IGNORECASE)
-    if m_vat and float(m_vat.group(1)) < total:
-        vat_amount = float(m_vat.group(1))
-    else:
-        vat_amount = round(total - shipping_fee - ((total - shipping_fee) / 1.22), 2)
-        
+    # 22% items base for VAT
+    gross_22 = subtotal if subtotal > 0 else max(0.0, round(total - shipping_fee - import_charges + discount_amount, 2))
+    vat_amount = round(gross_22 - (gross_22 / 1.22), 2)
     net_amount = round(total - vat_amount, 2)
     
-    data["znesek_skupaj"] = total
-    data["znesek_ddv"] = vat_amount
-    data["znesek_brez_ddv"] = net_amount
+    if total > 0:
+        data["znesek_skupaj"] = total
+        data["znesek_ddv"] = vat_amount
+        data["znesek_brez_ddv"] = net_amount
+    else:
+        # Keep llama's totals if our regex failed
+        pass
     
     disc_pct = round((discount_amount / subtotal) * 100, 2) if subtotal > 0 else 0.0
     
@@ -1318,8 +1352,213 @@ def fix_aliexpress_data(data, text="", filename=""):
             "znesek_skupaj": shipping_fee
         })
         
-    data["postavke"] = postavke
+
+    # PRESERVE LLAMA / QWEN DATA IF PRESENT
+    if data.get("postavke") and len(data["postavke"]) > 0 and all(isinstance(p, dict) for p in data["postavke"]) and not any(p.get("opis", "").startswith("Nakup AliExpress") for p in data["postavke"]):
+        llama_items = data["postavke"]
+        regular_items = [
+            p for p in llama_items 
+            if not any(k in str(p.get("opis", "")).lower() for k in ["shipping", "import", "discount", "popust"])
+        ]
+        
+        expected_subtotal = subtotal if subtotal > 0 else round(total - shipping_fee - import_charges + discount_amount, 2)
+        sum_gross = sum(p.get("znesek_skupaj", 0) for p in regular_items)
+        
+        # If math is wrong and there's only 1 regular item, fix its price to match expected_subtotal!
+        if len(regular_items) == 1 and abs(sum_gross - expected_subtotal) > 0.05:
+            qty = regular_items[0].get("kolicina", 1.0)
+            unit_gross_price = round(expected_subtotal / qty, 2)
+            unit_price_net = round(unit_gross_price / 1.22, 4)
+            item_total_gross = round(unit_gross_price * qty, 2)
+                
+            regular_items[0]["cena_enote"] = unit_price_net
+            regular_items[0]["popust"] = 0.0
+            regular_items[0]["stopnja_ddv"] = 22.0
+            regular_items[0]["znesek_skupaj"] = item_total_gross
+            
+        # Ensure regular (non-shipping, non-import, non-discount) items always have 22% VAT and 0.0% discount
+        for p in regular_items:
+            p["stopnja_ddv"] = 22.0
+            p["popust"] = 0.0
+            
+        # Re-compute sum after any single-item fix
+        sum_gross = sum(p.get("znesek_skupaj", 0) for p in regular_items)
+        
+        # --- OCR ITEM PRICE CROSS-CHECK ---
+        # Extract gross prices from "Item detail" OCR section (e.g. "€9.04 x3")
+        # These are more reliable than Qwen's items when Qwen derived prices from wrong subtotal
+        ocr_item_sum = 0.0
+        ocr_matches = []
+        if item_part:
+            for m in re.finditer(r'[^\d,.](\d+[.,]\d+)\s*[xX×]\s*(\d+)', item_part):
+                try:
+                    price = float(m.group(1).replace(',', '.'))
+                    qty = int(m.group(2))
+                    if price > 0 and qty > 0:
+                        ocr_item_sum += round(price * qty, 2)
+                        ocr_matches.append((price, qty))
+                except:
+                    pass
+        
+        # If OCR item prices give a significantly different total than Qwen's items,
+        # trust OCR prices and correct the single-item case
+        if ocr_item_sum > 0.5 and abs(ocr_item_sum - sum_gross) > 0.5:
+            if len(regular_items) == 1 and len(ocr_matches) > 0:
+                # Qwen bundled all items into one — fix using OCR price×qty
+                total_qty = sum(q for _, q in ocr_matches)
+                if total_qty > 0:
+                    unit_gross = round(ocr_item_sum / total_qty, 4)
+                    regular_items[0]["kolicina"] = float(total_qty)
+                    regular_items[0]["cena_enote"] = round(unit_gross / 1.22, 4)
+                    regular_items[0]["stopnja_ddv"] = 22.0
+                    regular_items[0]["popust"] = 0.0
+                    regular_items[0]["znesek_skupaj"] = round(ocr_item_sum, 2)
+            sum_gross = round(ocr_item_sum, 2)
+        
+        # TRUST item sum as true subtotal when it differs significantly from OCR regex subtotal
+        # (e.g. OCR reads "e742" for "27.12" — item prices give the correct total)
+        if sum_gross > 0 and total > 0 and abs(sum_gross - subtotal) > 0.10:
+            subtotal = round(sum_gross, 2)
+            # Re-derive shipping only if current value is implausible (0 or larger than total)
+            if shipping_fee <= 0 or shipping_fee > total:
+                derived_shipping = round(total - subtotal + discount_amount - import_charges, 2)
+                if derived_shipping > 0:
+                    shipping_fee = derived_shipping
+            # Recompute DDV based on corrected subtotal
+            gross_22 = subtotal
+            vat_amount = round(gross_22 - (gross_22 / 1.22), 2)
+            net_amount = round(total - vat_amount, 2)
+            data["znesek_ddv"] = vat_amount
+            data["znesek_brez_ddv"] = net_amount
+            disc_pct = round((discount_amount / subtotal) * 100, 2) if subtotal > 0 else 0.0
+            
+        # FORCE SHIPPING FEE TO MATCH OUR DETERMINISTIC CALCULATION
+        has_shipping = False
+        for p in llama_items:
+            if "shipping" in str(p.get("opis", "")).lower():
+                has_shipping = True
+                p["opis"] = "Shipping fee"
+                p["kolicina"] = 1.0
+                p["cena_enote"] = shipping_fee
+                p["stopnja_ddv"] = 0.0
+                p["popust"] = 0.0
+                p["znesek_skupaj"] = shipping_fee
+                break
+                
+        if shipping_fee > 0 and not has_shipping:
+            llama_items.append({
+                "opis": "Shipping fee",
+                "kolicina": 1.0,
+                "enota_mere": "kos",
+                "cena_enote": shipping_fee,
+                "popust": 0.0,
+                "stopnja_ddv": 0.0,
+                "znesek_skupaj": shipping_fee
+            })
+
+        # FORCE ESTIMATED IMPORT CHARGES
+        # If import_charges = 0.0 (OCR unreadable), remove any Qwen-added import item
+        # rather than showing a false 0.0 line. User can correct via learning mode.
+        has_import = False
+        for p in list(llama_items):
+            if "import" in str(p.get("opis", "")).lower():
+                if import_charges > 0:
+                    has_import = True
+                    p["opis"] = "Estimated import charges"
+                    p["kolicina"] = 1.0
+                    p["cena_enote"] = import_charges
+                    p["stopnja_ddv"] = 0.0
+                    p["popust"] = 0.0
+                    p["znesek_skupaj"] = import_charges
+                    break
+                else:
+                    # Remove the 0.0 item — we don't know the real value
+                    llama_items.remove(p)
+                    break
+                    
+        if import_charges > 0 and not has_import:
+            llama_items.append({
+                "opis": "Estimated import charges",
+                "kolicina": 1.0,
+                "enota_mere": "kos",
+                "cena_enote": import_charges,
+                "popust": 0.0,
+                "stopnja_ddv": 0.0,
+                "znesek_skupaj": import_charges
+            })
+
+        # FORCE ALL DISCOUNT AS SEPARATE NEGATIVE LINE ITEM
+        has_discount = False
+        for p in llama_items:
+            if any(k in str(p.get("opis", "")).lower() for k in ["discount", "popust"]):
+                has_discount = True
+                p["opis"] = "All discount"
+                p["kolicina"] = 1.0
+                p["cena_enote"] = -discount_amount
+                p["stopnja_ddv"] = 0.0
+                p["popust"] = 0.0
+                p["znesek_skupaj"] = -discount_amount
+                break
+                
+        if discount_amount > 0 and not has_discount:
+            llama_items.append({
+                "opis": "All discount",
+                "kolicina": 1.0,
+                "enota_mere": "kos",
+                "cena_enote": -discount_amount,
+                "popust": 0.0,
+                "stopnja_ddv": 0.0,
+                "znesek_skupaj": -discount_amount
+            })
+            
+        data["postavke"] = llama_items
+    else:
+        postavke = []
+        expected_subtotal = subtotal if subtotal > 0 else round(total - shipping_fee - import_charges + discount_amount, 2)
+        gross_item = round(expected_subtotal, 2)
+        postavke.append({
+            "opis": f"Nakup AliExpress {data.get('stevilka', '')}",
+            "kolicina": 1.0,
+            "enota_mere": "kos",
+            "cena_enote": round(gross_item / 1.22, 4),
+            "popust": 0.0,
+            "stopnja_ddv": 22.0,
+            "znesek_skupaj": gross_item
+        })
+        if shipping_fee > 0:
+            postavke.append({
+                "opis": "Shipping fee",
+                "kolicina": 1.0,
+                "enota_mere": "kos",
+                "cena_enote": shipping_fee,
+                "popust": 0.0,
+                "stopnja_ddv": 0.0,
+                "znesek_skupaj": shipping_fee
+            })
+        if import_charges > 0:
+            postavke.append({
+                "opis": "Estimated import charges",
+                "kolicina": 1.0,
+                "enota_mere": "kos",
+                "cena_enote": import_charges,
+                "popust": 0.0,
+                "stopnja_ddv": 0.0,
+                "znesek_skupaj": import_charges
+            })
+        if discount_amount > 0:
+            postavke.append({
+                "opis": "All discount",
+                "kolicina": 1.0,
+                "enota_mere": "kos",
+                "cena_enote": -discount_amount,
+                "popust": 0.0,
+                "stopnja_ddv": 0.0,
+                "znesek_skupaj": -discount_amount
+            })
+        data["postavke"] = postavke
+        
     return data
+
 
 
 def check_corrections(original, final):
@@ -1573,7 +1812,7 @@ def save_llama_learning_example(ocr_text, final_confirmed_data, original_data, f
     except Exception as e:
         print(f"Napaka pri posodabljanju Llama pravil: {e}")
 
-def llama_identify_supplier(text, model="llama3"):
+def llama_identify_supplier(text, model=DEFAULT_AI_MODEL):
     if _is_aliexpress_document("", text):
         return {"naziv": "Aliexpress", "davcna_stevilka": "NL826439810B01"}
         
@@ -1591,7 +1830,7 @@ def llama_identify_supplier(text, model="llama3"):
         res = requests.post(url, json=payload, timeout=30).json()
         return json.loads(res['message']['content'])
     except Exception as e:
-        print(f"Llama identify supplier failed: {e}")
+        print(f"AI identify supplier failed: {e}")
         return None
 
 def get_supplier_rules(davcna):
@@ -1624,11 +1863,11 @@ def save_supplier_rules(davcna, naziv, rules):
     except Exception as e:
         print(f"Napaka pri shranjevanju pravil: {e}")
 
-def llama_generate_rules(ocr_text, extracted_json, davcna, naziv, model="llama3"):
+def llama_generate_rules(ocr_text, extracted_json, davcna, naziv, model=DEFAULT_AI_MODEL):
     import requests
     import json
     url = "http://localhost:11434/api/chat"
-    prompt = f"Based on this OCR text and its correctly extracted JSON data for supplier '{naziv}', write a concise set of extraction rules for an LLM to follow in the future. Focus on where to find the invoice number, dates, amounts, and any specific quirks for this supplier's line items. DO NOT output JSON. Output a bulleted list of rules.\n\nOCR:\n{ocr_text}\n\nJSON:\n{json.dumps(extracted_json, ensure_ascii=False)}"
+    prompt = f"Based on this OCR text and its correctly extracted JSON data for supplier '{naziv}', write a concise set of extraction rules for an LLM to follow in the future. Focus on where to find the invoice number, dates, amounts, and any specific quirks for this supplier's line items.\nCRITICAL RULE: Write GENERAL patterns (e.g. 'Look for invoice number after the word Stevilka:'). NEVER hardcode specific invoice numbers, dates, or amounts as permanent rules!\nDO NOT output JSON. Output a bulleted list of rules.\n\nOCR:\n{ocr_text}\n\nJSON:\n{json.dumps(extracted_json, ensure_ascii=False)}"
     payload = {
         "model": model,
         "messages": [{"role": "system", "content": "You write concise extraction rules based on examples."}, {"role": "user", "content": prompt}],
@@ -1640,9 +1879,9 @@ def llama_generate_rules(ocr_text, extracted_json, davcna, naziv, model="llama3"
         save_supplier_rules(davcna, naziv, rules)
         print(f"Generated new rules for {naziv}")
     except Exception as e:
-        print(f"Llama generate rules failed: {e}")
+        print(f"AI generate rules failed: {e}")
 
-def llama_update_rules(ocr_text, old_json, corrected_json, existing_rules, davcna, naziv, model="llama3"):
+def llama_update_rules(ocr_text, old_json, corrected_json, existing_rules, davcna, naziv, model=DEFAULT_AI_MODEL):
     import requests
     import json
     url = "http://localhost:11434/api/chat"
@@ -1651,7 +1890,7 @@ def llama_update_rules(ocr_text, old_json, corrected_json, existing_rules, davcn
         llama_generate_rules(ocr_text, corrected_json, davcna, naziv, model)
         return
         
-    prompt = f"The user corrected the extracted JSON for supplier '{naziv}'.\n\nOCR:\n{ocr_text}\n\nOld JSON (Incorrect):\n{json.dumps(old_json, ensure_ascii=False)}\n\nCorrected JSON:\n{json.dumps(corrected_json, ensure_ascii=False)}\n\nExisting Rules:\n{existing_rules}\n\nUpdate the existing rules to ensure the mistake made in the old JSON is not repeated. Return the COMPLETE updated bulleted list of rules. DO NOT output JSON."
+    prompt = f"The user corrected the extracted JSON for supplier '{naziv}'.\n\nOCR:\n{ocr_text}\n\nOld JSON (Incorrect):\n{json.dumps(old_json, ensure_ascii=False)}\n\nCorrected JSON:\n{json.dumps(corrected_json, ensure_ascii=False)}\n\nExisting Rules:\n{existing_rules}\n\nUpdate the existing rules to ensure the mistake made in the old JSON is not repeated. Return the COMPLETE updated bulleted list of rules.\nCRITICAL: Write GENERAL patterns. NEVER hardcode specific invoice numbers, dates, or amounts!\nDO NOT output JSON."
     payload = {
         "model": model,
         "messages": [{"role": "system", "content": "You refine extraction rules based on user corrections."}, {"role": "user", "content": prompt}],
@@ -1663,10 +1902,10 @@ def llama_update_rules(ocr_text, old_json, corrected_json, existing_rules, davcn
         save_supplier_rules(davcna, naziv, rules)
         print(f"Updated rules for {naziv}")
     except Exception as e:
-        print(f"Llama update rules failed: {e}")
+        print(f"AI update rules failed: {e}")
 
 
-def parse_with_llama(text, filename, model="llama3", rules=None):
+def parse_with_llama(text, filename, model=DEFAULT_AI_MODEL, rules=None):
     import requests
     import json
     
@@ -1722,32 +1961,31 @@ If the text contains "Dobropis" or "credit note":
 5. Line items have format: "Description  NotoAmount  DDVAmount  TotalAmount" (e.g. "Storno računa  107,59  23,67  131,26").
 6. Include "vezni_racun" as an extra field in the returned JSON.
 
-SPECIFIC RULES FOR ALIEXPRESS ORDERS:
-If the text contains "AliExpress" or "Order ID" or "Alibaba" or "Order time" or "Item detail":
-1. The supplier/partner name MUST be "Aliexpress" and the tax ID is "NL826439810B01", country is "Singapur", ulica is "10 Collyer Quay # 10-01, Ocean Financial Centre", kraj is "Singapur", postna_stevilka is "049315", tuji_partner_neprebran is false.
-2. The "stevilka" (invoice/order number) is the long numeric Order ID (15-18 digits).
-3. "datum_izdaje" and "datum_zapadlosti" are the order/payment date (e.g. "Feb 2, 2026" → "2026-02-02").
-4. "nacin_placila" MUST be "Poslovna kartica" and "placano" MUST be true. "sklic" is "".
-5. Look for "Subtotal", "All discount" (or "Coins"/"Balance"), "Shipping fee", and "Total".
-6. VERIFICATION LOGIC: Calculate "Total" = "Subtotal" - "All discount" + "Shipping fee". The extracted "znesek_skupaj" MUST be this "Total". The total VAT amount ("znesek_ddv") is derived from the items (22% on regular items, 0% on shipping).
-7. For each product in the "Item detail" section:
-   - "opis": Use the product name.
-   - "kolicina": The quantity specified after 'x' (e.g., 'x2' means 2.0).
-   - "stopnja_ddv": MUST be 22.0.
-   - Extract the unit gross price (e.g. if €2.32 x2, unit gross is 2.32).
-   - "cena_enote": Calculate unit price WITHOUT VAT as: unit gross price / 1.22 (e.g. 2.32 / 1.22 = 1.9016).
-   - "popust": Calculate item discount percentage as ("All discount" / "Subtotal") * 100.
-   - "znesek_skupaj": Calculate as (unit gross price * kolicina) * (1 - popust/100).
-   - CRITICAL: The sum of (unit gross price * kolicina) for all items MUST exactly equal the "Subtotal"! If an item price is misread, recalculate it based on Subtotal.
-8. The "Shipping fee" MUST be added as a SEPARATE line item (only if > 0):
-   - "opis": "Shipping fee".
-   - "kolicina": 1.0.
-   - "stopnja_ddv": MUST be 0.0 (0% VAT for shipping).
-   - "cena_enote": The gross shipping fee amount (since 0% VAT, net = gross).
-   - "popust": 0.0.
-   - "znesek_skupaj": The gross shipping fee amount.
-9. "tuji_partner_neprebran" MUST be false.
-
+SPECIFIC RULES FOR ALIEXPRESS / ALIBABA ORDERS:
+If the text contains "AliExpress" or "Order ID" or "Order 1D" or "Alibaba" or "Order time" or "Item detail":
+1. PARTNER INFO: "naziv" is "Alibaba.com Singapore E-Commerce Private Limited" (or "Aliexpress"), "davcna_stevilka" is "NL826439810B01", "drzava"/"kraj" is "Singapur", "ulica" is "10 Collyer Quay # 10-01, Ocean Financial Centre", "postna_stevilka" is "049315". "tuji_partner_neprebran" is false.
+2. The "stevilka" is the numeric Order ID (15-18 digits). "datum_izdaje" is the order date (YYYY-MM-DD). "nacin_placila" is "Poslovna kartica", "placano" is true, "sklic" is "".
+3. EXTRACT TOTALS CAREFULLY: Look for "Subtotal", "Shipping fee", "Estimated import charges", "All discount" (or Coins/Balance), and "Total". OCR may have missing decimal dots (e.g., '099' means 0.99, '554' means 5.54, 'e104' or '104' means 1.04). Insert missing decimal dots! If a value is garbled (e.g. "casa", "ess", "es"), set it to 0.0 and omit that line item.
+4. STRUCTURE OF LINE ITEMS ("postavke"):
+   A) Product line items — READ PRICES FROM "Item detail" SECTION, NOT from Subtotal:
+      - Look for patterns like "€9.04 x3" or "€3.00 x1" in the Item detail section. Use these individual prices and quantities!
+      - Do NOT derive item prices by dividing the Subtotal by the quantity. Use the explicit price shown next to each item.
+      - "opis": full product description/name (the line(s) above the price×qty line in Item detail).
+      - "kolicina": quantity from 'xN' (e.g. 'x3' → 3.0, 'x10' → 10.0).
+      - "cena_enote": net unit price WITHOUT VAT = unit gross price / 1.22.
+      - "popust": 0.0 (DO NOT distribute the discount into the product items!).
+      - "stopnja_ddv": 22.0 (standard 22% VAT).
+      - "znesek_skupaj": gross amount for this item = unit gross price * kolicina.
+   B) "Shipping fee" (only if > 0 and readable):
+      - "opis": "Shipping fee", "kolicina": 1.0, "cena_enote": shipping amount, "popust": 0.0, "stopnja_ddv": 0.0 (0% VAT), "znesek_skupaj": shipping amount.
+   C) "Estimated import charges" (only if present in text and > 0 and readable):
+      - "opis": "Estimated import charges", "kolicina": 1.0, "cena_enote": import amount, "popust": 0.0, "stopnja_ddv": 0.0 (0% VAT), "znesek_skupaj": import amount.
+   D) "All discount" (only if discount is present in text and > 0):
+      - "opis": "All discount", "kolicina": 1.0, "cena_enote": -discount amount (NEGATIVE value, e.g. -1.03), "popust": 0.0, "stopnja_ddv": 0.0 (0% VAT), "znesek_skupaj": -discount amount (NEGATIVE value, e.g. -1.03).
+5. FINANCIAL TOTALS VERIFICATION:
+   - "znesek_skupaj" MUST equal: Subtotal + Shipping fee + Estimated import charges - All discount (which matches "Total").
+   - "znesek_ddv" is calculated ONLY from 22% products: Subtotal - (Subtotal / 1.22).
+   - "znesek_brez_ddv" = znesek_skupaj - znesek_ddv.
 SPECIFIC RULES FOR "GOOGLE" INVOICES (Google Cloud EMEA Limited, Google Ireland Limited, Google Workspace, Google Cloud, Google Ads):
 If the text contains "Google Cloud EMEA" or "Google Ireland" or "Google Workspace" or "Google Cloud" or "členom 196 Direktive" or filename contains "Google":
 1. The supplier is "Google Cloud EMEA Limited" (tax ID "IE3668997OH", Velasco, Clanwilliam Place, Dublin 2, Irska) OR "Google Ireland Limited" (tax ID "IE6388047V", Gordon House, Barrow Street, Dublin 4, Irska).
@@ -1874,7 +2112,7 @@ Here is the invoice text:
     return parsed
 
 
-def parse_bank_statement_with_llama(text, filename, model="llama3"):
+def parse_bank_statement_with_llama(text, filename, model=DEFAULT_AI_MODEL):
     import requests
     import json
     
@@ -2096,12 +2334,12 @@ def process_invoice_data(source, filename):
             'tip': tip
         }
 
-    # 2. Poskusi z Llama AI kot primarnim bralnikom
-    print(f"[Parser] Poskušam z Llama AI za {filename}...")
-    if ensure_ollama_running("llama3"):
+    # 2. Poskusi z AI kot primarnim bralnikom
+    print(f"[Parser] Poskušam z AI ({DEFAULT_AI_MODEL}) za {filename}...")
+    if ensure_ollama_running(DEFAULT_AI_MODEL):
         try:
             # 2a. Najprej identificiraj dobavitelja (za pravila)
-            supplier_info = llama_identify_supplier(text, "llama3")
+            supplier_info = llama_identify_supplier(text, DEFAULT_AI_MODEL)
             rules = None
             davcna = None
             if supplier_info:
@@ -2114,7 +2352,7 @@ def process_invoice_data(source, filename):
                         print(f"[Parser] Uporabljam obstoječa pravila za dobavitelja: {davcna}")
             
             # 2b. Ekstrakcija podatkov (z ali brez pravil)
-            parsed = parse_with_llama(text, filename, "llama3", rules=rules)
+            parsed = parse_with_llama(text, filename, DEFAULT_AI_MODEL, rules=rules)
             if parsed:
                 parsed = post_process_invoice_data(parsed)
                 # Za AliExpress dokumente vedno reapply fix po post_process (ki bi sicer resetiral DDV na 0)

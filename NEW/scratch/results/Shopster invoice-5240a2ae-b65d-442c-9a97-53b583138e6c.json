@@ -1,0 +1,39 @@
+{
+  "stevilka": "2000-95-19331",
+  "datum_izdaje": "2026-02-16",
+  "datum_zapadlosti": "2026-02-16",
+  "datum_storitve_od": "2026-03-01",
+  "datum_storitve_do": "2026-03-31",
+  "znesek_skupaj": 39.85,
+  "znesek_ddv": 7.18,
+  "znesek_brez_ddv": 32.67,
+  "partner": {
+    "naziv": "Shoppster d.o.o.",
+    "davcna_stevilka": "",
+    "drzava": "Slovenija",
+    "ulica": "",
+    "kraj": "",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
+  },
+  "postavke": [
+    {
+      "opis": "Stroški dostavne storitve",
+      "kolicina": 1.0,
+      "enota_mere": "KOS",
+      "cena_enote": 3.24,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 3.95
+    },
+    {
+      "opis": "HONOR polnilec SuperCharge GaN Slim",
+      "kolicina": 1.0,
+      "enota_mere": "KOS",
+      "cena_enote": 29.43,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 35.9
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+    p["ulica"] = p.get("ulica") or ""
+    p["kraj"] = p.get("kraj") or ""
+    p["postna_stevilka"] = p.get("postna_stevilka") or ""
+    p["tuji_partner_neprebran"] = p.get("tuji_partner_neprebran") or False
+    
+    if "inpos" in filename.lower() or "inpos" in str(p.get("naziv", "")).lower():
+        parsed = fix_inpos_data(parsed, text, filename)
+    elif "soncek" in filename.lower() or "sonček" in filename.lower() or "soncek" in str(p.get("naziv", "")).lower() or "sonček" in str(p.get("naziv", "")).lower():
+        parsed = fix_soncek_data(parsed, text, filename)
+    elif (_is_sp_document(filename, text)):
+        parsed = fix_sp_data(parsed, text, filename)
+    elif _is_aliexpress_document(filename, text) or "aliexpress" in str(p.get("naziv", "")).lower() or "alibaba" in str(p.get("naziv", "")).lower():
+        parsed = fix_aliexpress_data(parsed, text, filename)
+    if _is_credit_note(filename, text):
+        parsed = fix_credit_note_data(parsed, text, filename)
+        
+    return parsed
+
+
+def parse_bank_statement_with_llama(text, filename, model="llama3"):

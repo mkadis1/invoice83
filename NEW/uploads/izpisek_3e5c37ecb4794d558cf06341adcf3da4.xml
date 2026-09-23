@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08 ./camt.053.001.08.xsd">
+<BkToCstmrStmt>
+<GrpHdr>
+<MsgId>2026-05-23T00.01.12/094208</MsgId>
+<CreDtTm>2026-05-23T00:01:12+00:00</CreDtTm>
+</GrpHdr>
+<Stmt>
+<Id>202605223159736SI56024530264377270</Id>
+<LglSeqNb>74</LglSeqNb>
+<CreDtTm>2026-05-23T00:01:12+00:00</CreDtTm>
+<Acct>
+<Id>
+<IBAN>SI56024530264377270</IBAN>
+</Id>
+<Ccy>EUR</Ccy>
+<Ownr>
+<Nm>SIM 83 - SIMULATORJI VOŽNJE, MIHA K ADIŠ S.P.</Nm>
+<PstlAdr>
+<Ctry>SI</Ctry>
+<AdrLine>DOBJA VAS 253</AdrLine>
+<AdrLine>2390 RAVNE NA KOROŠKEM</AdrLine>
+</PstlAdr>
+</Ownr>
+</Acct>
+<Bal>
+<Tp>
+<CdOrPrtry>
+<Cd>OPBD</Cd>
+</CdOrPrtry>
+</Tp>
+<Amt Ccy="EUR">3420.70</Amt>
+<CdtDbtInd>CRDT</CdtDbtInd>
+<Dt>
+<Dt>2026-05-19</Dt>
+</Dt>
+</Bal>
+<Bal>
+<Tp>
+<CdOrPrtry>
+<Cd>CLBD</Cd>
+</CdOrPrtry>
+</Tp>
+<Amt Ccy="EUR">3786.70</Amt>
+<CdtDbtInd>CRDT</CdtDbtInd>
+<Dt>
+<Dt>2026-05-22</Dt>
+</Dt>
+</Bal>
+<TxsSummry>
+<TtlCdtNtries>
+<NbOfNtries>1</NbOfNtries>
+<Sum>366.00</Sum>
+</TtlCdtNtries>
+<TtlDbtNtries>
+<NbOfNtries>0</NbOfNtries>
+<Sum>0.00</Sum>
+</TtlDbtNtries>
+</TxsSummry>
+<Ntry>
+<NtryRef>FT26142044489620/213273181943884/1</NtryRef>
+<Amt Ccy="EUR">366.00</Amt>
+<CdtDbtInd>CRDT</CdtDbtInd>
+<Sts>
+<Cd>BOOK</Cd>
+</Sts>
+<BookgDt>
+<Dt>2026-05-22</Dt>
+</BookgDt>
+<ValDt>
+<Dt>2026-05-22</Dt>
+</ValDt>
+<AcctSvcrRef>CR213273181943884010001</AcctSvcrRef>
+<BkTxCd>
+<Prtry>
+<Cd>NOTPROVIDED</Cd>
+</Prtry>
+</BkTxCd>
+<NtryDtls>
+<TxDtls>
+<Refs>
+<InstrId>FT26142044489620</InstrId>
+<EndToEndId>0182026</EndToEndId>
+<TxId>CR213273181943884010001</TxId>
+</Refs>
+<RltdPties>
+<Dbtr>
+<Pty>
+<Nm>ALJA MLACNIK</Nm>
+<PstlAdr>
+<Ctry>SI</Ctry>
+<AdrLine>SENTJANZ PRI DRAVOGRADU 75  2373 SENTJANZ</AdrLine>
+<AdrLine>-</AdrLine>
+</PstlAdr>
+&lt;PrvtId&gt;       &lt;Othr&gt;        &lt;Id&gt;ie0424150&lt;/Id&gt;        &lt;SchmeNm&gt;   &lt;Cd&gt;NIDN&lt;/Cd&gt;        &lt;/SchmeNm&gt;       &lt;Issr&gt;ue koper&lt;/Issr&gt;&lt;/Othr&gt;      &lt;/PrvtId&gt;
+</Pty>
+</Dbtr>
+<DbtrAcct>
+<Id>
+<IBAN>SI56101111020304044</IBAN>
+</Id>
+</DbtrAcct>
+<Cdtr>
+<Pty>
+<Nm>SIM 83 - SIMULATORJI VOŽNJE, MIHA K ADIŠ S.P.</Nm>
+<PstlAdr>
+<Ctry>SI</Ctry>
+<AdrLine>DOBJA VAS 253</AdrLine>
+<AdrLine>2390 RAVNE NA KOROŠKEM</AdrLine>
+</PstlAdr>
+</Pty>
+</Cdtr>
+<CdtrAcct>
+<Id>
+<IBAN>SI56024530264377270</IBAN>
+</Id>
+</CdtrAcct>
+</RltdPties>
+<RltdAgts>
+<DbtrAgt>
+<FinInstnId>
+<BICFI>BAKOSI2XXXX</BICFI>
+</FinInstnId>
+</DbtrAgt>
+<CdtrAgt>
+<FinInstnId>
+<BICFI>LJBASI2XXXX</BICFI>
+</FinInstnId>
+</CdtrAgt>
+</RltdAgts>
+<Purp>
+<Prtry>OTHR</Prtry>
+</Purp>
+<RmtInf>
+<Strd>
+<CdtrRefInf>
+<Ref>SI000182026</Ref>
+</CdtrRefInf>
+<AddtlRmtInf>Priliv</AddtlRmtInf>
+</Strd>
+</RmtInf>
+<RltdDts>
+<IntrBkSttlmDt>2026-05-22</IntrBkSttlmDt>
+</RltdDts>
+</TxDtls>
+</NtryDtls>
+</Ntry>
+</Stmt>
+</BkToCstmrStmt>
+</Document>

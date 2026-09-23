@@ -1,0 +1,18 @@
+﻿=== TELEMACH RACUN 343 - POSTAVKE ===
+(1914, 'EON Light 0,323 EN', 1.0, 6.74, 0.0, 22.0, 8.22)
+(1915, 'Paket Dodatna raz┼íirjena shema 0,323 EN', 1.0, 0.0, 0.0, 22.0, 0.0)
+(1916, 'Paket Voyo 0,323 EN', 1.0, 0.0, 0.0, 22.0, 0.0)
+(1917, 'Mobilni paket ┼áE VE─î 0,774 EN', 1.0, 4.38, 0.0, 22.0, 5.34)
+(1918, 'Mobilni paket ┼áE VE─î 1,000 EN', 1.0, 5.66, 0.0, 22.0, 6.91)
+
+=== LLAMA LEARNING EXAMPLES za Telemach ===
+Najdenih: 3
+
+ID: 12, filename: Telemach CLB-S1-1001885563.pdf
+corrected_json: {"stevilka": "CLB-S1-1001885563", "datum_izdaje": "2026-04-30", "datum_zapadlosti": "2026-05-25", "datum_storitve_od": "2026-04-01", "datum_storitve_do": "2026-04-30", "znesek_skupaj": 88.67, "znesek_ddv": 15.99, "znesek_brez_ddv": 72.68, "partner": {"naziv": "Telemach Slovenija d.o.o.", "davcna_stevilka": "SI56 0400 0027 7723 551", "drzava": "Slovenija", "ulica": "Brn─ìi─ìeva ulica 49A", "kraj": "Ljubljana - ─îrnu─ìe", "postna_stevilka": "1231", "tuji_partner_neprebran": false}, "postavke": [{"opis
+
+ID: 27, filename: Telemach CLB-S1-1000943244.pdf
+corrected_json: {"stevilka": "CLB-S1-1000943244", "datum_izdaje": "2026-02-28", "datum_zapadlosti": "2026-03-25", "datum_storitve_od": "2026-02-01", "datum_storitve_do": "2026-02-28", "znesek_skupaj": 61.96, "znesek_ddv": 11.17, "znesek_brez_ddv": 50.79, "partner": {"naziv": "Telemach Slovenija d.o.o.", "davcna_stevilka": "SI56 0400 0027 7723 551", "drzava": "Slovenija", "ulica": "Brn─ìi─ìeva ulica 49A", "kraj": "Ljubljana - ─îrnu─ìe", "postna_stevilka": "1231", "tuji_partner_neprebran": false}, "postavke": [{"opis
+
+ID: 36, filename: Telemach CLB-S1-2000013088.pdf
+corrected_json: {"stevilka": "CLB-S1-2000013088", "sklic": "SI12 9055460337015", "datum_izdaje": "2026-01-31", "datum_zapadlosti": "2026-02-25", "datum_storitve_od": "2026-01-01", "datum_storitve_do": "2026-01-31", "znesek_skupaj": 20.46, "znesek_ddv": 3.69, "znesek_brez_ddv": 16.78, "partner": {"naziv": "Telemach Slovenija d.o.o.", "davcna_stevilka": "SI56 0400 0027 7723 551", "trr": "SI56040000277723551", "drzava": "Slovenija", "ulica": "Brn─ìi─ìeva ulica 49A", "kraj": "Ljubljana - ─îrnu─ìe", "postna_stevilka": "

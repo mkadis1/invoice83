@@ -1,0 +1,30 @@
+        conn.close()
+    except Exception as e:
+        print(f"Napaka pri shranjevanju učenja v bazo: {e}")
+        
+    # Kliči posodobitev pravil v ozadju/sinhrono
+    try:
+        partner_davcna = final_confirmed_data.get("partner", {}).get("davcna_stevilka", "").strip()
+        if not partner_davcna:
+            partner_davcna = final_confirmed_data.get("partner", {}).get("naziv", "").strip()
+        if partner_davcna:
+            rules = get_supplier_rules(partner_davcna)
+            llama_update_rules(ocr_text, original_data, example_json, rules, partner_davcna, partner_naziv)
+    except Exception as e:
+        print(f"Napaka pri posodabljanju Llama pravil: {e}")
+
+def llama_identify_supplier(text, model="llama3"):
+    if _is_aliexpress_document("", text):
+        return {"naziv": "Aliexpress", "davcna_stevilka": "NL826439810B01"}
+        
+    import requests
+    import json
+    url = "http://localhost:11434/api/chat"
+    prompt = f"Identify the supplier (the company issuing the invoice, NOT the buyer 'Miha Kadiš' or 'SIM 83' or 'SI11648236'). Extract their name and tax ID (VAT number). Return ONLY valid JSON:\n{{\"naziv\": \"Name\", \"davcna_stevilka\": \"VAT number\"}}\n\nText:\n{text}"
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+        "format": "json"
+    }
+    try:

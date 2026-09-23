@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice83</title>
+    <link rel="stylesheet" href="/static/styles.css?v=2026060312">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        .gear-btn {
+            background: white; border: 1px solid #dee2e6; border-radius: 50%;
+            width: 38px; height: 38px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2em; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            flex-shrink: 0;
+        }
+        .gear-btn:hover { transform: rotate(60deg); background: #f1f3f5; }
+        
+        .header-tools {
+            position: fixed; top: 14px; right: 20px; z-index: 1000;
+            display: flex; align-items: center; gap: 15px;
+        }
+        
+        #company-switcher {
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid #dee2e6;
+            background: white;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--primary-blue);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            outline: none;
+            transition: all 0.2s;
+            max-width: 200px;
+        }
+        
+        #company-switcher:hover {
+            border-color: var(--primary-blue);
+            background: #f8f9fa;
+        }
+        /* Partner popup modal */
+        #partner-popup-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.4); z-index: 30000;
+            align-items: center; justify-content: center;
+        }
+        #partner-popup-overlay.active { display: flex; }
+        #partner-popup-box {
+            background: white; border-radius: 8px; padding: 25px;
+            width: 420px; max-width: 95vw;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        /* Startup error display */
+        #startup-monitor-overlay {
+            display: none; position: fixed; inset: 0; background: white; z-index: 10000;
+            align-items: center; justify-content: center; flex-direction: column; text-align: center;
+            padding: 20px;
+        }
+
+        /* Gumb za vrnitev na vrh */
+        #back-to-top {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 9999;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary-blue, #2563eb);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition: opacity 0.25s, transform 0.25s;
+        }
+        #back-to-top.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        #back-to-top:hover {
+            background: #1d4ed8;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+    </style>
+    <script>
+        // Startup Monitor
+        window._bootStartTime = Date.now();
+        window._bootTimer = setTimeout(function() {
+            if (!window._appLoaded) {
+                document.getElementById('startup-monitor-overlay').style.display = 'flex';
+                document.getElementById('startup-error-msg').innerText = "Aplikacija se nalaga dlje kot običajno. To lahko pomeni napako v kodi ali težavo s strežnikom.";
+            }
+        }, 8000);
+
+        window.addEventListener('error', function(e) {
+            if (!window._appLoaded) {
+                document.getElementById('startup-monitor-overlay').style.display = 'flex';
+                document.getElementById('startup-error-msg').innerHTML = "<b>Kritična napaka pri nalaganju:</b><br>" + e.message + "<br><small style='color:#999'>" + e.filename + ":" + e.lineno + "</small>";
+            }
+        });
+    </script>
+</head>
+<body>
+    <!-- Startup Monitor Overlay -->
+    <div id="startup-monitor-overlay">
+        <div style="max-width: 500px;">
+            <div style="font-size: 3em; margin-bottom: 10px;">⚠️</div>
+            <h2 style="color: var(--primary-red);">Težava pri komunikaciji</h2>
+            <p id="startup-error-msg">Nalagam...</p>
+            <div style="margin-top: 25px;">
+                <button class="btn btn-blue" onclick="location.reload()">Ponovno naloži stran</button>
+            </div>
+            <p style="margin-top: 20px; font-size: 0.85em; color: #999;">
+                Če se težava ponavlja, prosim preverite, če je strežnik vklopljen ali preverite zadnje popravke v kodi.
+            </p>
+        </div>
+    </div>
+
+    <!-- Header tools moved inside main content header -->
+
+    <div id="mobile-overlay" onclick="window.toggleMobileMenu()"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="brand" id="brand-logo-container" onclick="document.getElementById('logo-input').click()" title="Kliknite za nalaganje ali spremembo logotipa">
+            <h1 id="brand-text">Invoice83</h1>
+        </div>
+        <nav>
+            <div style="padding: 10px 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px;">
+                <label style="font-size: 0.75rem; color: var(--text-muted); display:block; margin-bottom: 5px; text-transform:uppercase; font-weight:bold;">Poslovno leto</label>
+                <select id="poslovno-leto" style="width: 100%; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: white; font-weight:bold; color:var(--primary-blue);">
+                    <option value="2023">2023</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                    <option value="2027">2027</option>
+                </select>
+            </div>
+            <a href="#" class="active" onclick="showModule('dashboard')" style="margin-top: 10px;">🏠 Nadzorna plošča</a>
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
+                    <span>📂 Šifranti</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="nav-group-items">
+                    <a href="#" onclick="showModule('partnerji')">Partnerji</a>
+                    <a href="#" onclick="showModule('artikli_storitve')">Artikli in storitve</a>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
+                    <span>🤝 CRM</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="nav-group-items">
+                    <a href="#" onclick="showModule('crm_dashboard')">CRM Nadzorna plošča</a>
+                    <a href="#" onclick="showModule('partnerji')">Partnerji</a>
+                    <a href="#" onclick="showModule('crm_kanal')">Prodajni kanal</a>
+                    <a href="#" onclick="showModule('crm_aktivnosti')">Aktivnosti</a>
+                    <a href="#" onclick="showModule('crm_interakcije')">Interakcije</a>
+                </div>
+            </div>
+            
+            <div class="nav-group open">
+                <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
+                    <span>💰 Prodaja</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="nav-group-items">
+                    <a href="#" onclick="showModule('izdani_racuni')">Izdani računi</a>
+                    <a href="#" onclick="showModule('ponudbe')">Ponudbe</a>
+                    <a href="#" onclick="showModule('delovni_nalogi')">Delovni nalogi</a>
+                    <a href="#" onclick="showModule('dobropisi')">Dobropisi</a>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
+                    <span>🛒 Nabava</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="nav-group-items">
+                    <a href="#" onclick="showModule('prejeti_racuni')">Prejeti računi</a>
+                    <a href="#" onclick="showModule('prejete_ponudbe')">Prejete ponudbe</a>
+                    <a href="#" onclick="showModule('prejeti_dobropisi')">Prejeti dobropisi</a>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
+                    <span>🏦 Finance</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="nav-group-items">
+                    <a href="#" onclick="showModule('izpiski')">Bančni izpiski</a>
+                    <a href="#" onclick="showModule('glavna_knjiga')">Glavna knjiga</a>
+                    <a href="#" onclick="showModule('konto_kartica')">Iskanje po kontih</a>
+                    <a href="#" onclick="showModule('osnovna_sredstva')">Osnovna sredstva</a>
+                    <a href="#" onclick="showModule('financna_porocila')">Finančna poročila</a>
+                </div>
+            </div>
+            
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
+                    <span>👔 Zaposleni</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="nav-group-items">
+                    <a href="#" onclick="showModule('zaposleni')">Seznam zaposlenih</a>
+                    <a href="#" onclick="showModule('potni_nalogi')">Potni nalogi</a>
+                    <a href="#" onclick="showModule('prispevki')">Plače / Prispevki</a>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-header" onclick="window.toggleNavGroup(this)">
+                    <span>⚙️ Pomoč in ostalo</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="nav-group-items">
+                    <a href="#" onclick="showModule('help')">📖 Navodila in pomoč</a>
+                    <a href="#" onclick="showModule('zgodovina')">🕒 Zgodovina sprememb</a>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <div class="main-content">
+        <header>
+            <button id="mobile-menu-btn" class="mobile-menu-btn" onclick="window.toggleMobileMenu()">☰</button>
+            <div class="tabs-outer-container">
+                <button id="tabs-scroll-left" class="tabs-scroll-btn" onclick="window.scrollTabs(-1)">◀</button>
+                <div id="app-tabs-bar" class="app-tabs-bar">
+                    <!-- Zavihki se bodo naložili dinamično -->
+                </div>
+                <button id="tabs-scroll-right" class="tabs-scroll-btn" onclick="window.scrollTabs(1)">▶</button>
+            </div>
+            
+            <div class="header-tools-inline">
+                <h2 id="module-title" style="display: none;"></h2>
+                <div id="company-switcher-container">
+                    <select id="company-switcher" onchange="window.switchCompany(this.value)">
+                        <option value="">Nalagam podjetja...</option>
+                    </select>
+                </div>
+                <button class="gear-btn" title="Nastavitve" onclick="showModule('nastavitve')">⚙️</button>
+            </div>
+        </header>
+        <main id="app-content">
+            <!-- Vsebina se bo naložila tukaj -->
+        </main>
+    </div>
+
+    <!-- Skriti input za nalaganje logotipa -->
+    <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="window.handleLogoUpload(this)">
+
+    <!-- Pop-up modal za dodajanje partnerja iz bancnih izpiskov (popoln obrazec) -->
+    <div id="partner-popup-overlay">
+        <div id="partner-popup-box" style="width:620px; max-height:85vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; color:var(--primary-blue);">Dodaj novega partnerja</h3>
+                <button onclick="window.zapriPartnerPopup()" style="background:none; border:none; font-size:1.4em; cursor:pointer; color:#868e96;">&times;</button>
+            </div>
+
+            <!-- Bizi.si iskanje -->
+            <div style="background:#f8f9fa; padding:15px; border-radius:6px; margin-bottom:15px; border:1px solid #dee2e6;">
+                <label style="font-weight:bold; display:block; margin-bottom:8px; color:var(--primary-red); font-size:0.9em;">Iskanje po Bizi.si</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="pp_bizi_q" placeholder="Ime podjetja ali davčna številka..." style="flex:1; padding:6px 10px; border:1px solid #ccc; border-radius:4px;">
+                    <button class="btn btn-blue" onclick="window.iskanjeBiziPopup()" style="white-space:nowrap;">Išči</button>
+                </div>
+                <div id="pp_bizi_results" style="max-height:180px; overflow-y:auto; margin-top:8px;"></div>
+            </div>
+
+            <!-- Partner polja -->
+            <div class="form-group"><label>Polni naziv *</label><input type="text" id="pp_naziv" oninput="window.checkPartnerSimilarity()" required></div>
+            <div id="pp_similarity_warn" style="display:none; background:#fff3cd; border:1px solid #ffc107; border-radius:4px; padding:8px 12px; margin-bottom:12px; font-size:0.85rem; color:#856404;"></div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:2"><label>Ulica in hišna št.</label><input type="text" id="pp_ulica"></div>
+                <div class="form-group" style="flex:1"><label>Poštna številka</label><input type="text" id="pp_posta"></div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1"><label>Kraj</label><input type="text" id="pp_kraj"></div>
+                <div class="form-group" style="flex:1"><label>Država</label><input type="text" id="pp_drzava" value="Slovenija"></div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1"><label>Davčna številka</label><input type="text" id="pp_davcna" oninput="window.checkPartnerSimilarity()"></div>
+                <div class="form-group" style="flex:1; display:flex; align-items:center; gap:8px; padding-top:18px;">
+                    <input type="checkbox" id="pp_zavezanec" style="width:auto; margin:0;">
+                    <label for="pp_zavezanec" style="margin:0;">Zavezanec za DDV</label>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1"><label>TRR (IBAN)</label><input type="text" id="pp_trr"></div>
+                <div class="form-group" style="flex:1"><label>E-naslov</label><input type="email" id="pp_email"></div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1"><label>Telefon</label><input type="text" id="pp_telefon"></div>
+                <div class="form-group" style="flex:1"><label>Vrsta</label>
+                    <select id="pp_vrsta"><option value="oba">Oba</option><option value="kupec">Kupec</option><option value="dobavitelj">Dobavitelj</option></select>
+                </div>
+            </div>
+
+            <div style="margin-top:15px; padding-top:15px; border-top:1px solid #eee; display:flex; gap:10px; justify-content:flex-end;">
+                <button class="btn" style="background:#eee; color:#333;" onclick="window.zapriPartnerPopup()">Prekliči</button>
+                <button class="btn btn-blue" onclick="window.shraniPartnerPopup()">Shrani partnerja</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal za izbiro artikla/storitve iz šifranta -->
+    <div id="artikel-popup-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9998; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:10px; padding:25px; width:680px; max-width:96vw; max-height:88vh; overflow-y:auto; box-shadow:0 15px 50px rgba(0,0,0,0.25);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; color:var(--primary-blue);">📦 Izberi artikel ali storitev</h3>
+                <button onclick="window.zapriArtikelPopup()" style="background:none; border:none; font-size:1.5em; cursor:pointer; color:#868e96;">×</button>
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="ap_search" placeholder="Išči po nazivu, šifri..." style="flex:1; min-width:180px;" oninput="window.filterArtikelPopup()">
+                <select id="ap_vrsta_filter" onchange="window.filterArtikelPopup()" style="width:140px;">
+                    <option value="">Vse vrste</option>
+                    <option value="artikel">Artikli</option>
+                    <option value="storitev">Storitve</option>
+                </select>
+                <button class="btn btn-blue" onclick="window.odpriDodajArtikelIzPopupa()" style="white-space:nowrap;">+ Nov</button>
+            </div>
+            <div id="ap_list" style="max-height:420px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+
+    <div id="temeljnica-popup-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;">
+        <div style="background:white; padding:25px; border-radius:12px; width:480px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <h3 style="margin-top:0; color:var(--primary-blue); font-size:1.2rem; border-bottom:1px solid #eee; padding-bottom:10px;">Izbira temeljnice</h3>
+            
+            <p style="font-size:0.9rem; color:#555; margin-bottom:15px;">Izberite obstoječo temeljnico za to poslovno leto, ali ustvarite novo.</p>
+            
+            <div class="form-group">
+                <label>Temeljnica</label>
+                <select id="tp_izbira_temeljnice" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px;" onchange="window.onTemeljnicaSelectChange()">
+                    <option value="-1">-- Ustvari NOVO temeljnico --</option>
+                    <!-- dinamicno napolnjeno iz baze -->
+                </select>
+            </div>
+
+            <div id="tp_novi_naziv_wrapper" class="form-group" style="margin-top:10px;">
+                <label>Naziv nove temeljnice</label>
+                <input type="text" id="tp_novi_naziv" placeholder="npr. Prejeti računi jan 2025" style="width:100%; padding:8px; border:1px solid #ced4da; border-radius:4px; box-sizing:border-box;">
+            </div>
+
+            <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn" style="background:#eee; color:#333;" onclick="window.zapriTemeljnicaPopup()">Prekliči</button>
+                <button class="btn btn-blue" onclick="window.potrdiTemeljnicaPopup()">Potrdi in knjiži</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup za dokumente (Izdani računi, Prejeti računi, Ponudbe...) -->
+    <div id="dokument-popup-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9000; align-items:center; justify-content:center;">
+        <div id="dokument-popup-box" style="background:white; border-radius:12px; width:98vw; height:98vh; max-width:1800px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <!-- Vsebina se naloži dinamično -->
+        </div>
+    </div>
+
+    <!-- Modal za urejanje/dodajanje artikla (pop-up) -->
+    <div id="artikel-form-popup-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; align-items:center; justify-content:center;">
+        <div id="artikel-form-popup-container" style="background:white; border-radius:10px; padding:0; width:720px; max-width:96vw; max-height:92vh; overflow-y:auto; box-shadow:0 15px 50px rgba(0,0,0,0.25);">
+            <!-- Vsebina se naloži dinamično -->
+        </div>
+    </div>
+
+    <datalist id="konti-datalist"></datalist>
+
+    <!-- Gumb za vrnitev na vrh -->
+    <button id="back-to-top" title="Na vrh" onclick="window.scrollToTop()">↑</button>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/sl.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="/static/app.js?v=2026060312"></script>
+    <script>
+        // Gumb za vrnitev na vrh
+        (function() {
+            var btn = document.getElementById('back-to-top');
+
+            function getScrollTop() {
+                var appContent = document.getElementById('app-content');
+                var appScroll = appContent ? appContent.scrollTop : 0;
+                var winScroll = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                return Math.max(appScroll, winScroll);
+            }
+
+            function updateVisibility() {
+                if (getScrollTop() > 250) {
+                    btn.classList.add('visible');
+                } else {
+                    btn.classList.remove('visible');
+                }
+            }
+
+            window.scrollToTop = function() {
+                var appContent = document.getElementById('app-content');
+                if (appContent) {
+                    appContent.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+                document.body.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // Prav tako pomakni morebitne odprte modale/popupe
+                var popups = document.querySelectorAll('#dokument-popup-box, #partner-popup-box, #artikel-popup-overlay > div, #artikel-form-popup-container');
+                popups.forEach(function(el) {
+                    if (el && el.scrollTop > 0) {
+                        el.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                });
+            };
+
+            // Poslušaj pomik na vsebini aplikacije in na celotnem oknu (s capture)
+            window.addEventListener('scroll', updateVisibility, true);
+            var appContent = document.getElementById('app-content');
+            if (appContent) {
+                appContent.addEventListener('scroll', updateVisibility);
+            }
+        })();
+    </script>
+    <script>
+        window.toggleMobileMenu = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        };
+        
+        // Zaprto na klik menija (izvedeno, ko uporabnik klikne navigacijo)
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar.classList.contains('open')) {
+                    window.toggleMobileMenu();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

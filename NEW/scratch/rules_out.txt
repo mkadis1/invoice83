@@ -1,0 +1,229 @@
+﻿=== llama_supplier_rules for AliExpress ===
+ID: 38, davcna: NL826439810B01, naziv: Aliexpress
+Rules:
+- Supplier/Partner: "Aliexpress", Tax ID: "NL826439810B01", Country: "Singapur", Address: "10 Collyer Quay # 10-01, Ocean Financial Centre", City: "Singapur", Postal code: "049315". Buyer is Miha KadiÜ / SIM 83.
+- Order ID: 15-18 digit numeric Order ID (e.g. 3068081298166667) is the invoice number ("stevilka").
+- Dates: "datum_izdaje", "datum_zapadlosti", "datum_storitve_od", "datum_storitve_do" match the order date (e.g. "Feb 2, 2026" -> "2026-02-02").
+- Payment reference: "sklic" is always empty string "".
+- Articles in "Item detail":
+  * Check gross unit price and quantity (from 'x1', 'x2', 'x5', etc.).
+  * Unit price without VAT: "cena_enote" = unit_gross_price / 1.22.
+  * VAT rate on articles: "stopnja_ddv" = 22.0.
+  * Check that "Subtotal" matches the sum of gross article amounts (Subtotal = sum(unit_gross_price * kolicina)).
+- Discounts ("All discount", "Coins", "Balance"):
+  * Calculate discount percentage: discount_pct = (discount_amount / Subtotal) * 100.
+  * Set "popust" = discount_pct for each article.
+  * Item total with VAT: "znesek_skupaj" = (unit_gross_price * kolicina) * (1 - discount_pct / 100).
+- Shipping fee ("Shipping fee"):
+  * If shipping fee > 0, add as a separate line item with: "opis": "Shipping fee", "kolicina": 1.0, "cena_enote": shipping_fee, "popust": 0.0, "stopnja_ddv": 0.0 (0% VAT), "znesek_skupaj": shipping_fee.
+- Overall Totals:
+  * "znesek_skupaj" = Total (Subtotal - Discount + Shipping fee).
+  * "znesek_ddv" = round((Subtotal - Discount) - ((Subtotal - Discount) / 1.22), 2).
+  * "znesek_brez_ddv" = round(znesek_skupaj - znesek_ddv, 2).
+- "tuji_partner_neprebran": false.
+
+
+=== llama_learning_examples for AliExpress ===
+ID: 73, filename: OrderSummary202603133068081298186667.png, created: 2026-06-23 09:29:27
+  Postavke (3):
+    - 8Pin Automotive driving recorder p yellow with Pin qty=10.0 price=0.598 ddv=22.0 total=7.3
+    - 8Pin Automotive driving recorder p White with Pin qty=10.0 price=0.598 ddv=22.0 total=7.3
+    - Shipping fee qty=1.0 price=8.6066 ddv=22.0 total=10.5
+ID: 74, filename: OrderSummary202603133068081298146667.png, created: 2026-06-23 09:32:10
+  Postavke (1):
+    - 2025 Summer Men's Solid Color Pal qty=1.0 price=9.2623 ddv=22.0 total=11.19
+ID: 75, filename: OrderSummary202603133068469617356667.png, created: 2026-06-23 09:34:00
+  Postavke (1):
+    - 100% Original Makita 18V.6.0Ah bat M6.0AHKI H qty=1.0 price=15.51 ddv=22.0 total=18.93
+ID: 76, filename: OrderSummary202603133068529064046667.png, created: 2026-06-23 09:42:39
+  Postavke (2):
+    - Abie-Transmission Gear Shift Lever Black Lefthand driv qty=1.0 price=44.4344 ddv=22.0 total=53.38
+    - Shipping fee qty=1.0 price=2.0492 ddv=22.0 total=2.5
+ID: 77, filename: OrderSummary202603133068553088766667.png, created: 2026-06-23 09:44:19
+  Postavke (1):
+    - Rocoren Cable Organizer Wire Win, 5M Black qty=1.0 price=2.1311 ddv=22.0 total=2.45
+ID: 78, filename: OrderSummary202603133068553088806667.png, created: 2026-06-23 09:45:45
+  Postavke (1):
+    - 20PóS 10/20Pes Wire Connectors, Low-Val 20pcs,T Type 2 Pins qty=1.0 price=2.6967 ddv=22.0 total=3.09
+ID: 79, filename: OrderSummary202603133068553088826667.png, created: 2026-06-23 09:49:45
+  Postavke (1):
+    - DIY Anti-slip Furniture Pads Mute M Width 4cm,6mm,2 Meters qty=1.0 price=1.8443 ddv=22.0 total=2.11
+ID: 80, filename: OrderSummary202603133068553088846667.png, created: 2026-06-23 09:51:25
+  Postavke (1):
+    - 50/100 Set U-Shaped Electrical Wire, 100Set qty=1.0 price=2.6967 ddv=22.0 total=3.1
+ID: 81, filename: OrderSummary202603133068553088866667.png, created: 2026-06-23 09:52:26
+  Postavke (1):
+    - Welding Wire Fixture Adjustable Su, black qty=1.0 price=1.1311 ddv=22.0 total=1.3
+ID: 82, filename: OrderSummary202603133068554040676667.png, created: 2026-06-23 09:53:55
+  Postavke (2):
+    - Black Heat Shrink Tube Kit Thermor qty=1.0 price=6.8525 ddv=22.0 total=8.28
+    - Shipping fee qty=1.0 price=0.8115 ddv=22.0 total=0.99
+ID: 83, filename: OrderSummary202603133068600991556667.png, created: 2026-06-23 10:20:26
+  Postavke (2):
+    - 19me 22mm 25mm 30mm Laser ENGINE START,30mm,China Mainland,LED Voltage 3-6V qty=1.0 price=7.8279 ddv=22.0 total=9.33
+    - Shipping fee qty=1.0 price=0.0246 ddv=22.0 total=0.03
+ID: 84, filename: OrderSummary202603133068600991576667.png, created: 2026-06-23 10:23:39
+  Postavke (1):
+    - Electric cars for kids electrical car s, Power switch big qty=1.0 price=2.5 ddv=22.0 total=3.05
+ID: 85, filename: OrderSummary202603133068686999526667.png, created: 2026-06-23 10:25:13
+  Postavke (1):
+    - 2Pcs/lot Zine Alloy Flexible Pivot Joi, 4040(2Pcs) qty=1.0 price=16.3197 ddv=22.0 total=19.04
+ID: 86, filename: OrderSummary202603133068894311976667.png, created: 2026-06-23 10:29:15
+  Postavke (2):
+    - Red Bull Men's 2 Int Double-Layer Black-Shorts-1.XL qty=1.0 price=3.3279 ddv=22.0 total=3.86
+    - Shipping fee qty=1.0 price=9.4344 ddv=22.0 total=11.51
+ID: 87, filename: OrderSummary202603133068894311996667.png, created: 2026-06-23 10:30:46
+  Postavke (1):
+    - 12.3 inch touch screen monitor with, 12.3 inch non touch,China Mainland qty=1.0 price=61.6885 ddv=22.0 total=75.26
+ID: 88, filename: OrderSummary202603133068894312016667.png, created: 2026-06-23 10:31:42
+  Postavke (1):
+    - Raspberry Pi3.5 Touch Screen 480*, 3B ABS Case qty=1.0 price=10.83 ddv=22.0 total=13.21
+ID: 89, filename: OrderSummary202603133068976640446667.png, created: 2026-06-23 10:34:21
+  Postavke (2):
+    - romania europe 6 gang extension s qty=2.0 price=9.6967 ddv=22.0 total=23.66
+    - Shipping fee qty=1.0 price=0.041 ddv=22.0 total=0.05
+ID: 90, filename: OrderSummary202603133068976640466667.png, created: 2026-06-23 10:35:28
+  Postavke (1):
+    - Phone Sim Card Tray For Samsung, S21 Ultra Black qty=1.0 price=1.8443 ddv=22.0 total=2.25
+ID: 91, filename: OrderSummary202603133069040238696667.png, created: 2026-06-23 10:36:56
+  Postavke (1):
+    - 2025 New for Milwaukee 12V M12, 1pcs Battery qty=1.0 price=9.2705 ddv=22.0 total=10.74
+ID: 92, filename: OrderSummary202603133069065790626667.png, created: 2026-06-23 10:39:37
+  Postavke (2):
+    - PC USB Automatic Transmission Gearbox Grey(with clamp),China Mainland qty=1.0 price=85.4426 ddv=22.0 total=99.03
+    - Shipping fee qty=1.0 price=0.008 ddv=22.0 total=0.01
+ID: 93, filename: OrderSummary202603133069143241696667.png, created: 2026-06-23 10:41:12
+  Postavke (1):
+    - 2.4Ghz Wireless Keyboard with Tou, 2.4Ghz Bluetooth,Standard qty=1.0 price=17.1066 ddv=22.0 total=19.83
+ID: 94, filename: OrderSummary202603133069179701386667.png, created: 2026-06-23 10:42:17
+  Postavke (1):
+    - 10PCS~500PCS A3144 OH3144 V3t, 50PCS qty=1.0 price=2.42 ddv=22.0 total=2.95
+ID: 95, filename: OrderSummary202603133069179701446667.png, created: 2026-06-23 10:45:05
+  Postavke (1):
+    - P2040 Raspberry Pi Core Board C, RP2040 Core 4MB qty=5.0 price=2.3033 ddv=22.0 total=13.77
+ID: 96, filename: OrderSummary202603133069179701466667.png, created: 2026-06-23 10:46:38
+  Postavke (1):
+    - 2/10pcs MB-102 Breadboard 400 8, MB-102 830holes,2pcs qty=1.0 price=5.5984 ddv=22.0 total=6.76
+ID: 97, filename: OrderSummary202603133069192732926667.png, created: 2026-06-23 10:49:21
+  Postavke (1):
+    - Lightning Transformer DC 12V/24V P, 100W,12V qty=5.0 price=5.4262 ddv=22.0 total=32.77
+ID: 98, filename: OrderSummary202603133069356521276667.png, created: 2026-06-23 10:50:23
+  Postavke (1):
+    - AC/DC Adapter Power Supply For F, EU qty=1.0 price=26.418 ddv=22.0 total=32.23
+ID: 99, filename: OrderSummary202603243067623352746667.png, created: 2026-06-23 10:51:24
+  Postavke (1):
+    - New for Asus x540 XS40U18 XS40UP, 1 PCS qty=1.0 price=9.6803 ddv=22.0 total=11.81
+ID: 100, filename: OrderSummary202603303069497047626667.png, created: 2026-06-23 10:52:32
+  Postavke (2):
+    - USB C Solderless Adapter USB Type grey SPin,China Mainland qty=5.0 price=1.1885 ddv=22.0 total=7.25
+    - Shipping fee qty=1.0 price=1.2377 ddv=22.0 total=1.51
+ID: 101, filename: OrderSummary202603303069681949066667.png, created: 2026-06-23 10:54:46
+  Postavke (2):
+    - USB2.0 Solderless Adapter Metal C male head qty=5.0 price=2.3115 ddv=22.0 total=12.94
+    - Shipping fee qty=1.0 price=0.8115 ddv=22.0 total=0.99
+ID: 102, filename: OrderSummary202603303069794862796667.png, created: 2026-06-23 10:56:48
+  Postavke (1):
+    - LED Constant Current Driver AC85- qty=10.0 price=2.2787 ddv=22.0 total=27.52
+ID: 103, filename: OrderSummary202603303070105188736667.png, created: 2026-06-23 10:58:56
+  Postavke (2):
+    - 5 Pcs Hydrogel Film For Honor Magi, Honor MAgic 8 Pro,5 Pcs Hydrogel Film qty=1.0 price=4.3033 ddv=22.0 total=4.99
+    - Shipping fee qty=1.0 price=0.8115 ddv=22.0 total=0.99
+ID: 104, filename: OrderSummary202603303070204313316667.png, created: 2026-06-23 11:04:00
+  Postavke (2):
+    - USB 2.0 Female B Micro Usb Mini U Type-C-H-1PC qty=1.0 price=2.8033 ddv=22.0 total=3.39
+    - Shipping fee qty=1.0 price=0.8115 ddv=22.0 total=0.99
+ID: 105, filename: OrderSummary202603303070231849146667.png, created: 2026-06-23 11:05:54
+  Postavke (2):
+    - Auminum Profile Corner Bracket,L, 16Pcs qty=4.0 price=11.3361 ddv=22.0 total=54.77
+    - Shipping fee qty=1.0 price=0.0081 ddv=22.0 total=0.01
+ID: 106, filename: OrderSummary202603303070404039556667.png, created: 2026-06-23 11:08:35
+  Postavke (2):
+    - USB 2.0 Male to micro USB B Type, Left,1.5m qty=1.0 price=4.1639 ddv=22.0 total=4.98
+    - Shipping fee qty=1.0 price=0.8115 ddv=22.0 total=0.99
+ID: 107, filename: OrderSummary202603303070510541486667.png, created: 2026-06-23 11:11:09
+  Postavke (2):
+    - 304 Stainless Steel L-Shaped Right, 5Set MBx80 qty=1.0 price=4.4262 ddv=22.0 total=4.79
+    - Shipping fee qty=1.0 price=1.8934 ddv=22.0 total=2.31
+ID: 108, filename: OrderSummary202603303070524441056667.png, created: 2026-06-23 11:14:58
+  Postavke (2):
+    - Camera Plate 35mm 43mm 3 Way T, 35x35mm qty=1.0 price=0.7869 ddv=22.0 total=0.96
+    - Shipping fee qty=1.0 price=1.2377 ddv=22.0 total=1.51
+ID: 109, filename: OrderSummary202603303070611143696667.png, created: 2026-06-23 11:17:37
+  Postavke (2):
+    - Emergency Parking Brake Release qty=1.0 price=3.6803 ddv=22.0 total=4.45
+    - Shipping fee qty=1.0 price=0.5656 ddv=22.0 total=0.69
+ID: 110, filename: OrderSummary202603303070550013106667.png, created: 2026-06-23 11:21:29
+  Postavke (1):
+    - RP2040-Zero RP2040 For Raspberry, 3pcs qty=1.0 price=3.96 ddv=22.0 total=4.83
+ID: 111, filename: OrderSummary202603303070611143716667.png, created: 2026-06-23 11:51:17
+  Postavke (2):
+    - ESP32-C3 ESP32-S3 ESP32-H2 ESP3 ESP32-C3 qty=2.0 price=1.9026 ddv=22.0 total=4.64
+    - Shipping fee qty=1.0 price=0.3846 ddv=22.0 total=0.47
+ID: 112, filename: OrderSummary202603303070611143716667.png, created: 2026-06-23 11:52:15
+  Postavke (2):
+    - ESP32-C3 ESP32-S3 ESP32-H2 ESP3, ESP32-C3 qty=2.0 price=1.9026 ddv=22.0 total=4.64
+    - Shipping fee qty=1.0 price=0.3846 ddv=22.0 total=0.47
+ID: 113, filename: OrderSummary202603303070611143716667.png, created: 2026-06-23 11:53:01
+  Postavke (2):
+    - ESP32-C3 ESP32-S3 ESP32-H2 ESP3, ESP32-C3 qty=2.0 price=1.9026 ddv=22.0 total=4.64
+    - Shipping fee qty=1.0 price=0.3846 ddv=22.0 total=0.47
+ID: 114, filename: OrderSummary202603303070611143716667.png, created: 2026-06-23 11:53:33
+  Postavke (2):
+    - ESP32-C3 ESP32-S3 ESP32-H2 ESP3, ESP32-C3 qty=2.0 price=1.9026 ddv=22.0 total=4.64
+    - Shipping fee qty=1.0 price=0.3846 ddv=22.0 total=0.47
+ID: 115, filename: OrderSummary202603303070611143716667.png, created: 2026-06-23 11:54:10
+  Postavke (2):
+    - ESP32-C3 ESP32-S3 ESP32-H2 ESP3, ESP32-C3 qty=2.0 price=1.9026 ddv=22.0 total=4.64
+    - Shipping fee qty=1.0 price=0.3846 ddv=22.0 total=0.47
+ID: 116, filename: OrderSummary202603303070611143716667.png, created: 2026-06-23 11:54:43
+  Postavke (2):
+    - ESP32-C3 ESP32-S3 ESP32-H2 ESP3, ESP32-C3 qty=2.0 price=1.9026 ddv=22.0 total=4.64
+    - Shipping fee qty=1.0 price=0.3846 ddv=22.0 total=0.47
+ID: 117, filename: OrderSummary202603303070611143716667.png, created: 2026-06-23 11:55:15
+  Postavke (2):
+    - ESP32-C3 ESP32-S3 ESP32-H2 ESP3, ESP32-C3 qty=2.0 price=1.9026 ddv=22.0 total=4.64
+    - Shipping fee qty=1.0 price=0.3846 ddv=22.0 total=0.47
+ID: 118, filename: OrderSummary202603303070611143736667.png, created: 2026-06-23 11:57:13
+  Postavke (2):
+    - Welding Ring Heat Shrink Terminal, 50pcs-white-bag qty=1.0 price=1.6721 ddv=22.0 total=2.02
+    - Shipping fee qty=1.0 price=0.2459 ddv=22.0 total=0.3
+ID: 119, filename: OrderSummary202603303070611143736667.png, created: 2026-06-23 11:57:54
+  Postavke (2):
+    - Welding Ring Heat Shrink Terminal, S0pes-white-bag qty=1.0 price=1.6721 ddv=22.0 total=2.02
+    - Shipping fee qty=1.0 price=0.2459 ddv=22.0 total=0.3
+ID: 120, filename: OrderSummary202603303070611143736667.png, created: 2026-06-23 11:58:42
+  Postavke (2):
+    - Welding Ring Heat Shrink Terminal, 50pcs-white-bag qty=1.0 price=1.6721 ddv=22.0 total=2.02
+    - Shipping fee qty=1.0 price=0.2459 ddv=22.0 total=0.3
+ID: 121, filename: OrderSummary202603303070611143736667.png, created: 2026-06-23 11:59:33
+  Postavke (2):
+    - Welding Ring Heat Shrink Terminal, 50pcs-white-bag qty=1.0 price=1.6721 ddv=22.0 total=2.02
+    - Shipping fee qty=1.0 price=0.2459 ddv=22.0 total=0.3
+ID: 122, filename: OrderSummary202603303070611143736667.png, created: 2026-06-23 12:00:04
+  Postavke (2):
+    - Welding Ring Heat Shrink Terminal, 50pcs-white-bag qty=1.0 price=1.6721 ddv=22.0 total=2.02
+    - Shipping fee qty=1.0 price=0.2459 ddv=22.0 total=0.3
+ID: 123, filename: OrderSummary202603303070611143736667.png, created: 2026-06-23 12:00:40
+  Postavke (2):
+    - Welding Ring Heat Shrink Terminal, 50pcs-white-bag qty=1.0 price=1.6721 ddv=22.0 total=2.02
+    - Shipping fee qty=1.0 price=0.2459 ddv=22.0 total=0.3
+ID: 124, filename: OrderSummary202603303071017824206667.png, created: 2026-06-23 12:02:22
+  Postavke (2):
+    - 50-2000pcs Decorative LED Strip Lig, 5 50pcs SIDE A new version qty=1.0 price=6.1885 ddv=22.0 total=7.55
+    - Shipping fee qty=1.0 price=2.0246 ddv=22.0 total=2.47
+ID: 125, filename: OrderSummary202603303071017824206667.png, created: 2026-06-23 12:09:14
+  Postavke (2):
+    - 50-5000pcs Decorative LED Strip Lig, 50pcs,SIDE A new version qty=1.0 price=6.1885 ddv=22.0 total=7.55
+    - Shipping fee qty=1.0 price=2.0246 ddv=22.0 total=2.47
+ID: 167, filename: OrderSummary202608263072616279086667.png, created: 2026-08-26 07:29:01
+  Postavke (2):
+    - 10mm SI10-1T/K SIHOT/K rod end jo SI10 right M10x1.5,1Pes,Chrome steel qty=20.0 price=0.623 ddv=22.0 total=15.2
+    - Shipping fee qty=1.0 price=18.9672 ddv=22.0 total=23.14
+ID: 168, filename: OrderSummary202608263072616279066667.png, created: 2026-08-26 07:33:04
+  Postavke (3):
+    - Origin 1100mAh Battery for GoPro WHITE qty=1.0 price=5.7213 ddv=22.0 total=6.98
+    - Shipping fee qty=1.0 price=1.2213 ddv=22.0 total=1.49
+    - Coins qty=1.0 price=-0.14 ddv=22.0 total=-0.14
+ID: 169, filename: OrderSummary202608263074584851506667.png, created: 2026-08-26 08:24:15
+  Postavke (1):
+    - ATATITM ee original Makita DTMSt Cordless M qty=1.0 price=81.8852 ddv=22.0 total=99.9

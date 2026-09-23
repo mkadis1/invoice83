@@ -1,0 +1,27 @@
+﻿=== LLAMA LEARNING EXAMPLES - TELEMACH POSTAVKE ===
+
+ID: 12, filename: Telemach CLB-S1-1001885563.pdf
+  opis: EON Light 1,000 EN, popust: 0.0, stopnja_ddv: 22.0, cena: 20.86
+  opis: Paket Dodatna raz┼íirjena shema, popust: 0.0, stopnja_ddv: 22.0, cena: 0.0
+  opis: Paket Voyo, popust: 0.0, stopnja_ddv: 22.0, cena: 0.0
+  opis: Mobilni paket ┼áE VE─î, popust: 0.0, stopnja_ddv: 22.0, cena: 5.66
+  opis: Oprema na obroke, popust: 0.0, stopnja_ddv: 22.0, cena: 34.84
+
+ID: 27, filename: Telemach CLB-S1-1000943244.pdf
+  opis: EON Light 1,000 EN, popust: 0.0, stopnja_ddv: 22.0, cena: 20.86
+  opis: Paket Dodatna raz┼íirjena shema, popust: 0.0, stopnja_ddv: 22.0, cena: 0.0
+  opis: Paket Voyo, popust: 0.0, stopnja_ddv: 22.0, cena: 0.0
+  opis: Mobilni paket ┼áE VE─î, popust: 0.0, stopnja_ddv: 22.0, cena: 5.66
+  opis: Mednarodni klici v cono, popust: 0.0, stopnja_ddv: 22.0, cena: 3.99
+  opis: Mobilni paket NAJVE─î, popust: 0.0, stopnja_ddv: 22.0, cena: 19.25
+  opis: Mobilni paket ┼áE VE─î, popust: 0.0, stopnja_ddv: 22.0, cena: 1.02
+
+ID: 36, filename: Telemach CLB-S1-2000013088.pdf
+  opis: EON Light 0,323 EN, popust: 0.0, stopnja_ddv: 22.0, cena: 6.74
+  opis: Paket Dodatna raz┼íirjena shema 0,323 EN, popust: 0.0, stopnja_ddv: 22.0, cena: 0.0
+  opis: Paket Voyo 0,323 EN, popust: 0.0, stopnja_ddv: 22.0, cena: 0.0
+  opis: Mobilni paket ┼áE VE─î 0,774 EN, popust: 0.0, stopnja_ddv: 22.0, cena: 4.38
+  opis: Mobilni paket ┼áE VE─î 1,000 EN, popust: 0.0, stopnja_ddv: 22.0, cena: 5.66
+
+ID: 37, filename: Telemach CLB-S1-1000427622.pdf
+  opis: Mobilni paket ┼áE VE─î 0,097 EN, popust: 0.0, stopnja_ddv: 22.0, cena: 0.55

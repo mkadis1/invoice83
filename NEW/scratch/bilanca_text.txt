@@ -1,0 +1,385 @@
+Sistem: edavki.durs.si
+Vloženo: 27.03.2026 13:51:58
+Št. dokumenta: EDP-11648236-140
+Vložil: RENATA KREBEL
+Obračun akontacije dohodnine in dohodnine od dohodka iz dejavnosti
+za obdobje od 01.01.2025 do 31.12.2025.
+Vrsta dokumenta: Original
+I. NAČIN UGOTAVLJANJA DAVČNE OSNOVE od dohodka iz dejavnosti v obdobju, za katerega se predlaga obračun
+od dohodka iz dejavnosti v obdobju, za katerega se predlaga obračun: D – Dejanski na podlagi dejanskih prihodkov in dejanskih odhodkov
+II. OSNOVNI PODATKI O ZAVEZANCU
+Ime in priimek zavezanca MIHA KADIŠ
+Davčna številka 11648236
+Podatki o prebivališču PRISOJE 063B, PREVALJE, 2391 PREVALJE
+Elektronski naslov info@financom.si
+Telefon 041342751
+Zavezanec je nosilec osnovne kmetijske in osnovne gozdarske dejavnosti (drugi NE
+odstavek 47. člena ZDoh-2)
+Zavezanec je rezident Republike Slovenije DA
+Sedež opravljanja dejavnosti v RS DOBJA VAS 253, 2390 RAVNE NA KOROŠKEM
+Matična številka obrata 9182136000
+Občina sedeža opravljanja glavne dejavnosti RAVNE NA KOROŠKEM
+Vrsta dejavnosti 77.390
+Sistem vodenja poslovnih knjig: dvostavno knjigovodstvo
+Vrsta obveznega socialnega zavarovanja:
+iz naslova opravljanja dejavnosti 3.801,56 (obračunani znesek prispevkov za socialno
+varnost v tem poslovnem letu)
+Dejavnosti v Sloveniji
+Matična številka Naslov Občina SKD
+9182136000 DOBJA VAS 253, 2390 RAVNE NA KOROŠKEM 103 77.390
+Dejavnosti v tujini
+Država Naslov SKD
+III. UVELJAVLJANJE UGODNOSTI PO ZDoh-2
+III.A Izjavljam, da sem rezident Slovenije, samostojno opravljam specializiran poklic () na področju kulturne dejavnosti in sem vpisan v razvid samozaposlenih v kulturi (), NE
+nimam sklenjenega delovnega razmerja in ne opravljam druge dejavnosti, zato uveljavljam zmanjšanje davčne osnove od dohodka iz dejavnosti v višini 15 odstotkov
+prihodkov.
+Izjavljam, da sem rezident Slovenije, samostojno opravljam novinarski poklic () in sem vpisan v razvid samostojnih novinarjev (), nimam sklenjenega delovnega NE
+razmerja in ne opravljam druge dejavnosti, zato uveljavljam zmanjšanje davčne osnove od dohodka iz dejavnosti v višini 15 odstotkov prihodkov.
+Izjavljam, da sem rezident Slovenije, samostojno opravljam športni poklic () in sem vpisan v razvid poklicnih športnikov (), nimam sklenjenega delovnega razmerja in NE
+ne opravljam druge dejavnosti, zato uveljavljam zmanjšanje davčne osnove od dohodka iz dejavnosti v višini 15 odstotkov prihodkov.
+III.B Izjavljam, da sem v zadnjih petih letih uveljavljal davčno obravnavo po 4. odstavku 51. člena ZDoh-2. NE
+IV. PODATKI O VRSTI OBRAČUNA
+1. Redni letni obračun DA
+2. Obračun pri prenehanju davčnega zavezanca z izbrisom iz Poslovnega registra dne NE
+3. Obračun pri izrednem prenehanju davčnega zavezanca NE
+4. Obračun pri prenehanju davčnega zavezanca s statusno spremembo vpisano v Sodni register dne NE
+4.1 V okviru statusnega preoblikovanja podjetnika po Zakonu o gospodarskih družbah NE
+4.2 V okviru drugega statusnega preoblikovanja davčnega zavezanca, ki ni podjetnik po Zakonu o gospodarskih družbah NE
+5. Obračun pri prenehanju davčnega zavezanca z izbrisom iz Poslovnega registra dne in prenosu NE
+5.1 podjetja na podjetnika prevzemnika v skladu z Zakonom o gospodarskih družbah s podatki NE
+5.2 podjetja ali dela podjetja na drugo (druge) fizično osebo s podatki NE
+5.3 podjetja ali dela podjetja na drugo (druge) pravno osebo s podatki NE
+6. Obračun v postopku prisilne poravnave, začete dne NE
+Zneski v eurih s centi
+V. IZRAČUN AKONTACIJE DOHODNINE OD DOHODKA IZ DEJAVNOSTI (DEJANSKI)
+1. Prihodki, ugotovljeni po računovodskih predpisih, od tega 59.916,54
+1.1 Dohodki, od katerih je bil odtegnjen davek na viru, vključno z davčnim odtegljajem
+2. Popravek prihodkov na raven davčno priznanih – zmanjšanja (vsota 2.1 do 2.9) 0,00
+2.1 Izvzem prihodkov iz odprave ali porabe že obdavčenih ali delno obdavčenih rezervacij
+2.2 Izvzem prihodkov na podlagi mednarodnih pogodb
+2.3 Izvzem prihodkov iz naslova odprave oslabitev, če se predhodna oslabitev ni upoštevala
+2.4 Izvzem prihodkov, doseženih od dividend, obresti, prihodkov, doseženih na podlagi odsvojitve lastniških deležev, ali odsvojitve investicijskih kuponov in drugih
+prihodkov v zvezi s finančnimi instrumenti oziroma deleži v skladu s 4. in 5. točko prvega odstavka 54. člena ZDoh-2
+2.5 Izvzem prihodkov, ki so v tekočem oz. so bili v preteklih davčnih obdobjih že vključeni v davčno osnovo, zaradi odprave dvojne obdavčitve
+2.6 Izvzem prihodkov zaradi predhodno nepriznanih odhodkov
+2.7 Zmanjšanje prihodkov v primeru odtujitve prenesenih sredstev za neupoštevane izgube pri prenosu sredstev na novega zasebnika glede na določbo 1.b
+točke četrtega odstavka 51. člena ZDoh-2
+2.8 Izvzem prihodkov iz naslova mesečnega temeljnega dohodka na podlagi ZIUZEOP in ZZUOOP, iz naslova delno povrnjenega izgubljenega dohodka po
+ZZUOOP, iz naslova pomoči za samozaposlene na podlagi ZOPNN-F ter iz naslova solidarnostnega dodatka po ZIUOPZP (samozaposleni v kulturi,
+samostojni novinarji in kmetje)
+2.9 Izvzem prihodkov iz naslova obveznih prispevkov za socialno varnost, ki jih za zavezanca v skladu s posebnimi predpisi plačuje Slovenija ali samoupravna
+lokalna skupnost v skladu s tretjim odstavkom 56. člena ZDoh-2
+3. Popravek prihodkov na raven davčno priznanih – povečanja (vsota 3.1 do 3.6) 0,00
+3.1 Povečanje prihodkov zaradi transfernih cen med povezanimi osebami
+3.2 Povečanje prihodkov zaradi cen med povezanimi osebami rezidenti v skladu z določbami ZDDPO-2
+3.3 Povečanje prihodkov od obresti na dana posojila povezanim osebam nerezidentom
+3.4 Povečanje prihodkov od obresti na dana posojila povezanim osebam rezidentom v skladu z določbami ZDDPO-2
+3.5 Povečanje prihodkov v primeru odtujitve prenesenih sredstev za neobdavčene zneske glede na določbo 1.b točke četrtega odstavka 51. člena ZDoh-2
+3.6 Povečanje prihodkov iz naslova prehoda med različnimi načini ugotavljanja davčne osnove od dohodka iz dejavnosti na podlagi drugega odstavka 49. člena
+ZDoh-2
+4. DAVČNO PRIZNANI PRIHODKI (1 – 2 + 3) 59.916,54
+5. ODHODKI, ugotovljeni po računovodskih predpisih 57.156,10
+6. Popravek odhodkov na raven davčno priznanih – zmanjšanja (vsota 6.1 do 6.30) 0,00
+6.1 Zmanjšanje odhodkov zaradi transfernih cen med povezanimi osebami
+6.2 Zmanjšanje odhodkov zaradi cen med povezanimi osebami rezidenti v skladu z določbami ZDDPO-2
+6.3 Zmanjšanje odhodkov za obresti na prejeta posojila od povezanih oseb
+6.4 Zmanjšanje odhodkov za obresti na prejeta posojila od povezanih oseb rezidentov v skladu z določbami ZDDPO-2
+6.5 Zmanjšanje odhodkov v znesku 50% oblikovanih rezervacij, ki niso davčno priznane
+6.6 Zmanjšanje odhodkov za odhodke prevrednotenja terjatev (razen odhodkov prevrednotenja terjatev, ki se po računovodskih standardih prevrednotujejo zaradi
+spremembe valutnega tečaja), ki se po prvem odstavku 21. člena ZDDPO-2 ne priznajo
+6.7 Izvzem odhodkov, ki se nanašajo na izvzete prihodke na podlagi mednarodnih pogodb
+6.8 Nepriznani odhodki za pokrivanje izgub iz preteklih let
+6.9 Nepriznani odhodki za stroške, ki se nanašajo na privatno življenje
+6.10 Nepriznani odhodki za stroške prisilne izterjave davkov ali drugih dajatev
+6.11 Nepriznani odhodki za kazni, ki jih izreče pristojni organ
+6.12 Nepriznani odhodki za davke
+6.13 Nepriznani odhodki za obresti od nepravočasno plačanih davkov ali drugih dajatev
+6.14 Nepriznani odhodki za obresti od posojil, prejetih od oseb, določenih v 8b. točki prvega odstavka 30. člena ZDDPO-2
+6.15 Nepriznani odhodki za podkupnine in druge oblike premoženjskih koristi
+6.16 Nepriznani odhodki za donacije
+6.17 Drugi odhodki, ki se ne priznajo v skladu z 29. členom ZDDPO-2
+6.18 Nepriznani odhodki v višini 50% stroškov reprezentance
+6.19 Nepriznani odhodki za obračunano amortizacijo, ki presega amortizacijo, obračunano po metodi enakomernega časovnega amortiziranja in na podlagi
+predpisanih stopenj
+6.20 Nepriznani odhodki za amortizacijo opredmetenih osnovnih sredstev, katerih nabavna vrednost je bila predhodno odpisana in davčno priznana
+6.21 Nepriznani odhodki za nagrade vajencem, ki presegajo višino, določeno z zakonom
+6.22 Nepriznani odhodki za stroške, ki se nanašajo izključno na zavezanca
+6.23 Nepriznani odhodki za zagotavljanje bonitet in drugih izplačil v zvezi z zaposlitvijo zaposlenih pri zavezancu, če niso obdavčeni po ZDoh-2
+6.24 Odhodki, nastali v zvezi s prihodki iz zap. št. 2.4
+6.25 Zmanjšanje odhodkov v primeru prodaje ali drugačne odtujitve sredstva pred dokončno obračunano amortizacijo za znesek razlike med amortizacijo,
+obračunano za davčne namene, in amortizacijo, obračunano za poslovne namene
+6.26 Drugi nepriznani odhodki
+6.27 Zmanjšanje odhodkov za odhodke, ki so že zniževali davčno osnovo v tekočem ali preteklih davčnih obdobjih in zmanjšanje odhodkov, ki so posledica
+preteklih prihodkov, ki so bili izvzeti iz davčne osnove (na primer odhodki iz naslova vračila mesečnega temeljnega dohodka po ZIUZEOP in ZZUOOP, iz
+naslova vračila delno povrnjenega izgubljenega dohodka po ZZUOOP ter iz naslova pomoči za samozaposlene po ZIUOPZP)
+6.28 Zmanjšanje odhodkov za razliko v amortizaciji pri novem zasebniku glede na določbo 1.b točke četrtega odstavka 51. člena ZDoh-2
+6.29 Zmanjšanje odhodkov v primeru odtujitve prenesenih sredstev za neobdavčene zneske glede na določbo 1.b točke četrtega odstavka 51. člena ZDoh-2
+6.30 Izvzem odhodkov iz naslova obveznih prispevkov za socialno varnost, ki jih za zavezanca v skladu s posebnimi predpisi plačuje Slovenija ali samoupravna
+lokalna skupnost v skladu s tretjim odstavkom 56. člena ZDoh-2
+7. Popravek odhodkov na raven davčno priznanih – povečanja (vsota 7.1 do 7.8) 0,00
+7.1 Povečanje odhodkov za porabo rezervacij, ki ob oblikovanju niso bile ali so bile delno priznane kot odhodek
+7.2 Povečanje odhodkov za odhodke prevrednotenja terjatev, ki se priznajo ob odpisu celote ali dela terjatev, ki niso bile poplačane oz. poravnane
+7.3 Povečanje odhodkov za odhodke prevrednotenja in odpise drugih sredstev, ki se priznajo ob prodaji oz. odtujitvi
+7.4 Povečanje odhodkov za razliko pri amortizaciji do zneska, obračunanega po metodi enakomernega časovnega amortiziranja in na podlagi predpisanih
+stopenj
+7.5 Povečanje odhodkov za odpis do celotne nabavne vrednosti opredmetenih osnovnih sredstev ob prenosu v uporabo
+7.6 Povečanje odhodkov v primeru prodaje ali drugačne odtujitve sredstva pred dokončno obračunano amortizacijo za znesek razlike med amortizacijo,
+obračunano za poslovne namene, in amortizacijo, obračunano za davčne namene
+7.7 Povečanje odhodkov za razliko v amortizaciji pri novem zasebniku glede na določbo 1.b točke četrtega odstavka 51. člena ZDoh-2
+7.8 Povečanje odhodkov v primeru odtujitve prenesenih sredstev za neupoštevane izgube pri prenosu sredstev na novega zasebnika glede na določbo 1.b točke
+četrtega odstavka 51. člena ZDoh-2
+8. DAVČNO PRIZNANI ODHODKI (5 – 6 + 7) 57.156,10
+9. RAZLIKA med davčno priznanimi prihodki in odhodki (4 – 8) 2.760,44
+10. RAZLIKA med davčno priznanimi odhodki in prihodki (8 – 4) 0,00
+11. Sprememba davčne osnove zaradi sprememb računovodskih usmeritev, popravkov napak in prevrednotenj (11.1 - 11.2 + 11.3 - 11.4) 0,00
+11.1 Povečanje davčne osnove za znesek razlik zaradi sprememb računovodskih usmeritev in popravkov napak
+11.2 Zmanjšanje davčne osnove za znesek razlik zaradi sprememb računovodskih usmeritev in popravkov napak
+11.3 Povečanje davčne osnove za znesek presežka iz prevrednotenja zaradi prevrednotenja gospodarskih kategorij, ki ga zavezanec prenese v preneseni poslovni
+izid, vključno s presežki iz prevrednotenja sredstev, ki se amortizirajo, ter za delež zneska odprave rezervacij, pripoznanih v drugem vseobsegajočem donosu,
+ki je zmanjševal davčno osnovo ob oblikovanju.
+11.4 Zmanjšanje davčne osnove za že obdavčene dolgoročne rezervacije za pokojnine, jubilejne nagrade in za odpravnine pri prehodu na nov način
+računovodenja ter za 50 odstotkov zneska oblikovanih rezervacij, pripoznanih v drugem vseobsegajočem donosu, oziroma za delež zneska porabljenih
+rezervacij, pripoznanih v drugem vseobsegajočem donosu, ki ob oblikovanju ni zmanjševal davčne osnove
+12. Povečanje davčne osnove (vsota 12.1 do 12.3) 0,00
+12.A Znesek izkoriščene davčne olajšave za investiranje po 66.a členu ZDoh-2, za katerega na podlagi 20. člena ZIUOPZP ni potrebno povečati davčne osnove
+pod zaporedno številko 12.1, ker je do odtujitve opreme prišlo na podlagi uničenja zaradi poplav in plazov
+12.1 Znesek izkoriščene davčne olajšave za investiranje zaradi prodaje ali odtujitve sredstva pred predpisanim rokom
+12.2 Znesek izkoriščene davčne olajšave za investiranje zaradi odsvojitve ali prenosa sredstva iz Pomurske regije oziroma iz problemskega območja z visoko
+brezposelnostjo pred predpisanim rokom
+12.3 Povečanje davčne osnove za predhodno davčno priznane odhodke iz oslabitve terjatev, zaradi neizpolnitve pogojev za odpis
+13. Davčna osnova (9 + 11 + 12) ali (11 + 12 - 10); če je > 0 2.760,44
+14. Davčna izguba (9 + 11 + 12) ali (11 + 12 – 10); če je < 0 0,00
+15. Zmanjšanje davčne osnove in davčne olajšave (vsota [(vsota 15.1. do 15.17 brez 15.13, vendar največ do višine 63% davčne osnove iz zaporedne št. 13) in 1.739,08
+(15.13)], vendar največ do višine davčne osnove iz zaporedne št. 13)
+15.1 Olajšava za investiranje po 66.a členu ZDoh-2 1.739,08
+15.2 Pokrivanje izgube
+15.3 XXXXXXXXXXXXXXXXXXXXXX
+15.4 Olajšava za vlaganja v raziskave in razvoj po prvem stavku prvega odstavka 61. člena ZDoh-2
+15.5 XXXXXXXXXXXXXXXXXXXXXX
+15.6 Olajšava za zaposlovanje invalidov
+15.7 Olajšava za zavezanca invalida
+15.8 Olajšava za izvajanje praktičnega dela v strokovnem izobraževanju
+15.9 Olajšava za prostovoljno dodatno pokojninsko zavarovanje pri zavezancu zaposlenih delavcev po 65. členu ZDoh-2
+15.10 Olajšava za donacije – izplačila za humanitarne, invalidske, socialno-varstvene, dobrodelne, znanstvene, vzgojno-izobraževalne, zdravstvene, ekološke,
+religiozne in splošnokoristne namene
+15.11a Olajšava za donacije – izplačila za kulturne namene, športne namene in izplačila prostovoljnim društvom, ustanovljenim za varstvo pred naravnimi in drugimi
+nesrečami, ki delujejo v javnem interesu, ter drugim nevladnim organizacijam na področju varstva pred naravnimi in drugimi nesrečami, ki delujejo v javnem
+interesu
+15.11b Olajšava za donacije – izplačila izvajalcem programa vrhunskega športa za vlaganja v vrhunski šport, opredeljenim z zakonom, ki ureja šport (druga točka
+drugega odstavka 66. člena ZDoh-2)
+15.11c Olajšava za donacije - izplačila namenjena odpravi posledic epidemije v skladu z 62.a členom ZIUZEOP in plačila, namenjena odpravi posledic poplav v
+avgustu 2023 v skladu s 53. členom ZOPNN-F
+15.12 XXXXXXXXXXXXXXXXXXXXXX
+15.13 Posebna osebna olajšava
+15.14 Olajšava za zaposlovanje brezposelnih oseb po 61.a členu ZDoh-2
+15.15 Olajšava za zaposlovanje po drugem odstavku 28. člena ZSRR-2
+15.16 Olajšava za investiranje po petem odstavku 28. člena ZSRR-2
+15.17 Olajšava za vlaganja v digitalni in zeleni prehod po 65.a členu ZDoh-2
+16. Osnova za dohodnino (izračun dohodnine na letni ravni) (13 - 15) 1.021,36
+17. Olajšave, ki zmanjšujejo osnovo za dohodnino (17.1+17.2+17.3) 0,00
+17.1 Splošna olajšava
+17.2 Posebna olajšava za vzdrževane družinske člane. (Zavezanec, ki želi uveljavljati posebno olajšavo za VDČ, mora obvezno izpolniti Prilogo 13. 0,00
+Znesek olajšave v zap. 17.2 se bo izračunal iz podatkov v prilogi 13.)
+17.3 Olajšava za prostovoljno dodatno pokojninsko zavarovanje zavezanca po 117. členu ZDoh-2 v povezavi z drugim odstavkom 128. člena ZDoh-2
+18. XXXXXXXXXXXXXXXXXXXXXX
+19. Osnova za akontacijo dohodnine (16 – 17); če je > 0 1.021,36
+20. Akontacija dohodnine 163,42
+Izračun akontacije dohodnine od osnove za akontacijo dohodnine
+Nad Do Znesek davka Stopnja davka
+0,00 0,00 0,00 0,00
+0,00 1.021,36 163,42 16,00
+21. Odbitek tujega davka
+22. Povečanje davka zaradi spremembe odbitka tujega davka
+23. DAVČNA OBVEZNOST (20 - 21 + 22) 163,42
+24. Zmanjšanje davčne obveznosti za plačani znesek odtegnjenega davka
+25. Obračunana predhodna akontacija 58,44
+26. Obveznost za doplačilo akontacije (23 – 24 – 25); če je > 0 104,98
+27. Preveč obračunana predhodna akontacija (23 – 24 – 25 ); če je < 0 0,00
+28. OSNOVA ZA DOLOČITEV PREDHODNE AKONTACIJE ali akontacije dohodnine 1.021,36
+29. Predhodna akontacija ali akontacija dohodnine 163,42
+30. Obračunski mesečni obrok predhodne akontacije ali akontacije dohodnine 0,00
+31. Obračunski trimesečni obrok predhodne akontacije ali akontacije dohodnine 40,86
+VII. SPREMEMBA NAČINA UGOTAVLJANJA DAVČNE OSNOVE V NASLEDNJEM DAVČNEM OBDOBJU
+VII.A Priglašam ugotavljanje davčne osnove na podlagi dejanskih prihodkov in normiranih odhodkov NE
+VII.B Obveščam o prenehanju ugotavljanja davčne osnove na podlagi dejanskih prihodkov in normiranih odhodkov NE
+VII.C Davčno osnovo od dohodka iz osnovne kmetijske in osnovne gozdarske dejavnosti v letu po letu, za katero predlagam ta obračun, ugotavljam pavšalno (s katastrskim NE
+dohodkom)
+VIII. PODATKI O PRILOGAH K OBRAČUNU
+IZJAVA: Izjavljam, da ne prilagam podatkov, ki so navedeni kot Priloga 3 in Priloga 4, ker so bili podatki predloženi Agenciji Republike Slovenije za javnopravne evidence in NE
+storitve.
+PRILOGA 3: Bilanca stanja DA
+PRILOGA 4: Izkaz poslovnega izida DA
+PRILOGA 6: Podatki v zvezi s pokrivanjem davčne izgube DA
+PRILOGA 7a: Podatki v zvezi z olajšavo za investiranje po 66.a členu ZDoh-2 in za namene 73.a člena ZDoh-2 DA
+PRILOGA 8a: Podatki v zvezi z olajšavo za vlaganja v raziskave in razvoj (po prvem stavku prvega odstavka 61. člena ZDoh-2) NE
+Priloga Pravilnik (za 8a): Obrazec za uveljavljanje davčne olajšave za vlaganja v raziskave in razvoj NE
+PRILOGA 8c: Podatki v zvezi z olajšavo za vlaganja v digitalni in zeleni prehod (prvi odstavek 65.a člena ZDoh-2 v povezavi s 25. členom ZDoh 2AB) NE
+Priloga VDZP: Priloga VDZP - Priloga za uveljavljanje davčne olajšave za vlaganja v digitalni in zeleni prehod NE
+PRILOGA 9: Podatki v zvezi z olajšavo za zaposlovanje NE
+PRILOGA 10: Podatki v zvezi z olajšavo za donacije (66. člen ZDoh-2, 62.a člen ZIUZEOP in 53. člen ZOPNN-F) NE
+PRILOGA 11: Podatki v zvezi z odbitkom tujega davka NE
+PRILOGA 12: Podatki v zvezi s povečanjem davka zaradi sprememb odbitka tujega davka NE
+PRILOGA 13: Obvestilo o uveljavljanju olajšave za vzdrževane družinske člane pri izračunu akontacije dohodnine NE
+PRILOGA 13a: Razmejitev osnove, ki se nanaša na kmetijsko, gozdarsko in dopolnilno dejavnost na kmetiji in izračun povprečne stopnje akontacije dohodnine od NE
+dohodka iz dejavnosti za zavezance iz drugega odstavka 47. člena ZDoh-2
+PRILOGA 14a: Podatki o učinkih na davčno osnovo pri zavezancu, ki preneha z opravljanjem dejavnosti NE
+PRILOGA 14b: Podatki o učinkih na davčno osnovo pri zavezancu, ki nadaljuje z opravljanjem dejavnosti NE
+PRILOGA 15: Priglasitev ugotavljanja davčne osnove z upoštevanjem dejanskih prihodkov in normiranih odhodkov NE
+PRILOGA 16: Podatki v zvezi s prihodki, ki jih zavezanec, ki ugotavlja davčno osnovo z upoštevanjem normiranih odhodkov, dosega s povezanimi osebami po 16. členu NE
+ZDoh-2 ali z delodajalcem, s katerim je v delovnem razmerju na podlagi pogodbe o zaposlitvi
+UREDBA 1: Obrazec za uveljavljanje davčne olajšave za zaposlovanje na problemskih območjih z visoko brezposelnostjo – PRILOGA 1 Uredbe po ZSRR-2 NE
+UREDBA 2: Obrazec za uveljavljanje davčne olajšave za investiranje na problemskih območjih z visoko brezposelnostjo – PRILOGA 2 Uredbe po ZSRR-2 NE
+Obrazec Samoprijava-1: Podatki v zvezi s predložitvijo obračuna davka na podlagi samoprijave oziroma v postopku DIN (ne velja za DDV in DFS ter REK in OPSV) NE
+Priloga 3 in Priloga 4
+Podatki iz bilance stanja
+Zneski v eurih s centi
+Oznaka za AOP Postavka Znesek tekočega leta
+001 SREDSTVA (002+032+053) 27.022,94
+002 A. DOLGOROČNA SREDSTVA (003+010+018+019+027) 19.222,12
+003 I. Neopredmetena sredstva in dolgoročne aktivne časovne razmejitve (004+009) 3.725,17
+004 1. Neopredmetena sredstva 3.725,17
+009 2. Dolgoročne aktivne časovne razmejitve 0,00
+010 II. Opredmetena osnovna sredstva 15.496,95
+018 III. Naložbene nepremičnine 0,00
+019 IV. Dolgoročne finančne naložbe (020+024) 0,00
+020 1. Dolgoročne finančne naložbe, razen posojil 0,00
+024 2. Dolgoročna posojila 0,00
+027 V. Dolgoročne poslovne terjatve 0,00
+032 B. KRATKOROČNA SREDSTVA (033+034+040+048+052) 7.800,82
+033 I. Sredstva (skupine za odtujitev) za prodajo 0,00
+034 II. Zaloge (035 do 039) 0,00
+035 1. Material 0,00
+036 2. Nedokončana proizvodnja 0,00
+037 3. Proizvodi 0,00
+038 4. Trgovsko blago 0,00
+039 5. Predujmi za zaloge 0,00
+040 III. Kratkoročne finančne naložbe (041+045) 0,00
+041 1. Kratkoročne finančne naložbe, razen posojil 0,00
+045 2. Kratkoročna posojila 0,00
+048 IV. Kratkoročne poslovne terjatve 248,83
+052 V. Denarna sredstva 7.551,99
+053 C. KRATKOROČNE AKTIVNE ČASOVNE RAZMEJITVE 0,00
+054 Zunajbilančna sredstva 0,00
+055 OBVEZNOSTI DO VIROV SREDSTEV (056+072+075+085+095) 27.022,94
+056 A. PODJETNIKOV KAPITAL (058+060a+060b+067+301+070-071) 22.862,91
+058 I. Začetni podjetnikov kapital 0,00
+060a II. Prenosi stvarnega premoženja med opravljanjem dejavnosti 0,00
+060b III. Pritoki in odtoki denarnih sredstev 20.102,47
+067 IV. Revalorizacijske rezerve 0,00
+301 V. Rezerve, nastale zaradi vrednotenja po pošteni vrednosti 0,00
+070 VI. Podjetnikov dohodek 2.760,44
+071 VII. Negativni poslovni izid 0,00
+072 B. REZERVACIJE IN DOLGOROČNE PASIVNE ČASOVNE RAZMEJITVE (073+074) 0,00
+073 1. Rezervacije 0,00
+074 2. Dolgoročne pasivne časovne razmejitve 0,00
+075 C. DOLGOROČNE OBVEZNOSTI (076+080) 0,00
+076 I. Dolgoročne finančne obveznosti 0,00
+080 II. Dolgoročne poslovne obveznosti 0,00
+085 Č. KRATKOROČNE OBVEZNOSTI (086+087+091) 4.160,03
+086 I. Obveznosti, vključene v skupine za odtujitev 0,00
+087 II. Kratkoročne finančne obveznosti 0,00
+091 III. Kratkoročne poslovne obveznosti 4.160,03
+095 D. KRATKOROČNE PASIVNE ČASOVNE RAZMEJITVE 0,00
+096 Zunajbilančne obveznosti 0,00
+Podatki iz izkaza poslovnega izida
+Zneski v eurih s centi
+Oznaka za AOP Postavka Znesek tekočega leta
+110 A. ČISTI PRIHODKI OD PRODAJE (111+115+118) 59.916,39
+111 I. Čisti prihodki od prodaje na domačem trgu 59.916,39
+115 II. Čisti prihodki od prodaje na trgu EU 0,00
+118 III. Čisti prihodki od prodaje na trgu izven EU 0,00
+121 B. POVEČANJE VREDNOSTI ZALOG PROIZVODOV IN NEDOKONČANE PROIZVODNJE 0,00
+122 C. ZMANJŠANJE VREDNOSTI ZALOG PROIZVODOV IN NEDOKONČANE PROIZVODNJE 0,00
+123 Č. USREDSTVENI LASTNI PROIZVODI IN LASTNE STORITVE 0,00
+124 D. SUBVENCIJE, DOTACIJE, REGRESI, KOMPENZACIJE IN DRUGI PRIHODKI, KI SO POVEZANI S POSLOVNIMI UČINKI 0,00
+125 E. DRUGI POSLOVNI PRIHODKI 0,00
+126 F. KOSMATI DONOS OD POSLOVANJA (110+121-122+123+124+125) 59.916,39
+127 G. POSLOVNI ODHODKI (128+139+144+148) 57.145,02
+128 I. Stroški blaga, materiala in storitev (129+130+134) 39.832,92
+129 1. Nabavna vrednost prodanega blaga in materiala 0,00
+130 2. Stroški porabljenega materiala 16.288,81
+134 3. Stroški storitev 23.544,11
+139 II. Stroški dela (140 do 143) 0,00
+140 1. Stroški plač 0,00
+141 2. Stroški pokojninskih zavarovanj 0,00
+142 3. Stroški drugih socialnih zavarovanj 0,00
+143 4. Drugi stroški dela 0,00
+144 III. Odpisi vrednosti (145 do 147) 11.371,91
+145 1. Amortizacija 11.371,91
+146 2. Prevrednotovalni poslovni odhodki pri neopredmetenih sredstvih in opredmetenih osnovnih sredstvih 0,00
+147 3. Prevrednotovalni poslovni odhodki pri obratnih sredstvih 0,00
+148 IV. Drugi poslovni odhodki (148a+148b) 5.940,19
+148a 1. Prispevki za socialno varnost podjetnika 3.801,62
+148b 2. Ostali stroški 2.138,57
+151 H. DOBIČEK IZ POSLOVANJA (126-127) 2.771,37
+152 I. IZGUBA IZ POSLOVANJA (127-126) 0,00
+153 J. FINANČNI PRIHODKI (155+160+163) 0,00
+155 I. Finančni prihodki iz deležev 0,00
+160 II. Finančni prihodki iz danih posojil 0,00
+163 III. Finančni prihodki iz poslovnih terjatev 0,00
+166 K. FINANČNI ODHODKI (168+169+174) 11,04
+167 Finančni odhodki za obresti (upoštevano že v II. in III.) 0,00
+168 I. Finančni odhodki iz oslabitve in odpisov finančnih naložb 0,00
+169 II. Finančni odhodki iz finančnih obveznosti 0,00
+174 III. Finančni odhodki iz poslovnih obveznosti 11,04
+178 L. DRUGI PRIHODKI (179+180) 0,15
+179 I. Subvencije, dotacije in podobni prihodki, ki niso povezani s poslovnimi učinki 0,00
+180 II. Ostali prihodki 0,15
+181 M. DRUGI ODHODKI 0,04
+182 N. Podjetnikov dohodek (151-152+153-166+178-181) 2.760,44
+183 O. Negativni poslovni izid (152-151-153+166-178+181) 0,00
+188 *POVPREČNO ŠTEVILO ZAPOSLENIH NA PODLAGI DELOVNIH UR V OBRAČUNSKEM OBDOBJU (na dve decimalki) 0,00
+189 ŠTEVILO MESECEV POSLOVANJA 12,00
+Opombe:
+*Število delovnih ur v koledarskem (obračunskem) letu, za katere so zaposleni dobili plačo in nadomestilo plače / (deljeno) s številom možnih delovnih ur za koledarsko (obračunsko) leto.
+Priloga 6
+Podatki v zvezi s pokrivanjem davčne izgube
+Podatek pod zap. št. 15.2 obračuna oz. prenos ostanka nepokrite davčne izgube
+Zneski v eurih s centi
+Davčno obdobje Nepokrita Sprememba višine davčne izgube Prevzem davčne izgube zaradi Skupaj Pokrivanje davčne Ostanek
+davčna zaradi odločbe v postopku nadaljevanja opravljanja nepokrita izgube v tekočem nepokrite
+izguba nadzora dejavnosti davčna izguba obdobju davčne izgube
+1 2 3 4 5 = 2 + 3 + 4 6 7 = 5 - 6
+n- 0,00 0,00
+5
+n- 0,00 0,00
+4
+n- 0,00 0,00
+3
+n- 0,00 0,00
+2
+n- 31.12.2024 31.12.2024 10.561,95 10.561,95 10.561,95
+1
+n 01.01.2025 31.12.2025 0,00 0,00
+Skupaj 10.561,95 0,00 0,00 10.561,95 0,00 10.561,95
+n: Obdobje, za katero se sestavlja davčni obračun.
+Priloga 7a
+Podatki v zvezi z olajšavo za investiranje po 66.a členu ZDoh-2 in za namene 73.a člena ZDoh-2
+Podatek pod zap. št. 15.1 obračuna oz. prenos ter razčlenitev neizkoriščenega dela davčne olajšave
+Znesek investicij v tisto opremo in neopredmetena dolgoročna sredstva, za katera se lahko uveljavlja davčna olajšava v davčnem obdobju
+Zneski v eurih s centi
+Davčno obdobje 40 % Neizkoriščeni Zmanjšanje Sprememba Povečanje Skupaj Koriščenje Neizkoriščeni Neizkoriščeni
+investir. del davčne neizkoriščenega neizkoriščenega davčne neizkoriščena davčne del davčne del davčne
+zneska olajšave iz dela olajšave iz dela olajšave iz olajšave davčna olajšave v olajšave olajšave iz
+tekočega preteklega preteklega preteklega zaradi olajšava obdobju n naslova
+obdobja obdobja obdobja zaradi obdobja zaradi nadaljevanja investiranja v
+prodaje/odtujitve spremembe po opravljanja osnovno
+pred potekom 3 odločbi dejavnosti kmetijsko in
+let oz. pred osnovno
+dokon. gozdarsko
+amortiziranjem dejavnost
+pred potekom 3
+let
+od do
+1 2 3 4 5 6 7 = 2 + 3 - 4 + 8 9 = 7 - 8 9a
+5 + 6
+n-6 0,00 0,00
+n-5 0,00 0,00
+n-4 0,00 0,00
+n-3 01.08.2022 - 31.12.2022 1.592,74 1.592,74 1.592,74 0,00
+n-2 01.01.2023 - 31.12.2023 3.316,33 3.316,33 146,34 3.169,99
+n-1 01.01.2024 - 31.12.2024 81,95 81,95 81,95
+n 01.01.2025 - 31.12.2025 0,00 0,00
+Skupaj 0,00 4.991,02 0,00 0,00 0,00 4.991,02 1.739,08 3.251,94 0,00
+n: Obdobje, za katero se sestavlja obračun.
+MF-DURS OBR. DOHDEJ ŠT.18 e-DDD_DDD_11.47

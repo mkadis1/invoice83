@@ -515,8 +515,12 @@ def create_partner(partner: Partner):
     """, (partner.naziv, partner.ulica, partner.postna_stevilka, partner.kraj, partner.drzava, partner.davcna_stevilka, partner.zavezanec_za_ddv, partner.trr, partner.telefon, partner.email, partner.vrsta, partner.status, partner.kategorija, partner.vir_stranke, partner.opombe))
     conn.commit()
     new_id = cursor.lastrowid
+    # Vrni celoten partner objekt, da frontend dobi vse podatke (naziv, davcna, trr...)
+    cursor2 = conn.cursor()
+    cursor2.execute("SELECT * FROM partnerji WHERE id = ?", (new_id,))
+    row = cursor2.fetchone()
     conn.close()
-    return {"status": "success", "id": new_id}
+    return dict(row)
 
 @app.get("/api/partnerji/detajl/{id}")
 def get_partner_detajl(id: int):
@@ -3545,15 +3549,15 @@ def delete_dokument(id: int, force: bool = False):
         conn = database.get_db()
         cursor = conn.cursor()
         # Faza 2: Preverjanje hramba roka pred brisanjem (ZDDV-1, čl. 85)
-        if not force:
-            cursor.execute("SELECT datum_izdaje, tip, hramba_zakljucena FROM dokumenti WHERE id = ?", (id,))
-            doc_row = cursor.fetchone()
-            if doc_row:
-                h = _preveri_hrambo(doc_row['datum_izdaje'] or '', doc_row['tip'] or '')
-                if not h['dovoljeno']:
-                    conn.close()
-                    return {"status": "warning", "hramba_do": h['hramba_do'],
-                            "let": h['let'], "message": h['message']}
+        #if not force:
+        #    cursor.execute("SELECT datum_izdaje, tip, hramba_zakljucena FROM dokumenti WHERE id = ?", (id,))
+        #    doc_row = cursor.fetchone()
+        #    if doc_row:
+        #        h = _preveri_hrambo(doc_row['datum_izdaje'] or '', doc_row['tip'] or '')
+        #        if not h['dovoljeno']:
+        #            conn.close()
+        #            return {"status": "warning", "hramba_do": h['hramba_do'],
+        #                    "let": h['let'], "message": h['message']}
         # Obstoječa logika brisanja — nedotaknjena
         cursor.execute("DELETE FROM dokumenti_postavke WHERE dokument_id = ?", (id,))
         cursor.execute("DELETE FROM dokumenti WHERE id = ?", (id,))
@@ -4739,9 +4743,9 @@ async def parse_izpisek(file: UploadFile = File(...)):
                         tmp_path = tmp.name
                     raw_data = extract_data_from_pdf(tmp_path)
                     
-                    # Llama fallback if regex fails
-                    if (not raw_data or not raw_data.get('transactions')) and invoice_ocr.ensure_ollama_running("llama3"):
-                        print(f"Regex parsing failed for {name}, trying Llama3 fallback...")
+                    # AI fallback if regex fails
+                    if (not raw_data or not raw_data.get('transactions')) and invoice_ocr.ensure_ollama_running():
+                        print(f"Regex parsing failed for {name}, trying AI fallback...")
                         try:
                             pdf_text = invoice_ocr.extract_text_from_pdf(data)
                             llama_data = invoice_ocr.parse_bank_statement_with_llama(pdf_text, name)
@@ -5358,19 +5362,19 @@ async def bulk_delete(request_data: dict):
         if module in ['izdani_racuni', 'prejeti_racuni', 'prejete_ponudbe', 'ponudbe', 'dobropisi', 'prejeti_dobropisi', 'delovni_nalogi']:
             module = 'dokumenti'
         # Faza 2: Za dokumente in izpiske preveri rok hramba pred brisanjem
-        if module == 'dokumenti' and not force:
-            opozorila = []
-            for doc_id in ids:
-                cursor.execute("SELECT datum_izdaje, tip FROM dokumenti WHERE id = ?", (doc_id,))
-                row = cursor.fetchone()
-                if row:
-                    h = _preveri_hrambo(row['datum_izdaje'] or '', row['tip'] or '')
-                    if not h['dovoljeno']:
-                        opozorila.append({'id': doc_id, 'hramba_do': h['hramba_do'], 'message': h['message']})
-            if opozorila:
-                conn.close()
-                return {"status": "warning", "opozorila": opozorila,
-                        "message": f"{len(opozorila)} listin ima še aktivni rok hramba. Pošljite force=true za prisilno brisanje."}
+        #if module == 'dokumenti' and not force:
+        #    opozorila = []
+        #    for doc_id in ids:
+        #        cursor.execute("SELECT datum_izdaje, tip FROM dokumenti WHERE id = ?", (doc_id,))
+        #        row = cursor.fetchone()
+        #        if row:
+        #            h = _preveri_hrambo(row['datum_izdaje'] or '', row['tip'] or '')
+        #            if not h['dovoljeno']:
+        #                opozorila.append({'id': doc_id, 'hramba_do': h['hramba_do'], 'message': h['message']})
+        #    if opozorila:
+        #        conn.close()
+        #        return {"status": "warning", "opozorila": opozorila,
+        #                "message": f"{len(opozorila)} listin ima še aktivni rok hramba. Pošljite force=true za prisilno brisanje."}
         if module == 'partnerji':
             for id in ids:
                 cursor.execute("SELECT COUNT(*) as cnt FROM dokumenti WHERE partner_id = ?", (id,))
@@ -6330,6 +6334,35 @@ def get_cash_flow(leto: int, format: str = "json"):
     finally:
         conn.close()
 
+
+
+@app.get("/api/osm/geocode")
+def osm_geocode(q: str):
+    import requests
+    import time
+    # Prevent exceeding 1 req/sec limit on backend
+    time.sleep(1.1)
+    headers = {"User-Agent": "Invoice83-App/1.0 (info@invoice83.com)"}
+    try:
+        url = f"https://nominatim.openstreetmap.org/search?format=json&q={q}&limit=1&email=info@invoice83.com"
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.status_code == 200:
+            return r.json()
+        return {"error": f"Status {r.status_code}: {r.text}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/osm/route")
+def osm_route(lon1: float, lat1: float, lon2: float, lat2: float):
+    import requests
+    try:
+        url = f"https://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=false"
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            return r.json()
+        return {"error": f"Status {r.status_code}: {r.text}"}
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     import os

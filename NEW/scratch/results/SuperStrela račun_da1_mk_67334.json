@@ -1,0 +1,48 @@
+{
+  "stevilka": "DA1-MK-67334",
+  "datum_izdaje": "2026-03-03T08:24:00",
+  "datum_zapadlosti": null,
+  "datum_storitve_od": "",
+  "datum_storitve_do": "",
+  "znesek_skupaj": 99.95,
+  "znesek_ddv": 18.02,
+  "znesek_brez_ddv": 81.93,
+  "partner": {
+    "naziv": "SUPER STRELA INTERNETNA PRODAJA, D.O.O.",
+    "davcna_stevilka": "SI68692331",
+    "drzava": "Slovenija",
+    "ulica": "Cesta krških žrtev 46",
+    "kraj": "Krško",
+    "postna_stevilka": "",
+    "tuji_partner_neprebran": false
+  },
+  "postavke": [
+    {
+      "opis": "Nadgradni LED panel okrogli 24W / 3 kos",
+      "kolicina": 3.0,
+      "enota_mere": "kos",
+      "cena_enote": 8.525,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 25.575
+    },
+    {
+      "opis": "Nadgradni LED panel kvadrat 24W / 8 kos",
+      "kolicina": 8.0,
+      "enota_mere": "kos",
+      "cena_enote": 6.557,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 52.456
+    },
+    {
+      "opis": "GLS - Dostava na vaš naslov 1 stor",
+      "kolicina": 1.0,
+      "enota_mere": "stor",
+      "cena_enote": 3.89,
+      "popust": 0.0,
+      "stopnja_ddv": 22.0,
+      "znesek_skupaj": 3.899
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+    "active_id": "default",
+    "items": [
+        {
+            "id": "default",
+            "name": "Miha Kadi\u0161 s.p.",
+            "db": "racunovodstvo.db"
+        },
+        {
+            "id": "comp_43a4d859",
+            "name": "Testni d.o.o.",
+            "db": "comp_43a4d859.db"
+        }
+    ]
+}

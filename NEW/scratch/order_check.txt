@@ -1,0 +1,17 @@
+            # 2b. Ekstrakcija podatkov (z ali brez pravil)
+            parsed = parse_with_llama(text, filename, "llama3", rules=rules)
+            if parsed:
+                parsed = post_process_invoice_data(parsed)
+                # Za AliExpress dokumente vedno reapply fix po post_process (ki bi sicer resetiral DDV na 0)
+                if _is_aliexpress_document(filename, text):
+                    parsed = fix_aliexpress_data(parsed, text, filename)
+                # Zagotovi, da je ocr_text vedno vključen (za shranjevanje učenja)
+                if 'ocr_text' not in parsed or not parsed['ocr_text']:
+                    parsed['ocr_text'] = text
+                partner_info = parsed.get("partner", {}) if isinstance(parsed.get("partner"), dict) else {}
+                partner_naziv = partner_info.get("naziv", "Neznan Partner")
+                partner_davcna = partner_info.get("davcna_stevilka", "")
+                partner_trr = partner_info.get("trr", "")
+                
+                if partner_davcna and len(partner_davcna) == 8 and partner_davcna.isdigit():
+                    partner_davcna = "SI" + partner_davcna

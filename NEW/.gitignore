@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Database
+*.db
+!demo.db
+!racunovodstvo.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Distribution / Build
+dist/
+build/
+*.spec
+BACKUP-*/
+
+# Project specific
+sessions/
+uploads/temp_*
+server_log.txt
+Invoice83_tester.zip

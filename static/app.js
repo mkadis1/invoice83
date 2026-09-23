@@ -3832,7 +3832,7 @@ async function showImportPreview(data) {
                     <div style="display: flex; gap: 12px; align-items: center; text-align: left;">
                         <span style="font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">🤖</span>
                         <div>
-                            <h4 style="margin: 0; color: #1971c2; font-size: 0.95rem; font-weight: bold;">Način učenja Llama je AKTIVEN</h4>
+                            <h4 style="margin: 0; color: #1971c2; font-size: 0.95rem; font-weight: bold;">Način učenja modela je AKTIVEN</h4>
                             <p style="margin: 3px 0 0 0; color: #343a40; font-size: 0.82rem; line-height: 1.4;">Preverite polja. Če so pravilna, kliknite gumb desno. Če niso, jih popravite in kliknite <strong>Potrdi uvoz</strong> spodaj.</p>
                         </div>
                     </div>
@@ -4190,7 +4190,9 @@ async function showImportPreview(data) {
                                 })
                             });
                             if (res.ok) {
-                                const savedPartner = await res.json();
+                                const savedRes = await res.json();
+                                // API vrne samo {status, id} — dopolnimo z obstojecimi podatki partnerja
+                                const savedPartner = { ...data.partner, id: savedRes.id };
                                 window.__importUpdatePartner(savedPartner);
                             } else {
                                 alert('Napaka pri samodejnem ustvarjanju partnerja.');
@@ -4364,7 +4366,7 @@ window.uvoziEslog = async function(input, currentTip = 'prejeti_racuni', current
         
         if (combinedItems.length > 1) {
             if (window.llamaLearningMode) {
-                alert(`Način učenja Llama je vklopljen. Zdaj boste ročno pregledali in potrdili vsakega od ${combinedItems.length} dokumentov posebej.`);
+                alert(`Način učenja modela je vklopljen. Zdaj boste ročno pregledali in potrdili vsakega od ${combinedItems.length} dokumentov posebej.`);
                 for (let j = 0; j < combinedItems.length; j++) {
                     const data = combinedItems[j];
                     const docId = await showImportPreview(data);
@@ -5251,12 +5253,12 @@ async function renderNastavitve(tab = 'podjetje', isNew = false) {
             const checked = !!data.learning_mode;
             tabContent.innerHTML = `
                 <div style="max-width: 800px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-blue);">
-                    <h3 style="margin-bottom: 20px; color: var(--primary-blue);">Umetna inteligenca (Llama)</h3>
-                    <p style="margin-bottom: 25px; color: var(--text-muted); font-size: 0.9em;">Upravljanje nastavitev učenja Llama modela za samodejno ekstrakcijo podatkov iz PDF računov in drugih dokumentov.</p>
+                    <h3 style="margin-bottom: 20px; color: var(--primary-blue);">Umetna inteligenca</h3>
+                    <p style="margin-bottom: 25px; color: var(--text-muted); font-size: 0.9em;">Upravljanje nastavitev učenja modela umetne inteligence za samodejno ekstrakcijo podatkov iz PDF računov in drugih dokumentov.</p>
                     
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
                         <div>
-                            <strong style="display: block; font-size: 1.05em; color: #212529; margin-bottom: 5px;">Način učenja Llama modela</strong>
+                            <strong style="display: block; font-size: 1.05em; color: #212529; margin-bottom: 5px;">Način učenja modela</strong>
                             <span style="color: #6c757d; font-size: 0.85em;">Ko je vklopljeno, si sistem zapomni vaše popravke pri uvozu dokumentov za izboljšanje prihodnjih prepoznavanj.</span>
                         </div>
                         <label class="switch" style="position: relative; display: inline-block; width: 60px; height: 34px;">
@@ -6628,8 +6630,13 @@ window.pnSeštevek = function() {
 // --- OSRM in Nominatim logika ---
 async function obdelajOSMKoordinate(naslov) {
     if(!naslov) return null;
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(naslov.trim())}&limit=1`);
+    const url = `/api/osm/geocode?q=${encodeURIComponent(naslov.trim())}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error("Napaka pri Notranjem API za Nominatim: " + res.status);
+    }
     const data = await res.json();
+    if(data.error) throw new Error("OSM proxy napaka: " + data.error);
     if(data && data.length > 0) {
         return { lon: parseFloat(data[0].lon), lat: parseFloat(data[0].lat) };
     }
@@ -6637,12 +6644,12 @@ async function obdelajOSMKoordinate(naslov) {
 }
 
 async function dobiOSMRazdaljo(lon1, lat1, lon2, lat2) {
-    // API OpenRouteService ali OSRM
-    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`);
+    const res = await fetch(`/api/osm/route?lon1=${lon1}&lat1=${lat1}&lon2=${lon2}&lat2=${lat2}`);
     if(res.ok) {
         const data = await res.json();
+        if(data.error) throw new Error("OSRM proxy napaka: " + data.error);
         if(data.routes && data.routes.length > 0) {
-            return data.routes[0].distance / 1000; // OSRM vraca metre
+            return data.routes[0].distance / 1000;
         }
     }
     return 0;
@@ -6687,7 +6694,8 @@ window.pnIzracunajRazdaljoOSM = async function(btn) {
         window.pnProracunKm();
 
     } catch(e) {
-        alert("Napaka pri povezavi z OpenStreetMap!");
+        console.error(e);
+        alert("Napaka pri povezavi z OpenStreetMap! Podrobnosti: " + e.message);
     }
     btn.disabled = false;
     info.style.display = 'none';
@@ -7250,13 +7258,15 @@ window.shraniPartnerPopup = async function() {
         if(!res.ok) { alert('Napaka pri shranjevanju.'); return; }
         const saved = await res.json();
         const newId = saved.id;
+        // API vrne samo {status, id} — dopolnimo z vsemi vpisanimi podatki
+        const savedPartner = { ...payload, id: newId };
 
         // Osvezi seznam partnerjev
         await preLoadPartners();
         
         if (window._partnerPopupTargetSelect === 'IMPORT_MODAL') {
             if (window.__importUpdatePartner) {
-                window.__importUpdatePartner(saved);
+                window.__importUpdatePartner(savedPartner);
             }
         } else if(window._partnerPopupTargetSelect) {
             window._partnerPopupTargetSelect.value = newId;
@@ -7371,6 +7381,8 @@ async function renderPlace() {
                         <th>Vrsta</th>
                         <th style="text-align:right">Bruto / Osnova</th>
                         <th style="text-align:right">Skupaj prispevki</th>
+                        <th style="text-align:right">Skupaj povračila</th>
+                        <th style="text-align:right">Skupaj</th>
                         <th style="text-align:right">Status</th>
                         <th width="120" style="text-align:right">Akcije</th>
                     </tr>
@@ -7379,13 +7391,20 @@ async function renderPlace() {
         `;
         
         if (data.length === 0) {
-            html += `<tr><td colspan="7" style="text-align:center">Ni zapisov</td></tr>`;
+            html += `<tr><td colspan="9" style="text-align:center">Ni zapisov</td></tr>`;
         } else {
             let sortirano = window.sortAppData(data, 'prispevki');
             let zaporedna = 1;
             sortirano.forEach(p => {
                 const statusColor = p.placan ? '#2b8a3e' : '#e03131';
                 const isChecked = window.appSelection.ids.includes(p.id) ? 'checked' : '';
+                
+                const malica = p.malica || 0;
+                const potni_stroski = p.potni_stroski || 0;
+                const skupajPovracila = malica + potni_stroski;
+                const skupajZnesek = p.znesek_skupaj || 0;
+                const skupajPrispevki = skupajZnesek - skupajPovracila;
+                
                 html += `
                     <tr>
                         <td><input type="checkbox" class="row-checkbox" data-id="${p.id}" ${isChecked} onclick="window.toggleItemSelection(${p.id}, 'place')"></td>
@@ -7397,7 +7416,9 @@ async function renderPlace() {
                         <td style="font-weight:bold;">${p.zaposleni_ime || '/'}</td>
                         <td style="font-size:0.9em;">${p.vrsta_zaposlitve.toUpperCase()}</td>
                         <td style="text-align:right;">${formatMoneyJS(p.bruto_placa)}</td>
-                        <td style="text-align:right; font-weight:bold;">${formatMoneyJS(p.znesek_skupaj)}</td>
+                        <td style="text-align:right;">${formatMoneyJS(skupajPrispevki)}</td>
+                        <td style="text-align:right;">${formatMoneyJS(skupajPovracila)}</td>
+                        <td style="text-align:right; font-weight:bold;">${formatMoneyJS(skupajZnesek)}</td>
                         <td style="text-align:right;">
                             ${p.knjizeno 
                                 ? '<span style="background:#e3fafc; color:#1098ad; padding:3px 8px; border-radius:10px; font-size:0.8em; text-transform:uppercase; font-weight:bold;" title="Knjiženo v glavno knjigo">Zaprto</span>'
@@ -8801,20 +8822,33 @@ async function renderZgodovina() {
             <div id="zgodovina-marker" style="background:#fff; border:1px solid #eee; border-radius:10px; padding:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                     <div style="margin-bottom:25px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">26. 08. 2026</span>
+                            <span style="background:var(--primary-blue); color:white; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">23. 09. 2026</span>
                             <span style="color:#666; font-size:0.9rem;">Zadnja posodobitev</span>
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
-                            <li>Implement demo analytics, event tracking, and dashboard</li>
-                            <li>Restart both main and demo services during deploy</li>
-                            <li>Add Raspberry Pi deployment scripts and server mode config</li>
+                            <li><strong>Demo analitika:</strong> Vzpostavitev celovitega sistema za sledenje uporabe demo različice — evidentiranje sej, akcij in modulov, ki jih obiščejo demo uporabniki, s preglednim upravljavskim vmesnikom.</li>
+                            <li><strong>Strežniški način (Server Mode):</strong> Aplikacija zdaj podpira trajno delovanje na strežniku (Raspberry Pi / VPS) brez samodejnega izklopa po neaktivnosti — watchdog se aktivira samo v namiznem načinu.</li>
+                            <li><strong>Uvajanje na Raspberry Pi:</strong> Dodan avtomatski deploy na Pi strežnik neposredno iz release skripte; pri uvajanju se samodejno znova zaženeta obe storitvi (polna in demo različica).</li>
+                            <li><strong>Pošiljanje e-pošte:</strong> Podpora za več prejemnikov hkrati (ločenih z vejico ali podpičjem) pri pošiljanju računov in opominov po e-pošti.</li>
+                            <li><strong>OCR — AliExpress:</strong> Popolnoma predelano prepoznavanje računov AliExpress — determinističen normalizator za številko naročila, datum, postavke in zneske iz slik PNG.</li>
+                            <li><strong>Samodejno plačilo (Google/AliExpress):</strong> Dokumenti tujih ponudnikov (Google, AliExpress) se pri uvozu samodejno označijo kot plačani s poslovno kartico brez sklica.</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">26. 08. 2026</span>
+                        </div>
+                        <ul style="margin-top:5px; padding-left:20px;">
+                            <li><strong>Demo analitika:</strong> Implementiran sistem za sledenje dogodkov in nadzorna plošča za demo različico.</li>
+                            <li><strong>Uvajanje na strežnik:</strong> Pri namestitvi posodobitve se samodejno znova zaženeta obe storitvi (polna in demo različica).</li>
+                            <li><strong>Raspberry Pi konfiguracija:</strong> Dodane namestitvene skripte in nastavitve za strežniški način delovanja na Raspberry Pi.</li>
                         </ul>
                     </div>
 
                     <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">14. 08. 2026</span>
-                            
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Zakonska skladnost — PDF račun:</strong> ID za DDV (SI + davčna št.) se zdaj pravilno izpiše za zavezance na strani tako izdajatelja kot prejemnika — skladno z ZDDV-1, čl. 82.</li>
@@ -8831,7 +8865,6 @@ async function renderZgodovina() {
                     <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">01. 07. 2026</span>
-                            
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Prejete ponudbe:</strong> Nov modul za evidentiranje prejetih ponudb dobaviteljev. Podpora za uvoz (XML/ZIP/PNG/PDF), stotinsko izravnavo, konverzijo v prejet račun z enim klikom ter popolno integracijo z obstoječimi dokumenti.</li>
@@ -8845,7 +8878,6 @@ async function renderZgodovina() {
                     <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">16. 06. 2026</span>
-                            
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>Oblikovanje:</strong> Gumbi za prenos dokumentov imajo sedaj boljšo vidnost ter enak, prefinjen bel slog s svetlo obrobo in prehodom ob preletu, kot gumb "Pošlji po e-pošti".</li>
@@ -8859,7 +8891,6 @@ async function renderZgodovina() {
                     <div style="margin-bottom:25px; padding-top:15px; border-top:1px dashed #eee;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                             <span style="background:#f1f3f5; color:#495057; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:bold;">10. 06. 2026</span>
-                            
                         </div>
                         <ul style="margin-top:5px; padding-left:20px;">
                             <li><strong>CRM Modul:</strong> Celovit sistem za upravljanje strank, kontaktov, interakcij (klici, sestanki) in opravil s kanban pogledom prodajnega kanala.</li>

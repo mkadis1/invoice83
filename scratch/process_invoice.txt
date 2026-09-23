@@ -1,0 +1,60 @@
+def process_invoice_data(source, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    if ext == '.pdf':
+        text = extract_text_from_pdf(source)
+    elif ext in ['.png', '.jpg', '.jpeg']:
+        text = extract_text_from_image(source)
+    else:
+        return None
+        
+    tip = 'prejeti_racuni'
+    if _is_credit_note(filename, text):
+        tip = 'prejeti_dobropisi'
+
+        
+    # 1. Za SP (Stanovanjsko podjetje) dokumente - preskoči Llamo, uporabi deterministični parser
+    if _is_sp_document(filename, text):
+        data = {
+            "stevilka": "NEZNANA", "sklic": "",
+            "datum_izdaje": "", "datum_zapadlosti": "",
+            "datum_storitve_od": "", "datum_storitve_do": "",
+            "znesek_skupaj": 0.0, "znesek_ddv": 0.0, "znesek_brez_ddv": 0.0,
+            "partner": {"naziv": "Neznan Partner", "davcna_stevilka": "", "trr": "",
+                        "drzava": "Slovenija", "ulica": "", "kraj": "",
+                        "postna_stevilka": "", "tuji_partner_neprebran": False},
+            "postavke": []
+        }
+        data = fix_sp_data(data, text, filename)
+        p_info = data["partner"]
+        datum_od = data.get("datum_storitve_od", "") or data.get("datum_izdaje", "")
+        datum_do = data.get("datum_storitve_do", "") or datum_od
+        return {
+            'stevilka': data.get("stevilka", "NEZNANA"),
+            'sklic': data.get("sklic", ""),
+            'vezni_racun': data.get("vezni_racun", ""),
+            'datum_izdaje': data.get("datum_izdaje", ""),
+            'datum_zapadlosti': data.get("datum_zapadlosti", ""),
+            'datum_storitve': datum_od,
+            'datum_storitve_od': datum_od,
+            'datum_storitve_do': datum_do,
+            'partner': p_info,
+            'partner_naziv': p_info.get("naziv", ""),
+            'partner_davcna': p_info.get("davcna_stevilka", ""),
+            'partner_trr': p_info.get("trr", ""),
+            'znesek_skupaj': float(data.get("znesek_skupaj", 0.0)),
+            'znesek_brez_ddv': float(data.get("znesek_brez_ddv", 0.0)),
+            'znesek_ddv': float(data.get("znesek_ddv", 0.0)),
+            'postavke': data.get("postavke", []),
+            'ocr_text': text,
+            'tip': tip
+        }
+
+    # 2. Poskusi z Llama AI kot primarnim bralnikom
+    print(f"[Parser] Poskušam z Llama AI za {filename}...")
+    if ensure_ollama_running("llama3"):
+        try:
+            # 2a. Najprej identificiraj dobavitelja (za pravila)
+            supplier_info = llama_identify_supplier(text, "llama3")
+            rules = None
+            davcna = None
+            if supplier_info:

@@ -1,0 +1,50 @@
+2470:                             parsed = parse_eslog_xml(xml_content)
+2471:                             enriched = _enrich_eslog_data(parsed)
+2472:                             results.append(enriched)
+2473:                         except Exception as e:
+2474:                             print(f"Error parsing {name}: {e}")
+2475:                     elif name.lower().endswith('.png') or name.lower().endswith('.pdf'):
+2476:                         # AliExpress ali Temu?
+2477:                         f_content = z.read(name)
+2478:                         try:
+2479:                             parsed = None
+2480:                             if name.lower().endswith('.png'):
+2481:                                 parsed = extract_aliexpress_png(f_content)
+2482:                             else:
+2483:                                 parsed = invoice_ocr.process_invoice_data(f_content, name)
+2484:                             
+2485:                             if parsed:
+2486:                                 enriched = _enrich_eslog_data(parsed)
+2487:                                 enriched['file_data'] = base64.b64encode(f_content).decode('utf-8')
+2488:                                 enriched['file_name'] = name
+2489:                                 results.append(enriched)
+2490:                         except Exception as e:
+2491:                             print(f"Error parsing {name}: {e}")
+2492:         else:
+2493:             if file.filename.lower().endswith('.xml'):
+2494:                 parsed = parse_eslog_xml(content)
+2495:                 enriched = _enrich_eslog_data(parsed)
+2496:                 results.append(enriched)
+2497:             elif file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+2498:                 # Najprej poskusi z Llama AI (ki se uči iz primerov)
+2499:                 parsed = invoice_ocr.process_invoice_data(content, file.filename)
+2500:                 # Fallback: če Llama ni na voljo, uporabi regex parser za AliExpress
+2501:                 if not parsed:
+2502:                     parsed = extract_aliexpress_png(content)
+2503:                 
+2504:                 if parsed:
+2505:                     enriched = _enrich_eslog_data(parsed)
+2506:                     enriched['file_data'] = base64.b64encode(content).decode('utf-8')
+2507:                     enriched['file_name'] = file.filename
+2508:                     results.append(enriched)
+2509:             elif file.filename.lower().endswith('.pdf'):
+2510:                 parsed = invoice_ocr.process_invoice_data(content, file.filename)
+2511:                 
+2512:                 if parsed:
+2513:                     enriched = _enrich_eslog_data(parsed)
+2514:                     enriched['file_data'] = base64.b64encode(content).decode('utf-8')
+2515:                     enriched['file_name'] = file.filename
+2516:                     results.append(enriched)
+2517: 
+2518:         return {"items": results, "count": len(results)}
+2519:     except Exception as e:

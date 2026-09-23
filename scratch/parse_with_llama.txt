@@ -1,0 +1,250 @@
+def parse_with_llama(text, filename, model="llama3", rules=None):
+    import requests
+    import json
+    
+    url = "http://localhost:11434/api/chat"
+    prompt = f"""
+Extract structured invoice data from the following OCR/text representation of an invoice.
+
+CONTEXT:
+- The PDF filename is: "{filename}"
+- Use the filename as a strong clue for the supplier name if the supplier is not explicitly clear in the text (e.g. if the filename is 'Ajpes...', then the supplier is 'AJPES').
+
+IMPORTANT RULES FOR THE SUPPLIER/PARTNER:
+1. Your job is to extract the SUPPLIER (the company who sent the invoice and is charging money) and NOT the BUYER (the company receiving the invoice and paying money).
+2. The BUYER is ALWAYS 'Miha Kadiš', 'SIM 83', 'Simulatorji vožnje' or 'SI11648236'. Under NO circumstances should you extract the buyer as the supplier! If you extract 'Miha Kadiš s.p.' or 'SIM 83' as the supplier, you have failed.
+3. The PDF text extractor may horizontally merge the buyer name and the supplier name into a single line (e.g. 'Sim 83 - Simulatorji vožnje M ACME CORP' or similar). You MUST split them and extract ONLY the supplier part (e.g., 'ACME CORP'). Clean up any buyer traces from the supplier name!
+4. The supplier must be the OTHER company in the invoice, not the buyer. Look at the company names in the text and the filename context.
+
+IMPORTANT RULES FOR DATES AND PRICES:
+1. "datum_storitve_od" and "datum_storitve_do" MUST be extracted if a service period is mentioned (e.g., 'Obr. storitev za obd.: 01.03.2026 - 31.03.2026' or 'Obračunsko obdobje' or 'Plačilo komunalnih storitev 03/2026'). If a month is mentioned (e.g. '03/2026' or 'marec 2026'), 'datum_storitve_od' should be the first day of that month ('2026-03-01') and 'datum_storitve_do' the last day of that month ('2026-03-31').
+2. "cena_enote" MUST ALWAYS be the unit price WITHOUT tax/VAT (cena brez DDV). If the table has a column 'MPC' (MaloProdajna Cena) or 'Cena z DDV', this is the unit price WITH tax/VAT. You MUST convert it to the price WITHOUT tax/VAT by dividing it by (1 + VAT_rate/100) and set that converted value as 'cena_enote'. Never use the retail/gross price with VAT for 'cena_enote'.
+3. "popust" is the discount percentage. If there is a column labeled 'R %' or 'Rabat %', this is the discount percentage (e.g. '11,61' means a 11.61% discount). Extract it as a positive float (e.g. 11.61) for 'popust'. Do not confuse discount percentage with a discount amount in EUR (like '-4,99' which is the total discount amount). CRITICAL: If only a single percentage value (such as '22 %', '22', '9.5 %', '9.5') is found on a line item, that value is ALWAYS the VAT rate ("stopnja_ddv") and NOT the discount percentage ("popust"). In such cases, "popust" MUST be 0.0. Never set "popust" to the VAT rate (e.g., do not set popust to 22.0 or 9.5 unless there are explicitly TWO different percentages on that line, one of which is clearly labeled as a discount).
+4. "znesek_skupaj" for each item MUST be the final total value WITH tax/VAT for that row (e.g. 'Vred. z DDV' or 'Vrednost z DDV'). If a column with VAT is present, use it directly as the item total with tax.
+
+SPECIFIC RULES FOR "INPOS" INVOICES:
+If the filename contains "inpos" or the supplier is "INPOS":
+1. The invoice number ("stevilka") MUST follow the format "43-9038-XXXX", where "XXXX" is the suffix (e.g. "2054" or "1774"). Look for keywords like "Stevilka", "Sta viika", "Staying", "saving" or similar in the text. If the invoice number is misread by OCR (e.g. "A35038A TTA"), reconstruct the correct number as "43-9038-XXXX" using the suffix from "Sklic pri placilu na 93934-XXXX-26" or from the filename (e.g., if the filename is "inpos 2054.pdf", the suffix is "2054", making the invoice number "43-9038-2054").
+2. The supplier/partner name ("partner" -> "naziv") MUST be "INPOS, d.o.o., Celje" and the tax ID ("davcna_stevilka") MUST be "SI70868565".
+3. The payment reference ("sklic") MUST start with "SI00" (e.g. "SI00 93934-XXXX-26", extracted from "Sklic pri plačilu na 93934-XXXX-26"). It MUST ALWAYS start with "SI00" and NEVER with "SI12".
+4. In the line items ("postavke"):
+   - "cena_enote" is the unit price before discount and without VAT (e.g. "15.812" or "9.992" in the row).
+   - "popust" is the discount percentage. Note that OCR might read it as "800" (meaning 8.0%) or "20,00" (meaning 20.0%). If it is a multiple of 100 like "800" or "2000" and has no decimal points, divide it by 100 to get the correct percentage (e.g. 8.0 or 20.0). If it is "20,00" or "20", it is 20.0%.
+   - "znesek_skupaj" MUST be the concluding value in the row which represents the value WITH tax/VAT (e.g. "17.75" or "9.75"). Do NOT use the value without VAT (like "14.55" or "7.99") for "znesek_skupaj"!
+
+SPECIFIC RULES FOR "STANOVANJSKO PODJETJE" / "SP" RAZDELILNIK DOCUMENTS:
+If the text contains "Razdelilnik stroškov" or "STANOVANJSKO PODJETJE" or the filename starts with "SP ":
+1. The supplier is ALWAYS "STANOVANJSKO PODJETJE D.O.O." with tax ID "SI42865409" and IBAN "SI56 6100 0000 5443 696".
+2. The invoice/document number ("stevilka") is the number after "Razdelilnik št. :" (e.g. "2097826011015"). Do NOT use the filename number.
+3. The payment reference ("sklic") is found after "Referenca za plačilo :" (e.g. "SI12 2097826011015").
+4. "datum_izdaje" is after "Datum dokumenta:" (e.g. "9.1.2026" → "2026-01-09").
+5. "datum_zapadlosti" is after "Datum valute :" (e.g. "30.1.2026" → "2026-01-30").
+6. The service period comes from "Obračun : 1 MM/YYYY" (e.g. "01/2026" → datum_storitve_od="2026-01-01", datum_storitve_do="2026-01-31").
+7. The total amount ("znesek_skupaj") is shown as "Skupni znesek za plačilo : X.XXX,XX €" or as "***X.XXX,XX" in the payment slip.
+8. "znesek_ddv" comes from "Stroški DDV skupaj : XX,XX €".
+9. "znesek_brez_ddv" comes from "Osnova za DDV : X.XXX,XX €".
+10. For line items, extract the individual sub-items (podpostavke) associated with each "Vrsta stroška". For each sub-item row (which starts with a decimal number, contains unit text, and ends with: osnova, ddv_percent %, ddv_znesek, skupaj), create a line item with "opis" set to the "Vrsta stroška" name, "kolicina" set to 1.0, "cena_enote" set to the net base amount (osnova), "stopnja_ddv" set to the VAT rate, and "znesek_skupaj" set to the gross amount (skupaj).
+
+SPECIFIC RULES FOR CREDIT NOTES (DOBROPISI):
+If the text contains "Dobropis" or "credit note":
+1. The document number ("stevilka") is the number/code after "Dobropis Št." or "Dobropis St." (e.g. "C10000982776"). Do NOT use the "Vezni račun" number as the document number!
+2. Extract the "vezni_racun" field from "VEZNI RACUN:" (the original invoice this credit note refers to, e.g. "2602011739412").
+3. "znesek_skupaj" comes from "Skupaj" (e.g. "131,26" → 131.26).
+4. "znesek_brez_ddv" comes from "Vrednost brez DDV" (e.g. "107,59" → 107.59).
+5. Line items have format: "Description  NotoAmount  DDVAmount  TotalAmount" (e.g. "Storno računa  107,59  23,67  131,26").
+6. Include "vezni_racun" as an extra field in the returned JSON.
+
+SPECIFIC RULES FOR ALIEXPRESS ORDERS:
+If the text contains "AliExpress" or "Order ID" or "Alibaba" or "Order time" or "Item detail":
+1. PARTNER INFO: "naziv" is "Aliexpress", "davcna_stevilka" is "NL826439810B01", "drzava"/"kraj" is "Singapur", "ulica" is "10 Collyer Quay # 10-01, Ocean Financial Centre", "postna_stevilka" is "049315". "tuji_partner_neprebran" is false.
+2. The "stevilka" is the numeric Order ID (15-18 digits). "datum_izdaje" is the order date (YYYY-MM-DD). "nacin_placila" is "Poslovna kartica", "placano" is true.
+3. EXTRACT TOTALS CAREFULLY: Look for "Subtotal", "Discount" (or Coins/Balance), "Shipping fee", and "Total". OCR may be corrupted (e.g., 'subtota 2007' means 20.07, '007 xt' might mean 0.07 x1). Insert missing decimal dots!
+4. LOGIC TO FOLLOW:
+   Step A) Check items, unit gross price, and quantity. Calculate net unit price (cena_enote) = unit gross price / 1.22. stopnja_ddv MUST be 22.0.
+   Step B) Compare that "Subtotal" EXACTLY EQUALS the sum of (unit gross price * quantity) for all items.
+   Step C) Subtract the overall "Discount" amount. You can distribute the discount into the item's "popust" percentage: popust = (Discount / Subtotal) * 100. The item's znesek_skupaj = (unit gross price * quantity) - (Discount portion).
+   Step D) Check "Shipping fee" and add it as a SEPARATE line item! opis="Shipping fee", kolicina=1.0, cena_enote=shipping amount, stopnja_ddv=0.0 (0% VAT), znesek_skupaj=shipping amount.
+   Step E) Verify the final "Total". It MUST exactly equal: Subtotal - Discount + Shipping fee. This is your "znesek_skupaj".
+5. Calculate "znesek_ddv" = (Total - Shipping fee) - ((Total - Shipping fee) / 1.22).
+SPECIFIC RULES FOR "GOOGLE" INVOICES (Google Cloud EMEA Limited, Google Ireland Limited, Google Workspace, Google Cloud, Google Ads):
+If the text contains "Google Cloud EMEA" or "Google Ireland" or "Google Workspace" or "Google Cloud" or "členom 196 Direktive" or filename contains "Google":
+1. The supplier is "Google Cloud EMEA Limited" (tax ID "IE3668997OH", Velasco, Clanwilliam Place, Dublin 2, Irska) OR "Google Ireland Limited" (tax ID "IE6388047V", Gordon House, Barrow Street, Dublin 4, Irska).
+2. The invoice has 0% VAT / reverse charge ("DDV (0%): 0,00 €" / "uveljaviti DDV v skladu s členom 196 Direktive Sveta 2006/112/ES").
+3. "znesek_ddv" MUST ALWAYS be 0.0.
+4. "znesek_brez_ddv" MUST ALWAYS equal "znesek_skupaj" (e.g. 25.30).
+5. "sklic" MUST ALWAYS be empty string "" (there is NO payment reference / sklic because the invoice is paid via business credit card / automatic billing). DO NOT use invoice number or billing ID as sklic!
+6. For all line items:
+   - "stopnja_ddv" MUST be 0.0 (0%). Never use 22.0%!
+   - "cena_enote" is equal to the unit amount without VAT, which is the full listed price (e.g. 25.30). DO NOT divide by 1.22!
+   - "popust": 0.0.
+   - "znesek_skupaj": matches the item amount (e.g. 25.30).
+7. "tuji_partner_neprebran" MUST be false.
+
+"""
+    if rules:
+        prompt += f"\n\nCRITICAL SUPPLIER-SPECIFIC RULES GENERATED FROM LEARNING:\n{rules}\n"
+        
+    prompt += f"""
+Return ONLY a valid JSON object matching this schema:
+{{
+  "stevilka": "Invoice number (string, e.g. '26-0B42-0000110'). DO NOT use '2602011739412' unless it is actually in the text.",
+  "sklic": "Payment reference / 'sklic pri plačilu' / 'referenca' (string, e.g. 'SI00 1234-5678' or 'SI12 9934201' or 'RF8329384920'. Extract it exactly as written on the invoice under sklic/reference).",
+  "datum_izdaje": "Issue date (YYYY-MM-DD)",
+  "datum_zapadlosti": "Due date (YYYY-MM-DD)",
+  "datum_storitve_od": "Service start date (YYYY-MM-DD, or empty)",
+  "datum_storitve_do": "Service end date (YYYY-MM-DD, or empty)",
+  "znesek_skupaj": Total amount with tax (float),
+  "znesek_ddv": Total VAT amount (float),
+  "znesek_brez_ddv": Total amount without tax (float),
+  "partner": {{
+    "naziv": "Supplier/Issuer company name (string, e.g. 'A1 Slovenija d.d.'). DO NOT confuse with buyer (Miha Kadiš or SIM 83). If it is a foreign company (e.g. Google, Hostinger, Artlist, eBay, simpush, StickerApp, Conrad, etc.), extract their name carefully.",
+    "davcna_stevilka": "Supplier tax ID / VAT number (string, e.g. 'SI60595256' or 'IE6388047V'). ONLY the supplier's, not the buyer's (buyer is SI11648236). Do NOT put IBAN or bank account number here!",
+    "trr": "Supplier bank account / IBAN (string, typically starts with SI56... or similar bank format. Do NOT put the tax ID here!).",
+    "drzava": "Country of the supplier (string, e.g. 'Slovenija', 'Nemčija', 'Avstrija', 'ZDA', 'Irska'). Default to 'Slovenija' if the company is Slovenian, else extract their actual country.",
+    "ulica": "Supplier street and house number (string, only if foreign supplier, e.g. 'Gordon House, Barrow Street', else empty)",
+    "kraj": "Supplier city (string, only if foreign supplier, e.g. 'Dublin', else empty)",
+    "postna_stevilka": "Supplier postal code (string, only if foreign supplier, e.g. '4', else empty)",
+    "tuji_partner_neprebran": true/false (boolean: set to true ONLY if this is a foreign supplier (not Slovenian) and you cannot reliably read/extract their company name or tax ID from the invoice text. Else set to false.)
+  }},
+  "postavke": [
+    {{
+      "opis": "Line item description",
+      "kolicina": Quantity (float, default 1.0),
+      "enota_mere": "Unit of measure (string, default 'kos')",
+      "cena_enote": Unit price WITHOUT tax/VAT (float),
+      "popust": Discount percentage (float, default 0.0),
+      "stopnja_ddv": VAT rate percentage (float, default 22.0),
+      "znesek_skupaj": Line item total WITH tax/VAT (float)
+    }}
+  ]
+}}
+
+Here is the invoice text:
+---
+{text}
+---
+"""
+
+    # Pridobi podobne primere učenja iz baze
+    examples = get_similar_llama_examples(text, filename, limit=2)
+    
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a precise accounting extraction assistant. Your job is to extract the SUPPLIER and NOT the BUYER. Under NO circumstances should you extract 'Miha Kadiš s.p.' or 'SIM 83' as the supplier! Extract 'cena_enote' strictly as the unit price WITHOUT tax/VAT (cena brez DDV). Extract service start/end dates from mentioned service periods. For AliExpress, you MUST extract the correct quantity (e.g. from 'x2' as kolicina = 2.0), calculate unit price without VAT as unit_gross_price / 1.22, and separate the shipping fee into its own line item without any discount. Output ONLY a valid JSON object matching the requested schema. No conversational text."
+        }
+    ]
+    
+    # Dodamo primere učenja v zgodovino pogovora (few-shot prompting)
+    if examples:
+        for ex in examples:
+            messages.append({
+                "role": "user",
+                "content": f"Here is an example invoice text from filename '{ex['filename']}':\n---\n{ex['ocr_text']}\n---"
+            })
+            messages.append({
+                "role": "assistant",
+                "content": ex['corrected_json']
+            })
+            
+    # Na koncu dodamo trenutno sporočilo z navodili in tekstom
+    messages.append({
+        "role": "user",
+        "content": prompt
+    })
+    
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": False,
+        "format": "json",
+        "options": {
+            "temperature": 0.0
+        }
+    }
+    
+    response = requests.post(url, json=payload, timeout=60)
+    response.raise_for_status()
+    res_json = response.json()
+    content = res_json['message']['content']
+    parsed = json.loads(content)
+    
+    if "partner" not in parsed:
+        parsed["partner"] = {}
+    p = parsed["partner"]
+    p["drzava"] = p.get("drzava") or "Slovenija"
+    p["ulica"] = p.get("ulica") or ""
+    p["kraj"] = p.get("kraj") or ""
+    p["postna_stevilka"] = p.get("postna_stevilka") or ""
+    p["tuji_partner_neprebran"] = p.get("tuji_partner_neprebran") or False
+    
+    if "inpos" in filename.lower() or "inpos" in str(p.get("naziv", "")).lower():
+        parsed = fix_inpos_data(parsed, text, filename)
+    elif "soncek" in filename.lower() or "sonček" in filename.lower() or "soncek" in str(p.get("naziv", "")).lower() or "sonček" in str(p.get("naziv", "")).lower():
+        parsed = fix_soncek_data(parsed, text, filename)
+    elif (_is_sp_document(filename, text)):
+        parsed = fix_sp_data(parsed, text, filename)
+    elif _is_aliexpress_document(filename, text) or "aliexpress" in str(p.get("naziv", "")).lower() or "alibaba" in str(p.get("naziv", "")).lower():
+        parsed = fix_aliexpress_data(parsed, text, filename)
+    if _is_credit_note(filename, text):
+        parsed = fix_credit_note_data(parsed, text, filename)
+        
+    return parsed
+
+
+def parse_bank_statement_with_llama(text, filename, model="llama3"):
+    import requests
+    import json
+    
+    url = "http://localhost:11434/api/chat"
+    prompt = f"""
+Extract structured bank statement data from the following text representation of a bank statement.
+
+CONTEXT:
+- The PDF filename is: "{filename}"
+
+Return ONLY a valid JSON object matching this schema:
+{{
+  "statement_number": "Statement number (string)",
+  "statement_date": "Date of statement (YYYY-MM-DD)",
+  "opening_balance": Opening balance (float),
+  "closing_balance": Closing balance (float),
+  "transactions": [
+    {{
+      "date": "Transaction date (YYYY-MM-DD)",
+      "partner": "Counterparty name (string)",
+      "description": "Transaction description / purpose (string)",
+      "amount": Transaction amount (positive float),
+      "type": "Transaction type: 'breme' for outgoing/debit, 'dobro' for incoming/credit",
+      "code": "Purpose code (e.g. 'PMNT', 'OTHR', etc., string)"
+    }}
+  ]
+}}
+
+Here is the bank statement text:
+---
+{text}
+---
+"""
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a precise accounting extraction assistant. Your job is to extract bank statement transactions. Output ONLY a valid JSON object matching the requested schema. No conversational text."
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
+    
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": False,
+        "format": "json",
+        "options": {
+            "temperature": 0.0
+        }
+    }
+    
